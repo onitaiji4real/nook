@@ -9,7 +9,7 @@
 | P1-A01 | `PASS`    | P1-001 worklog：frozen lockfile install 成功。                                                                                                           |
 | P1-A02 | `PASS`    | P1-001 worklog：format/lint/typecheck 全部成功。                                                                                                         |
 | P1-A03 | `PASS`    | P1-001 worklog：unit/integration/build 全部成功。                                                                                                        |
-| P1-A04 | `PASS`    | 三個 production images 共六個 health/readiness probes 皆為 200、固定 schema 且回傳對應 `x-request-id`；不安全 request ID 會換成 UUID。                   |
+| P1-A04 | `PASS`    | `4fa1719` clean checkout 三個 production images：六個 probes 均為 200、固定 schema 且回傳對應 `x-request-id`；不安全值會換成 UUID。                      |
 | P1-A05 | `PASS`    | P1-001 worklog：fresh migration、重跑與 PostGIS tests。                                                                                                  |
 | P1-B01 | `PASS`    | `a8e1db4` clean checkout：Terraform 1.15.8、Google provider 6.50.0 multi-platform lock、五個 readonly validate、3 mocks、Trivy HIGH/CRITICAL 0。         |
 | P1-B02 | `PASS`    | `infra/terraform/scripts/check-isolation.mjs` 驗證 project example、backend prefix、environment 與 WIF repository condition。                            |
@@ -32,7 +32,7 @@
 | P1-E04 | `BLOCKED` | migration-first、zero-traffic candidate、smoke、promotion/stop ordering已通過 static contract；尚缺 staging workflow run。                               |
 | P1-E05 | `BLOCKED` | production 僅 manual dispatch 且綁 `prod` Environment；尚缺 reviewer protection 與未批准 run 證據。                                                      |
 | P1-E06 | `BLOCKED` | rollback script/runbook 已通過 shell/static checks；尚缺 staging 前後 digest 與實際 smoke 演練。                                                         |
-| P1-E07 | `BLOCKED` | 三服務 runtime logs 已直接驗證 requestId/service/version/environment/operation/outcome 且 redaction tests 通過；尚缺 applied query/notification。        |
+| P1-E07 | `BLOCKED` | `4fa1719` 三服務 runtime logs 已驗證 requestId/service/version/environment/operation/outcome 且 redaction tests 通過；尚缺 applied query/notification。  |
 | P1-F01 | `PASS`    | OpenAPI、ADR 0001～0003、data dictionary、threat notes、CI contract 與文件索引皆存在並通過格式/contract validation。                                     |
 | P1-F02 | `BLOCKED` | local/Terraform/migration/deploy/rollback runbooks 與本機 command audit 已完成；尚缺真實 staging deployment dry run。                                    |
 | P1-F03 | `PASS`    | P1-001～P1-005 task 均為 done；worklog 含變更、決策、驗證、風險、下一步與 Phase 1 implementation commit inventory。                                      |

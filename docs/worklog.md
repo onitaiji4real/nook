@@ -395,3 +395,20 @@
 - 第一次 integration 未注入 `DATABASE_URL`，第二次在受限 sandbox 無法連 localhost；確認 PostGIS container healthy 後，以允許本機 Docker 網路的相同 DSN 重跑即全部通過。
 - P1-E07 仍為 `BLOCKED`：本輪補的是 repository/runtime log 證據，尚未取得 applied Cloud Logging query、alert notification channel 與 staging 通知演練。
 - 本輪未 push、未 apply Terraform、未建立外部資源，也未更新 `main`。
+
+## 2026-07-14 — Verify request correlation from exact-head clean checkout
+
+### 驗收基準與結果
+
+- 從 implementation commit `phase1@4fa1719` 建立 `/private/tmp/nook-phase1-correlation-final` 無 hardlink clone；初始與最終工作樹皆乾淨。
+- clean checkout frozen install 與 pnpm supply-chain policy 通過；無 Turbo cache 的 format、12-project lint/typecheck/build、18 個 unit tasks、database 3 tests、API 11 tests全部成功。
+- workflow security/ordering、deploy shell syntax、Terraform 五個 readonly validate、3 mocks、environment isolation、Terraform Trivy 與 production audit 全數通過；audit 維持 2 moderate、無 high/critical。
+- 從 clone 重建 web/API/worker exact-head images；distroless migration command 確認 2 migrations、無 pending，三個容器皆 `healthy` 且以 `65532:65532` 執行。
+- 六個 runtime probes 均回 200 與傳入的安全 `x-request-id`；三服務 logs 直接顯示 `version=4fa1719` 及完整 correlation/operation/outcome 維度。
+- exact-head web/API/worker images 的 Trivy HIGH/CRITICAL findings 分別為 0、0、0；臨時 runtime containers 均已清除。
+
+### 結論
+
+- P1-A04 的 repository/runtime 直接證據現已完整；P1-E07 的 repository/runtime 部分也已可重現。
+- P1-E07 仍不能標為 PASS，因 applied Cloud Logging query、notification channel 與 staging alert 演練屬外部 gate；其餘 B05、D05、E01、E04～E06、F02、F04 亦維持 `BLOCKED`。
+- 本輪未 push、未 apply Terraform、未修改 GitHub/GCP/LINE 外部設定，也未更新 `main`。
