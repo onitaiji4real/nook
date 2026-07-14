@@ -1,6 +1,6 @@
 # Phase 1：平台骨架實作計畫
 
-狀態：`ready`  
+狀態：`in_progress`
 最後更新：2026-07-14  
 來源：`docs/product/business-technical-plan.md` §18 Phase 1
 
@@ -50,3 +50,5 @@
 - staging/production 網域；未決時可先用 Cloud Run URL。
 
 這些值不得提交。範例只能放在 `.tfvars.example` 或 `.env.example`。
+
+完整 gate、證據強度與外部阻塞定義見 [Phase 1 驗收標準](acceptance-standard.md)。

@@ -139,3 +139,25 @@
 ### 下一步
 
 - 開始 P1-003 Tenant onboarding and RBAC，或並行處理 P1-002 Terraform cloud foundation；兩者都必須使用獨立 task branch 或 `phase1`，不得直接更新 `main`。
+
+## 2026-07-14 — Phase 1 acceptance baseline and P1-002 start
+
+### 範圍
+
+- 將 Phase 1 完成定義拆成可重現、可追溯的 required gates。
+- 開始 P1-002 Terraform cloud foundation；不執行任何 Terraform apply。
+
+### 決策
+
+- 驗收狀態固定為 `PASS`、`FAIL`、`BLOCKED`、`NOT_RUN`；只有所有 required gate 為 `PASS` 才能宣告 Phase 1 完成。
+- 明確分離 local/static、provider plan 與 actual cloud evidence，避免以 mock 或語法檢查冒充已部署。
+- 後續每個 scoped commit 的第一行只放重點，body 同時使用中文與英文記錄範圍、原因、驗證與風險。
+
+### 驗收基準
+
+- 建立 `docs/phase-1/acceptance-standard.md`，涵蓋 repository、database、Terraform/GCP、tenancy/RBAC、LINE/Identity Platform、CI/CD、observability 與交接。
+- B05、D05、E01、E04～E07 需要外部 GCP、LINE 或 GitHub 管理權限；在取得直接證據前即使本機實作完成也不得標記 Phase 1 完成。
+
+### 下一步
+
+- 完成 P1-002 的 Terraform security/runtime/WIF/monitoring contract與自動化驗證。

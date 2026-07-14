@@ -1,6 +1,6 @@
 # P1-002：Terraform cloud foundation
 
-狀態：`ready`  
+狀態：`in_progress`
 目標：將現有 Terraform 骨架提升為可審查、可重複部署的 Phase 1 cloud foundation。
 
 ## Scope

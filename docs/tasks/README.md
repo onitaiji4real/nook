@@ -2,13 +2,13 @@
 
 狀態：`ready` 可開始、`blocked` 等待依賴、`in_progress` 執行中、`done` 已驗收。
 
-| ID     | 任務                       | 狀態    | 依賴                            |
-| ------ | -------------------------- | ------- | ------------------------------- |
-| P1-001 | Repository foundation      | done    | 無                              |
-| P1-002 | Terraform cloud foundation | ready   | GCP 外部資訊僅在 apply 時需要   |
-| P1-003 | Tenant onboarding and RBAC | ready   | P1-001                          |
-| P1-004 | LINE login exchange        | blocked | P1-003                          |
-| P1-005 | CI/CD and observability    | blocked | P1-001、P1-002 runtime contract |
+| ID     | 任務                       | 狀態        | 依賴                            |
+| ------ | -------------------------- | ----------- | ------------------------------- |
+| P1-001 | Repository foundation      | done        | 無                              |
+| P1-002 | Terraform cloud foundation | in_progress | GCP 外部資訊僅在 apply 時需要   |
+| P1-003 | Tenant onboarding and RBAC | ready       | P1-001                          |
+| P1-004 | LINE login exchange        | blocked     | P1-003                          |
+| P1-005 | CI/CD and observability    | blocked     | P1-001、P1-002 runtime contract |
 
 ## 接手規則
 
