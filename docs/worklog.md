@@ -412,3 +412,17 @@
 - P1-A04 的 repository/runtime 直接證據現已完整；P1-E07 的 repository/runtime 部分也已可重現。
 - P1-E07 仍不能標為 PASS，因 applied Cloud Logging query、notification channel 與 staging alert 演練屬外部 gate；其餘 B05、D05、E01、E04～E06、F02、F04 亦維持 `BLOCKED`。
 - 本輪未 push、未 apply Terraform、未修改 GitHub/GCP/LINE 外部設定，也未更新 `main`。
+
+## 2026-07-14 — Refresh read-only GitHub gate evidence
+
+### 唯讀結果
+
+- `git ls-remote --heads origin` 顯示遠端仍為 `main@dd5f146`、`phase1@d1ea43d`；本機 `phase1` 領先 11 commits，沒有自動 push。
+- 不帶 credential 的 GitHub Actions API 回 `HTTP 200`、`total_count=0`；沒有 successful run 可作 P1-E01 直接證據。
+- rulesets API 回 `HTTP 200` 與空陣列；目前沒有 required checks 或 main protection ruleset 可作 P1-E01/F04 證據。
+- environments API 回 `HTTP 200`、`total_count=0`；目前沒有 `stg`/`prod` Environment 或 reviewer protection 可作 P1-E05 證據。
+
+### 結論與安全界線
+
+- P1-E01、E05、F04 維持 `BLOCKED`，解除順序為：明確批准 push `phase1`、repository admin 建立 ruleset/environments、遠端 CI 通過，再建立 reviewed `phase1` → `main` PR。
+- 查詢全程未使用或輸出 GitHub token，未修改任何 repository setting；本輪仍未 push 或更新 `main`。

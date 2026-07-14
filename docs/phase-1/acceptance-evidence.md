@@ -26,14 +26,14 @@
 | P1-D03 | `PASS`    | LINE adapter 3 秒 timeout；API e2e 驗證 invalid token 401、provider timeout 503 與穩定 Problem Details。                                                 |
 | P1-D04 | `PASS`    | API e2e 僅回 customToken/expiresIn、無 Set-Cookie；Firebase adapter contract tests 通過。                                                                |
 | P1-D05 | `BLOCKED` | 尚缺 LINE/Identity Platform staging configuration。                                                                                                      |
-| P1-E01 | `BLOCKED` | clean checkout workflow contract 與等價命令通過；GitHub API 目前回報 0 runs，且尚缺 required ruleset。                                                   |
+| P1-E01 | `BLOCKED` | `4fa1719` clean workflow contract 通過；GitHub API 直接回報 Actions 0 runs、rulesets `[]`，尚無 required remote check。                                  |
 | P1-E02 | `PASS`    | `a8e1db4` clean checkout 重建三個 digest-pinned distroless Node 24 image；皆以 `65532:65532` 執行，migration、六個 probes、healthcheck 與 Trivy 全通過。 |
 | P1-E03 | `PASS`    | Terraform/workflows 僅使用 OIDC/WIF，stg/prod identity 與 environment claim 分離；credential scan 無 service-account key。                               |
 | P1-E04 | `BLOCKED` | migration-first、zero-traffic candidate、smoke、promotion/stop ordering已通過 static contract；尚缺 staging workflow run。                               |
-| P1-E05 | `BLOCKED` | production 僅 manual dispatch 且綁 `prod` Environment；尚缺 reviewer protection 與未批准 run 證據。                                                      |
+| P1-E05 | `BLOCKED` | production workflow 僅 manual dispatch 且宣告 `prod`；GitHub API environments `total_count=0`，尚無 reviewer protection。                                |
 | P1-E06 | `BLOCKED` | rollback script/runbook 已通過 shell/static checks；尚缺 staging 前後 digest 與實際 smoke 演練。                                                         |
 | P1-E07 | `BLOCKED` | `4fa1719` 三服務 runtime logs 已驗證 requestId/service/version/environment/operation/outcome 且 redaction tests 通過；尚缺 applied query/notification。  |
 | P1-F01 | `PASS`    | OpenAPI、ADR 0001～0003、data dictionary、threat notes、CI contract 與文件索引皆存在並通過格式/contract validation。                                     |
 | P1-F02 | `BLOCKED` | local/Terraform/migration/deploy/rollback runbooks 與本機 command audit 已完成；尚缺真實 staging deployment dry run。                                    |
 | P1-F03 | `PASS`    | P1-001～P1-005 task 均為 done；worklog 含變更、決策、驗證、風險、下一步與 Phase 1 implementation commit inventory。                                      |
-| P1-F04 | `BLOCKED` | 所有既有實作/文件 commits 均在 `phase1`，未直接更新 main；尚缺 GitHub ruleset 與 `phase1` → `main` reviewed PR evidence。                                |
+| P1-F04 | `BLOCKED` | 本機 commits 均在 `phase1` 且未更新 main；遠端仍為舊 `phase1@d1ea43d`、rulesets `[]`，尚缺 push 與 reviewed PR evidence。                                |
