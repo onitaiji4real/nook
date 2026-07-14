@@ -4,11 +4,13 @@
 
 GitHub rulesets for `main`, `phase1`, and later `dev` should require all matrix results from:
 
-- `verify`: frozen install, lint, typecheck, unit, migration, integration, build, production dependency audit.
+- `verify`: frozen install, repository/workspace/workflow architecture contracts, lint, typecheck, unit, migration, integration, build, production dependency audit.
 - `terraform`: five configuration validations, mocked tests, isolation contract, HIGH/CRITICAL misconfiguration scan.
 - `container-images (web|api|worker)`: multi-stage build, non-root assertion, HIGH/CRITICAL image scan.
 
 PR jobs have only `contents: read`; they never request OIDC or cloud credentials. Every external action is pinned to a full commit SHA. The Trivy action is pinned to the immutable post-incident v0.36.0 commit rather than a movable tag.
+
+`pnpm check:architecture` fails closed when a required Phase 1 directory or workspace entry is missing, a workspace manifest does not match its directory, an app depends on another deployable app, a shared package depends on an app, an `@nook/*` source import is undeclared, or generated/local/Terraform state data is tracked. It also executes the workflow security and release-ordering contract. New workspace packages are allowed when they follow the same manifest and boundary rules; the required Phase 1 apps/packages cannot silently disappear.
 
 ## Release ordering
 

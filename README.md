@@ -11,8 +11,11 @@ Phase 1 平台骨架實作中。當前交付範圍與完成定義見 [Phase 1 �
 - `apps/`: Next.js web、NestJS API、NestJS worker
 - `packages/`: domain、database、contracts 與共用能力
 - `infra/terraform/`: GCP bootstrap、共用模組、dev/stg/prod stacks
+- `infra/ci/`: repository boundary、workflow security 與 deployment scripts
 - `docs/`: 產品基準、ADR、Phase 計畫、任務與 runbook
 - `tests/`: 跨應用 E2E 與 fixtures
+
+`pnpm check:architecture` 會驗證必要目錄、workspace manifest、app/package dependency boundary、未宣告的 `@nook/*` import，以及不可提交的 build、環境與 Terraform state 產物。共用 package 不可依賴 deployable app，app 之間也不可直接依賴。
 
 ## 開始工作
 
@@ -23,7 +26,7 @@ Phase 1 平台骨架實作中。當前交付範圍與完成定義見 [Phase 1 �
 
 ## Local development
 
-需求：Node.js 20.17+、pnpm 9.9+、Docker Desktop 或 OrbStack。
+需求：Node.js 24.14+、pnpm 11.7+、Docker Desktop 或 OrbStack。權威版本約束以根目錄 `package.json` 與 `.nvmrc` 為準。
 
 Apple Silicon 會以 Docker 的 `linux/amd64` 模擬執行官方 PostGIS image；首次啟動較慢。
 
@@ -49,6 +52,7 @@ API 與 worker 在缺少或無效的 `DATABASE_URL` 時會 fail closed。應用�
 ## Verification
 
 ```bash
+pnpm check:architecture
 pnpm format:check
 pnpm lint
 pnpm typecheck

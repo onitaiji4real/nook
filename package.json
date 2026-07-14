@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "check:architecture": "eslint infra/ci/*.mjs && node --test infra/ci/check-repository-structure.test.mjs && node infra/ci/check-repository-structure.mjs && node infra/ci/check-workflows.mjs",
     "db:generate": "pnpm --filter @nook/database prisma:generate",
     "db:migrate": "pnpm --filter @nook/database prisma:migrate:deploy",
     "dev:services": "docker compose up -d postgres",

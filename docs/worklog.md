@@ -479,3 +479,33 @@
 - `P1-D05`：需真實 LINE channel 與 Identity Platform staging 驗證。
 - `P1-E04`～`P1-E07`：需 staging deployment、production approval wait、rollback、applied dashboard/log query/notification 直接證據。
 - `P1-F02`需 staging dry run；`P1-F04` 已有 ruleset/draft PR/CI，但仍需 review、ready 與 merge 證據。上述完成前 PR 維持 draft，不合併 `main`。
+
+## 2026-07-15 — Enforce repository structure and workspace boundaries
+
+### 目標與分層稽核
+
+- 從 Phase 1 repository foundation 選定「將專案分層轉成可執行 contract」作為本輪可本機閉環的目標；不擴張至 Phase 2 店家功能。
+- 實際盤點確認根目錄的 `apps`、`packages`、`infra`、`docs`、`tests` 與 `.github/workflows` 符合產品規劃；三個 deployable apps、九個 Phase 1 shared packages 與 dev/stg/prod Terraform stacks 齊全。
+- `apps/api/src` 目前僅有 health、identity、tenancy 三組 Phase 1 capability，平面檔案仍可接手；Phase 2 開始 merchant/location/staff/service vertical slices 時必須依 module 建立子目錄，不得繼續把新 controller/service 堆在 app root。
+- 發現 README 仍列 Node 20.17/pnpm 9.9，與實際 `package.json` Node 24.14/pnpm 11.7 contract 不一致；本輪已更正並指定 `package.json`/`.nvmrc` 為權威來源。
+
+### 實作與負向 contract
+
+- 新增 `infra/ci/check-repository-structure.mjs`，檢查必要目錄、workspace manifest 命名/private/scripts、`.nvmrc`/engine/pnpm workspace 一致性，並要求內部依賴使用 `workspace:` protocol。
+- Source boundary 禁止 app 直接依賴另一 deployable app、shared package 依賴 app、relative import 逃出 workspace，或使用未在 manifest 宣告的 `@nook/*` import。
+- Tracked-file contract 阻擋 `node_modules`/dist/Next/Turbo/pnpm/Terraform cache、Terraform state/plan、`.DS_Store` 與非 example `.env` 進入 Git。
+- 新增 5 個 Node test，直接驗證 module specifier 擷取、產物拒絕、未宣告/跨界 import 拒絕與合法 package-to-package import。
+- `pnpm check:architecture` 會先 lint 所有 `infra/ci/*.mjs`，再執行負向測試、live repository checker 與既有 workflow security/order checker；GitHub `verify` job 已在 lint 前強制執行。
+
+### 本機驗證與限制
+
+- 鎖定 Node 24.14 直接執行：5 個 architecture tests、live repository structure/dependency checker、workflow security/order checker、full repository Prettier 與原 package scopes ESLint 全數成功。
+- apps/web/api/worker 與九個 packages 共12 個 strict typecheck 通過；九個 package builds、API/worker TypeScript build 與 Next.js production build 通過。
+- 原有 workspace unit suites 全數通過：API 6、web 2、worker 2、config 4、contracts 1、database 2、LINE 5、observability 4，共 26 tests；無 test 的界面 package 依既有 `passWithNoTests` contract 通過。
+- Integration suites 在 sandbox 中無法連入已確認 healthy 的 localhost PostGIS，因此本機這次 run 是環境性失敗，不計為通過；本輪沒有 schema/dependency/lockfile 變更，推送後必須以 GitHub clean runner 的 migration + database/API integration 結果完成驗收。
+- 隔離副本 frozen install 成功，但 Codex fallback pnpm 在 Turbo 子程序重複要求重裝；Prisma cache 擴權又因 Codex 額度限制被系統拒絕。沒有繞過權限，也沒有清除原 workspace 依賴。
+
+### 下一步
+
+- 建立 scoped commit 並推送 `phase1`，確認 draft PR 新 head 的 `verify`、`terraform` 與三個 container jobs 成功。
+- GitHub clean runner 通過後，再以獨立文件 commit 記錄 run URL 與 final evidence；不合併 `main`。

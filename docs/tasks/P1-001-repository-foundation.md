@@ -36,4 +36,5 @@
 - 完成日期：2026-07-14。
 - 驗證與已知風險詳見 `docs/worklog.md` 的 P1-001 完成紀錄。
 - 2026-07-14 completion audit 補齊 web health/readiness 的 `x-request-id`、安全 request ID validation 與 production-image runtime evidence；三服務 correlation contract 現已一致。
+- 2026-07-15 repository structure audit 確認三個 deployable apps、九個 shared packages、Terraform environments、docs 與 tests 的頂層分層符合規劃；`pnpm check:architecture` 現會阻擋缺少目錄、workspace 命名錯誤、跨 app/package boundary import、未宣告的 `@nook/*` dependency 與誤提交產物。
 - 後續可開始 P1-003；不得在 P1-003 偷渡 LINE login 或 booking 功能。
