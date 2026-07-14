@@ -4,6 +4,8 @@
 | ------------------------------------ | ---------------------------- | ------------------------- |
 | `product/business-technical-plan.md` | 商業、產品與整體技術基準     | 最高；變更需 ADR/產品決策 |
 | `phase-1/implementation-plan.md`     | Phase 1 範圍、依賴、完成定義 | Phase 1 執行基準          |
+| `phase-1/acceptance-standard.md`     | Required gates 與證據強度    | Phase 1 驗收規範          |
+| `phase-1/acceptance-evidence.md`     | Gate 狀態與直接證據          | Phase 1 驗收進度          |
 | `tasks/README.md`                    | 可獨立交接的垂直任務清單     | 任務狀態入口              |
 | `tasks/*.md`                         | 單一垂直切片契約與驗收       | 實作交接基準              |
 | `adr/*.md`                           | 已接受的架構決策             | 決策依據                  |

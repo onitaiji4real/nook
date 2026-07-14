@@ -2,6 +2,7 @@ locals {
   name = "nook-${var.environment}"
   required_services = toset([
     "artifactregistry.googleapis.com",
+    "billingbudgets.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "compute.googleapis.com",
@@ -15,10 +16,16 @@ locals {
     "servicenetworking.googleapis.com",
     "sqladmin.googleapis.com",
     "storage.googleapis.com",
+    "sts.googleapis.com",
     "cloudtasks.googleapis.com",
     "cloudscheduler.googleapis.com"
   ])
   runtime_services = toset(["web", "api", "worker"])
+  health_paths = {
+    web    = "/api/health"
+    api    = "/health"
+    worker = "/health"
+  }
 }
 
 resource "google_project_service" "required" {
@@ -48,11 +55,11 @@ resource "google_compute_network" "platform" {
 }
 
 resource "google_compute_subnetwork" "serverless" {
-  project       = var.project_id
-  name          = "${local.name}-serverless"
-  region        = var.region
-  network       = google_compute_network.platform.id
-  ip_cidr_range = "10.20.0.0/24"
+  project                  = var.project_id
+  name                     = "${local.name}-serverless"
+  region                   = var.region
+  network                  = google_compute_network.platform.id
+  ip_cidr_range            = "10.20.0.0/24"
   private_ip_google_access = true
 }
 
@@ -107,6 +114,7 @@ resource "google_sql_database_instance" "postgres" {
       ipv4_enabled                                  = false
       private_network                               = google_compute_network.platform.id
       enable_private_path_for_google_cloud_services = true
+      ssl_mode                                      = "ENCRYPTED_ONLY"
     }
 
     maintenance_window {
@@ -210,6 +218,69 @@ resource "google_service_account" "automation_invoker" {
   display_name = "Nook Tasks and Scheduler invoker (${var.environment})"
 }
 
+resource "google_service_account" "github_deployer" {
+  project      = var.project_id
+  account_id   = "nook-deploy-${var.environment}"
+  display_name = "Nook GitHub deployer (${var.environment})"
+}
+
+resource "google_iam_workload_identity_pool" "github" {
+  project                   = var.project_id
+  workload_identity_pool_id = "nook-github-${var.environment}"
+  display_name              = "Nook GitHub ${var.environment}"
+  description               = "Keyless GitHub Actions identities for ${var.github_repository}"
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  project                            = var.project_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github"
+  display_name                       = "GitHub Actions"
+  description                        = "Restricted to ${var.github_repository} and the ${var.environment} GitHub Environment"
+
+  attribute_mapping = {
+    "google.subject"             = "assertion.sub"
+    "attribute.actor"            = "assertion.actor"
+    "attribute.repository"       = "assertion.repository"
+    "attribute.repository_owner" = "assertion.repository_owner"
+    "attribute.ref"              = "assertion.ref"
+  }
+
+  attribute_condition = "assertion.repository == '${var.github_repository}' && assertion.environment == '${var.environment}'"
+
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
+
+resource "google_service_account_iam_member" "github_workload_identity_user" {
+  service_account_id = google_service_account.github_deployer.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
+}
+
+resource "google_project_iam_member" "github_deployer_roles" {
+  for_each = toset([
+    "roles/artifactregistry.writer",
+    "roles/run.admin",
+    "roles/serviceusage.serviceUsageConsumer"
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.github_deployer.email}"
+}
+
+resource "google_service_account_iam_member" "github_runtime_service_account_user" {
+  for_each = local.runtime_services
+
+  service_account_id = google_service_account.runtime[each.key].name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.github_deployer.email}"
+}
+
 resource "google_project_iam_member" "cloud_sql_client" {
   for_each = toset(["api", "worker"])
 
@@ -231,7 +302,6 @@ resource "google_secret_manager_secret_iam_member" "runtime_access" {
     api_database    = { service = "api", secret = "database-url" }
     api_line        = { service = "api", secret = "line-channel-secret" }
     worker_database = { service = "worker", secret = "database-url" }
-    worker_line     = { service = "worker", secret = "line-channel-secret" }
   }
 
   project   = var.project_id
@@ -300,13 +370,55 @@ resource "google_cloud_run_v2_service" "application" {
         name  = "GCP_REGION"
         value = var.region
       }
-    }
-  }
 
-  lifecycle {
-    precondition {
-      condition     = alltrue([for service in local.runtime_services : contains(keys(var.container_images), service)])
-      error_message = "container_images must contain immutable web, api, and worker references when deploy_runtime is true."
+      dynamic "env" {
+        for_each = contains(["api", "worker"], each.key) ? [1] : []
+        content {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.runtime["database-url"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      dynamic "env" {
+        for_each = each.key == "api" ? [1] : []
+        content {
+          name = "LINE_CHANNEL_SECRET"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.runtime["line-channel-secret"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+
+      startup_probe {
+        initial_delay_seconds = 0
+        timeout_seconds       = 1
+        period_seconds        = 3
+        failure_threshold     = 20
+
+        tcp_socket {
+          port = 8080
+        }
+      }
+
+      liveness_probe {
+        initial_delay_seconds = 5
+        timeout_seconds       = 2
+        period_seconds        = 10
+        failure_threshold     = 3
+
+        http_get {
+          path = local.health_paths[each.key]
+          port = 8080
+        }
+      }
     }
   }
 
@@ -362,4 +474,53 @@ resource "google_cloud_scheduler_job" "notification_dispatcher" {
   }
 
   depends_on = [google_cloud_run_v2_service_iam_member.worker_automation]
+}
+
+resource "google_monitoring_alert_policy" "cloud_run_5xx" {
+  project      = var.project_id
+  display_name = "Nook ${var.environment} Cloud Run 5xx"
+  combiner     = "OR"
+  severity     = "ERROR"
+  enabled      = true
+
+  notification_channels = var.monitoring_notification_channels
+
+  documentation {
+    content   = "Cloud Run returned 5xx responses. Owner: platform-oncall. Runbook: ${var.alert_runbook_url}"
+    mime_type = "text/markdown"
+  }
+
+  conditions {
+    display_name = "Cloud Run 5xx rate"
+
+    condition_threshold {
+      filter = join(" AND ", [
+        "resource.type=\"cloud_run_revision\"",
+        "metric.type=\"run.googleapis.com/request_count\"",
+        "metric.label.response_code_class=\"5xx\""
+      ])
+      comparison      = "COMPARISON_GT"
+      threshold_value = 0.05
+      duration        = "300s"
+
+      aggregations {
+        alignment_period     = "60s"
+        per_series_aligner   = "ALIGN_RATE"
+        cross_series_reducer = "REDUCE_SUM"
+        group_by_fields      = ["resource.label.service_name"]
+      }
+    }
+  }
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  user_labels = {
+    application = "nook"
+    environment = var.environment
+    owner       = "platform-oncall"
+  }
+
+  depends_on = [google_project_service.required]
 }

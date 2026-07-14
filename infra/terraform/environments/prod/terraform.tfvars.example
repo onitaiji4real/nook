@@ -1,8 +1,12 @@
 project_id     = "beauty-platform-prod-unique"
 region         = "asia-east1"
 deploy_runtime = false
+github_repository = "onitaiji4real/nook"
 
 container_images = {}
+
+# Existing Monitoring channel resource names. Do not put email addresses or tokens here.
+monitoring_notification_channels = []
 
 # After P1-001 publishes immutable images, set deploy_runtime = true and use digests:
 # container_images = {

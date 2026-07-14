@@ -161,3 +161,32 @@
 ### 下一步
 
 - 完成 P1-002 的 Terraform security/runtime/WIF/monitoring contract與自動化驗證。
+
+## 2026-07-14 — Complete P1-002 Terraform cloud foundation
+
+### 已完成
+
+- 為 dev/stg/prod 建立環境專用 GitHub deployer service account 與 WIF pool/provider；condition 同時限制 `onitaiji4real/nook` 與對應 GitHub Environment。
+- `deploy_runtime=true` 強制 web/api/worker 三個 image 全部使用 sha256 digest；worker 維持 internal ingress，web/api 才能 public invoke。
+- Cloud Run runtime contract 加入 startup/liveness probe 與最小 Secret Manager 注入；worker 不再取得 LINE secret。
+- Cloud SQL 強制 private IP 與 `ENCRYPTED_ONLY`；新增 Cloud Run 5xx alert、platform-oncall owner 與 runbook link。
+- 建立 Terraform mocked tests、dev/stg/prod isolation/credential check 與可重現的 validation script。
+- 更新 Terraform runbook、P1-002 handoff 與 Phase 1 acceptance evidence；P1-005 因 runtime contract 完成改為 `ready`。
+
+### 實際驗證
+
+- 安裝並使用 Terraform 1.15.8；五個 configuration 以 Google provider 6.50.0 完成 `init -backend=false` 與 `validate`。
+- `terraform test`：3 passed，涵蓋 foundation-only、mutable/incomplete image 拒絕、immutable runtime/private worker。
+- `node infra/terraform/scripts/check-isolation.mjs`：通過 dev/stg/prod project example、backend prefix、environment、WIF repo 與 credential pattern 檢查。
+- Trivy 0.72.0 首次找到三環境 Cloud SQL 未強制 TLS；加入 `ssl_mode = "ENCRYPTED_ONLY"` 後重掃，HIGH/CRITICAL finding 為 0。
+- `terraform fmt -check -recursive` 與 `git diff --check` 通過。
+
+### 未執行與風險
+
+- 沒有 GCP credentials、organization/folder、billing account 與唯一 project IDs，因此未執行 provider-level dev plan、bootstrap、apply 或 post-apply query；P1-B05 保持 `BLOCKED`，不得稱為已部署。
+- notification channel resource names 尚未提供；alert policy contract 已建立，但實際通知路由必須在 apply checklist 補齊。
+- WIF 使用 GitHub `environment` claim；後續 workflow 必須宣告完全相同的 dev/stg/prod environment，否則 token exchange 會 fail closed。
+
+### 下一步
+
+- 執行 P1-003 Tenant onboarding and RBAC。

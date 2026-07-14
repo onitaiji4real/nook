@@ -21,3 +21,15 @@ output "runtime_service_accounts" {
 output "automation_invoker_service_account" {
   value = google_service_account.automation_invoker.email
 }
+
+output "github_deployer_service_account" {
+  value = google_service_account.github_deployer.email
+}
+
+output "github_workload_identity_provider" {
+  value = google_iam_workload_identity_pool_provider.github.name
+}
+
+output "cloud_run_5xx_alert_policy" {
+  value = google_monitoring_alert_policy.cloud_run_5xx.name
+}
