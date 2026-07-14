@@ -306,3 +306,21 @@
 - P1-005 repository implementation 標記 `done`；P1-E02、E03 有直接本機/config evidence。
 - P1-E01、E04～E07 仍 `BLOCKED`：尚缺 GitHub ruleset/Environment reviewer、遠端 successful run、staging deploy/rollback、applied dashboard query 與 notification channel。沒有執行 Terraform apply、推送 branch、建立 PR 或任何 production 變更。
 - repository admin 與 platform owner 解除外部 gate 後，從 clean checkout 執行 final acceptance，再以 reviewed PR 將 `phase1` 合併到 `main`。
+
+## 2026-07-14 — Phase 1 repository handoff checkpoint
+
+### Implementation commit inventory
+
+- `b073bb5` — repository foundation。
+- `ed804a1` — Phase 1 acceptance gates。
+- `1d1f959` — Terraform cloud foundation contract。
+- `1845586` — tenant onboarding and RBAC vertical slice。
+- `9dda3e8` — LINE identity exchange vertical slice。
+- `4da34f3` — secure CI/CD and observability delivery baseline。
+
+### 交接狀態
+
+- P1-001～P1-005 repository tasks 皆完成並留在 `phase1`；未直接 commit 或 push `main`，也尚未推送本輪六個 commits。
+- 文件/contract gate P1-F01、worklog gate P1-F03 可由 repository 直接驗證，標記 `PASS`。
+- P1-F02 尚缺 staging deployment dry run；P1-F04 尚缺 GitHub ruleset 與 reviewed PR，維持 `BLOCKED`。
+- 整體 Phase 1 尚未完成：B05、D05、E01、E04～E07、F02、F04 必須取得外部直接證據後才能宣告完成。
