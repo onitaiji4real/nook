@@ -445,3 +445,37 @@
 - P1-E01 現已有 successful workflow run，但 GitHub rulesets API 仍為 `[]`，checks 尚未被設定為 required，因此 gate 維持 `BLOCKED`。
 - P1-E02 新增 remote CI 直接證據並維持 `PASS`；P1-F04 的 push 部分已完成，但仍缺 ruleset 與 reviewed `phase1` → `main` PR。
 - 嘗試只檢查 Git credential helper 是否可提供管理憑證時，被安全政策判定為不必要的 credential probing 而拒絕；沒有讀取、輸出或繞過取得 token，也沒有修改 GitHub settings。
+
+## 2026-07-15 — Establish GitHub protection and draft Phase 1 review
+
+### 授權與 credential 安全
+
+- 使用者明確授權使用現有 Git credential helper 的 GitHub credential，並允許建立 ruleset、Environments 與 draft PR。
+- Credential 只在單次 shell process 的記憶體變數中傳給 GitHub API；未顯示、未寫入 repository/暫存檔/log，命令結束前已 unset。
+- Authenticated readback 確認 `onitaiji4real` 對 repository 具 admin 權限；本輪沒有設定 GCP/LINE secrets、沒有觸發 production deployment，也沒有更新或合併 `main`。
+
+### GitHub 保護設定
+
+- 建立並讀回 active `main` ruleset `Protect main via reviewed PR` #18939233；僅套用 `refs/heads/main`，無 bypass actor。
+- Ruleset 禁止 deletion 與 non-fast-forward，要求 linear history、pull request、review thread resolution，並只允許 squash/rebase merge。單一 maintainer 情境的 required approval count 為 0，但 Phase 1 handoff gate 仍要求實際 review 證據。
+- Strict required checks 為 `verify`、`terraform`、`container-images (web)`、`container-images (api)`、`container-images (worker)`；完全對應 CI job contexts。
+- 建立 `stg` 與 `prod` GitHub Environments，兩者的 custom deployment branch policy 都只允許 `main`；`prod` 要求 `onitaiji4real` reviewer，`prevent_self_review=false` 保留單一 maintainer 的手動核准流程。
+- Environments 中未寫入任何虛構或尚未批准的 GCP variables/secrets。`P1-E05` 仍維持 `BLOCKED`，因尚未觸發 production workflow 以取得未核准時停留等待的直接證據。
+
+### Draft PR 與遠端 CI
+
+- 建立 draft PR [#1 Phase 1 平台骨架 / Phase 1 platform foundation](https://github.com/onitaiji4real/nook/pull/1)：base `main@dd5f146`、head `phase1@22ec58b`，API 讀回為 open/draft/mergeable/clean。
+- PR body 明確要求不合併，並列出 GCP apply、真實 LINE/Identity Platform staging、staging deploy/rollback/observability 與最終 review/checks 等未完成 gate。
+- Pull request 觸發 [CI run #3](https://github.com/onitaiji4real/nook/actions/runs/29348356639)，`verify`、`terraform` 與 web/API/worker 三個 container jobs 全部 completed/success；此 run 與 active ruleset 讀回共同完成 `P1-E01` 直接證據。
+
+### 文件驗證
+
+- 以 repository 已安裝的 Prettier 針對本輪三個 Markdown 檔執行 check，結果全部符合格式；`git diff --check` 亦通過。
+- Root `pnpm format:check` 首次因系統 Node 20/pnpm 9 低於專案要求而拒絕；改用 bundled Node 24.14/pnpm 11.7 後，pnpm 因現有 `node_modules` 由不同 runtime 建立而要求重建。本輪為純文件變更，為保留使用者依賴目錄而沒有執行 purge/reinstall，改以相同 committed Prettier 驗證。
+
+### 剩餘 gate 與下一步
+
+- `P1-B05`：需 GCP organization/folder/billing、三個唯一 project ID 與 owner-approved Terraform apply。
+- `P1-D05`：需真實 LINE channel 與 Identity Platform staging 驗證。
+- `P1-E04`～`P1-E07`：需 staging deployment、production approval wait、rollback、applied dashboard/log query/notification 直接證據。
+- `P1-F02`需 staging dry run；`P1-F04` 已有 ruleset/draft PR/CI，但仍需 review、ready 與 merge 證據。上述完成前 PR 維持 draft，不合併 `main`。
