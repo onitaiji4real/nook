@@ -1,0 +1,2 @@
+bucket = "beauty-platform-dev-unique-tfstate"
+prefix = "platform/dev"

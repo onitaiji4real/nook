@@ -1,0 +1,12 @@
+project_id     = "beauty-platform-prod-unique"
+region         = "asia-east1"
+deploy_runtime = false
+
+container_images = {}
+
+# After P1-001 publishes immutable images, set deploy_runtime = true and use digests:
+# container_images = {
+#   web    = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/web@sha256:..."
+#   api    = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/api@sha256:..."
+#   worker = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/worker@sha256:..."
+# }

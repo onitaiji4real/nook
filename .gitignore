@@ -1,0 +1,28 @@
+node_modules/
+.turbo/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+.terraform.lock.hcl
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+*.auto.tfvars
+!*.tfvars.example
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
