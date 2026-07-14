@@ -51,4 +51,6 @@
 ### 發布前檢查
 
 - 工作樹只有本次 Phase 1 啟動檔案，repo 尚無既有 commit 或 remote。
-- 推送結果與 commit ID 待發布完成後補記。
+- 初始 commit：`dd8c0bf`（`chore: bootstrap phase 1 repository`）。
+- 已設定 `origin` 為 `https://github.com/onitaiji4real/nook.git`，並成功推送、追蹤 `origin/main`。
+- 本段發布結果將以後續 documentation commit 保存。
