@@ -15,7 +15,7 @@ coverage/
 *.tfstate
 *.tfstate.*
 *.tfplan
-.terraform.lock.hcl
+# Commit provider selections for every Terraform root; only state/plan data is ignored.
 crash.log
 override.tf
 override.tf.json

@@ -9,11 +9,12 @@ Terraform 可能建立付費資源。本 repo 的初始交付只做靜態檢查�
 - Terraform >= 1.7、gcloud CLI 與 Application Default Credentials。
 - 可建立 project、綁定 billing、管理 IAM 與 GCS 的權限。
 - 一個既有 seed project，以及 organization 或 folder ID。
+- 各 Terraform root 的 `.terraform.lock.hcl` 必須存在，且包含本機 `darwin_arm64` 與 CI `linux_amd64` 的已簽署 provider checksum。
 
 ## Bootstrap
 
 1. 複製 `infra/terraform/bootstrap/terraform.tfvars.example` 為不追蹤的 `terraform.tfvars`。
-2. 在 bootstrap 目錄執行 `terraform init`、`terraform fmt -check`、`terraform validate`。
+2. 在 bootstrap 目錄執行 `terraform init -lockfile=readonly`、`terraform fmt -check`、`terraform validate`。
 3. 產生 saved plan，確認只包含三個 project、Storage API 與三個 state bucket。
 4. 經 owner 批准後 apply。保存 outputs，並把 bootstrap local state 遷移到受保護的管理 backend；在此之前不可刪除工作站 state。
 
@@ -22,7 +23,7 @@ Terraform 可能建立付費資源。本 repo 的初始交付只做靜態檢查�
 以 dev 為例：
 
 1. 複製 `backend.hcl.example` 與 `terraform.tfvars.example`，填入 bootstrap outputs。
-2. `terraform init -backend-config=backend.hcl`。
+2. `terraform init -lockfile=readonly -backend-config=backend.hcl`。
 3. `terraform fmt -check -recursive` 與 `terraform validate`。
 4. `terraform plan -out=dev.tfplan`；確認 project 與 environment 無誤。
 5. 初次保持 `deploy_runtime=false`，先建立 foundation。
@@ -41,7 +42,9 @@ infra/terraform/scripts/validate.sh
 trivy config --exit-code 1 --severity HIGH,CRITICAL infra/terraform
 ```
 
-`validate.sh` 會對 bootstrap、platform module、dev/stg/prod 執行 `init -backend=false`、`validate`，再執行 mocked Terraform tests 與環境隔離檢查。這些結果只證明 configuration contract，不代表 provider plan 或 cloud apply 已成功。
+`validate.sh` 會對 bootstrap、platform module、dev/stg/prod 執行 `init -backend=false -lockfile=readonly`、`validate`，再執行 mocked Terraform tests 與環境隔離檢查。若 provider constraint 或 checksum 與 committed lockfile 不一致，驗證會停止。這些結果只證明 configuration contract，不代表 provider plan 或 cloud apply 已成功。
+
+經 ADR/依賴審查要升級 provider 時，在五個 root 執行 `terraform providers lock -platform=darwin_arm64 -platform=linux_amd64`，審查版本與 checksum diff，重跑完整 validation 後再提交；不得在一般 CI run 自動更新 lockfile。
 
 取得 GCP 權限後，每個環境另執行 saved plan，並使用以下 checklist：
 

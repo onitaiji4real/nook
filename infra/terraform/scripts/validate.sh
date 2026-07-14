@@ -11,7 +11,7 @@ for directory in \
   "$terraform_root/environments/dev" \
   "$terraform_root/environments/stg" \
   "$terraform_root/environments/prod"; do
-  terraform -chdir="$directory" init -backend=false -input=false
+  terraform -chdir="$directory" init -backend=false -input=false -lockfile=readonly
   terraform -chdir="$directory" validate
 done
 

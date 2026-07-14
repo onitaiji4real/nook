@@ -324,3 +324,24 @@
 - 文件/contract gate P1-F01、worklog gate P1-F03 可由 repository 直接驗證，標記 `PASS`。
 - P1-F02 尚缺 staging deployment dry run；P1-F04 尚缺 GitHub ruleset 與 reviewed PR，維持 `BLOCKED`。
 - 整體 Phase 1 尚未完成：B05、D05、E01、E04～E07、F02、F04 必須取得外部直接證據後才能宣告完成。
+
+## 2026-07-14 — Clean-checkout final acceptance and remote audit
+
+### 唯讀 GitHub 證據
+
+- `git ls-remote --heads origin` 確認遠端只有 `main@dd5f146` 與舊的 `phase1@d1ea43d`；本機仍未 push。
+- GitHub public repository API 確認 default branch 為 `main`；Actions API 回報 `total_count: 0`，因此 P1-E01 沒有 remote successful run 可引用，維持 `BLOCKED`。
+- 本機沒有 `gh` CLI，也沒有使用或輸出任何 GitHub credential；未嘗試修改 ruleset、Environment 或 repository settings。
+
+### Clean checkout 驗證
+
+- 從 `phase1@7e0f70b` 建立無 hardlink 的 `/private/tmp/nook-phase1-final` clone；初始工作樹乾淨。
+- clean checkout 以 pnpm 11.7 supply-chain policy 與 frozen lockfile 重建 13 個 workspace projects；format、12-project lint/typecheck/build、unit tests 全數通過。
+- 本機 PostGIS migration 顯示 2 migrations、無 pending；database 3 tests、API 11 tests 通過。
+- workflow security/ordering、deploy shell syntax、Terraform 五個 validate/3 mocks/isolation、Terraform Trivy、production audit 全數符合 gate；audit 僅有 2 moderate。
+
+### Provider lockfile 修正
+
+- clean checkout 的 Terraform init 重新建立五份 `.terraform.lock.hcl`，證明既有 ignore policy 讓 CI provider resolution 可漂移。
+- 移除 lockfile ignore，為 bootstrap/module/dev/stg/prod 固定 Google provider 6.50.0，納入 `darwin_arm64` 與 `linux_amd64` 已簽署 checksums。
+- `validate.sh` 改用 `-lockfile=readonly`；未來 provider 升級必須顯式更新並審查 lockfile，CI 不得靜默改寫。
