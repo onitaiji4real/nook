@@ -345,3 +345,25 @@
 - clean checkout 的 Terraform init 重新建立五份 `.terraform.lock.hcl`，證明既有 ignore policy 讓 CI provider resolution 可漂移。
 - 移除 lockfile ignore，為 bootstrap/module/dev/stg/prod 固定 Google provider 6.50.0，納入 `darwin_arm64` 與 `linux_amd64` 已簽署 checksums。
 - `validate.sh` 改用 `-lockfile=readonly`；未來 provider 升級必須顯式更新並審查 lockfile，CI 不得靜默改寫。
+
+## 2026-07-14 — Exact-head clean-checkout acceptance
+
+### 驗收基準
+
+- 以含 provider lockfile 修正的 `phase1@a8e1db4` 建立 `/private/tmp/nook-phase1-final-locked` clean checkout；本節驗證的是程式與基礎設施 exact head，後續文件紀錄 commit 不改變該驗收內容。
+- frozen install 與 pnpm 11 supply-chain policy 通過；format、12-project lint/typecheck/build、18 個 unit task、database 3 tests 與 API 11 tests 全數成功。
+
+### Infrastructure、供應鏈與映像證據
+
+- workflow security/ordering checker與 deploy shell syntax 通過；Terraform bootstrap/module/dev/stg/prod 均以 committed lockfile readonly init/validate 成功，3 個 mock tests、environment isolation 與 Terraform Trivy HIGH/CRITICAL 0 全數通過。
+- production `pnpm audit --prod --audit-level high` exit 0；目前只有 2 個 moderate，沒有 high/critical。
+- 從 clean checkout 重建 web/API/worker images；三者 `Config.User` 均為 `65532:65532`，Trivy image HIGH/CRITICAL 均為 0。
+- distroless API image 執行 `prisma migrate deploy` 成功，確認 2 個 migrations 且無 pending；application startup 沒有執行 migration。
+- web、API、worker 容器皆達 Docker `healthy`；各自 health/readiness 共六個 endpoint 均成功並回報版本 `a8e1db4`，臨時驗收容器已清除。
+- 所有驗證結束後 clean checkout 維持乾淨，證明 readonly Terraform init 沒有改寫 committed provider lockfiles。
+
+### Handoff 與剩餘 gate
+
+- repository 內可完成的 Phase 1 自動化驗收已在 exact head 通過；P1-001～P1-005 task 狀態維持 `done`。
+- Phase 1 整體仍不可宣告完成：B05、D05、E01、E04～E07、F02、F04 仍需要 GCP/LINE staging、GitHub ruleset與 Environment、遠端 workflow、部署/rollback、observability notification 及 reviewed PR 的直接證據。
+- 本輪未執行 Terraform apply、未建立或修改外部資源、未 push，亦未更新 `main`。
