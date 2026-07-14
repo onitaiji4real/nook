@@ -35,4 +35,5 @@
 
 - 完成日期：2026-07-14。
 - 驗證與已知風險詳見 `docs/worklog.md` 的 P1-001 完成紀錄。
+- 2026-07-14 completion audit 補齊 web health/readiness 的 `x-request-id`、安全 request ID validation 與 production-image runtime evidence；三服務 correlation contract 現已一致。
 - 後續可開始 P1-003；不得在 P1-003 偷渡 LINE login 或 booking 功能。

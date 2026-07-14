@@ -38,6 +38,46 @@ describe('createRequestLog', () => {
       version: 'synthetic-sha',
       environment: 'staging',
       requestId: 'request-123',
+      operation: 'http.request',
+      outcome: 'success',
+    });
+  });
+
+  it('marks server errors as failed operations', () => {
+    expect(
+      createRequestLog({
+        service: 'worker',
+        version: 'synthetic-sha',
+        environment: 'staging',
+        requestId: 'request-500',
+        method: 'GET',
+        path: '/ready',
+        statusCode: 503,
+        durationMs: 2.5,
+      }),
+    ).toMatchObject({
+      severity: 'ERROR',
+      operation: 'http.request',
+      outcome: 'failure',
+    });
+  });
+
+  it('marks rejected client requests as failed operations without inflating error severity', () => {
+    expect(
+      createRequestLog({
+        service: 'api',
+        version: 'synthetic-sha',
+        environment: 'staging',
+        requestId: 'request-401',
+        method: 'GET',
+        path: '/v1/me',
+        statusCode: 401,
+        durationMs: 1,
+      }),
+    ).toMatchObject({
+      severity: 'INFO',
+      operation: 'http.request',
+      outcome: 'failure',
     });
   });
 });

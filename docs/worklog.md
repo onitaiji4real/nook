@@ -367,3 +367,31 @@
 - repository 內可完成的 Phase 1 自動化驗收已在 exact head 通過；P1-001～P1-005 task 狀態維持 `done`。
 - Phase 1 整體仍不可宣告完成：B05、D05、E01、E04～E07、F02、F04 仍需要 GCP/LINE staging、GitHub ruleset與 Environment、遠端 workflow、部署/rollback、observability notification 及 reviewed PR 的直接證據。
 - 本輪未執行 Terraform apply、未建立或修改外部資源、未 push，亦未更新 `main`。
+
+## 2026-07-14 — Harden Phase 1 request correlation evidence
+
+### Completion audit 發現
+
+- 逐項比對 P1-A04 必要證據時，確認 API/worker middleware 會回 `x-request-id`，但 Next.js web health/readiness routes 只有 body 與 `Cache-Control`；先前 runtime smoke 因只記錄 JSON body，未證明三服務 correlation contract。
+- 共用 HTTP request log 原有 service/version/environment/requestId，但缺少 AGENTS.md 要求的 operation/outcome；401/403 也無一致 failure outcome 可供查詢。
+
+### 修正
+
+- 新增 web probe response helper：只接受 1～128 字元安全 request ID，否則產生 UUID；health/readiness 均回 `x-request-id`、`Cache-Control: no-store` 與既有固定 body schema。
+- web 透過既有 `@nook/observability` 輸出結構化 request completion log，不記錄任意 request headers、token 或 PII。
+- 共用 request log 新增 `operation=http.request`；HTTP status 400 以上為 `outcome=failure`，500 以上才使用 ERROR severity。
+- 新增 web route tests 與 observability 2xx/4xx/5xx outcome tests；workspace lockfile 明確加入 web 對 observability package 的依賴。
+
+### 實際驗證
+
+- frozen install 與 pnpm supply-chain policy、format、12-project lint/typecheck、18 個 unit tasks、database 3 tests、API 11 tests與 12-project build 全部通過。
+- 從目前工作樹重建 web/API/worker 三個 distroless production images；三者皆為 `healthy`、`65532:65532`，六個 health/readiness endpoints 均回 200、固定 schema 與傳入的安全 `x-request-id`。
+- web runtime 另驗證不安全 request ID 被 UUID 取代；三服務 container logs 均含 service/version/environment/requestId/operation/outcome。
+- Trivy 掃描三個最終 images，HIGH/CRITICAL findings 分別為 0、0、0。
+
+### 修正過程與剩餘風險
+
+- 第一次 web test 直接執行 package script時讀到舊的 observability dist；依 Turbo `^build` 契約先重建 dependency 後通過，完整 root test 亦通過。
+- 第一次 integration 未注入 `DATABASE_URL`，第二次在受限 sandbox 無法連 localhost；確認 PostGIS container healthy 後，以允許本機 Docker 網路的相同 DSN 重跑即全部通過。
+- P1-E07 仍為 `BLOCKED`：本輪補的是 repository/runtime log 證據，尚未取得 applied Cloud Logging query、alert notification channel 與 staging 通知演練。
+- 本輪未 push、未 apply Terraform、未建立外部資源，也未更新 `main`。

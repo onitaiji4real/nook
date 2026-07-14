@@ -44,9 +44,13 @@ export interface RequestLogInput {
 }
 
 export function createRequestLog(input: RequestLogInput): Record<string, unknown> {
+  const outcome = input.statusCode >= 400 ? 'failure' : 'success';
+
   return {
     severity: input.statusCode >= 500 ? 'ERROR' : 'INFO',
     event: 'http.request.completed',
+    operation: 'http.request',
+    outcome,
     ...input,
   };
 }

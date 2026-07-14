@@ -28,5 +28,6 @@
 ## Handoff
 
 - 本機與 CI contract 已完成：workspace quality/tests/build、Terraform mock/isolation、production dependency audit、三個 distroless image build/nonroot/smoke/scan，以及獨立 migration job 命令皆通過。
+- 2026-07-14 completion audit 將 web probes 接上 correlation/structured logging，並統一 HTTP request log 的 `operation` 與 `outcome`；4xx/5xx 均標記 failure，只有 5xx 提升為 ERROR。
 - `P1-E01`、`P1-E04`～`P1-E07` 仍需要 GitHub/GCP 管理權限與 staging 實際證據；這些 gate 維持 `BLOCKED`，不可用本機驗證替代。
 - repository admin 下一步先設定 required checks 與 `prod` Environment reviewer；platform owner 再依 `docs/runbooks/deployment.md` 執行 staging deploy、rollback 與 alert notification 演練。
