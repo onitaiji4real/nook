@@ -192,7 +192,7 @@ resource "google_identity_platform_config" "default" {
 }
 
 resource "google_secret_manager_secret" "runtime" {
-  for_each = toset(["database-url", "line-channel-secret"])
+  for_each = toset(["database-url"])
 
   project   = var.project_id
   secret_id = "nook-${each.value}"
@@ -300,7 +300,6 @@ resource "google_project_iam_member" "cloud_sql_instance_user" {
 resource "google_secret_manager_secret_iam_member" "runtime_access" {
   for_each = {
     api_database    = { service = "api", secret = "database-url" }
-    api_line        = { service = "api", secret = "line-channel-secret" }
     worker_database = { service = "worker", secret = "database-url" }
   }
 
@@ -308,6 +307,12 @@ resource "google_secret_manager_secret_iam_member" "runtime_access" {
   secret_id = google_secret_manager_secret.runtime[each.value.secret].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime[each.value.service].email}"
+}
+
+resource "google_service_account_iam_member" "api_custom_token_signer" {
+  service_account_id = google_service_account.runtime["api"].name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.runtime["api"].email}"
 }
 
 resource "google_storage_bucket_iam_member" "media_object_admin" {
@@ -372,25 +377,44 @@ resource "google_cloud_run_v2_service" "application" {
       }
 
       dynamic "env" {
-        for_each = contains(["api", "worker"], each.key) ? [1] : []
+        for_each = each.key == "api" ? [1] : []
         content {
-          name = "DATABASE_URL"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.runtime["database-url"].secret_id
-              version = "latest"
-            }
-          }
+          name  = "AUTH_ADAPTER_MODE"
+          value = "firebase"
         }
       }
 
       dynamic "env" {
         for_each = each.key == "api" ? [1] : []
         content {
-          name = "LINE_CHANNEL_SECRET"
+          name  = "LINE_CHANNEL_ID"
+          value = var.line_channel_id
+        }
+      }
+
+      dynamic "env" {
+        for_each = each.key == "api" ? [1] : []
+        content {
+          name  = "IDENTITY_PLATFORM_PROJECT_ID"
+          value = var.project_id
+        }
+      }
+
+      dynamic "env" {
+        for_each = each.key == "api" ? [1] : []
+        content {
+          name  = "IDENTITY_PLATFORM_SERVICE_ACCOUNT_ID"
+          value = google_service_account.runtime["api"].email
+        }
+      }
+
+      dynamic "env" {
+        for_each = contains(["api", "worker"], each.key) ? [1] : []
+        content {
+          name = "DATABASE_URL"
           value_source {
             secret_key_ref {
-              secret  = google_secret_manager_secret.runtime["line-channel-secret"].secret_id
+              secret  = google_secret_manager_secret.runtime["database-url"].secret_id
               version = "latest"
             }
           }

@@ -220,3 +220,46 @@
 ### 下一步
 
 - 執行 P1-004 LINE login exchange 與 Identity Platform adapters。
+
+## 2026-07-14 — Start P1-004 LINE login exchange
+
+### 範圍與安全決策
+
+- 登入端點只接受 raw LINE ID token 與 nonce；不接受前端提供的 LINE userId 作為身分證明。
+- LINE adapter 驗證 issuer、channel audience、expiry 與 nonce，並對外部呼叫設定 timeout；錯誤回應不揭露 token、email 或 provider subject。
+- Identity Platform 使用 Application Default Credentials 與 service account impersonation/signBlob；不建立或提交 service-account JSON key。
+- local identity 以 `(provider, providerSubject)` unique constraint 與 transaction 保證重試及 concurrent exchange 的 idempotency。
+
+### 進度
+
+- 任務狀態改為 `in_progress`；開始建立 typed config、adapter contract、application service、API 與測試。
+
+## 2026-07-14 — Complete P1-004 LINE login exchange
+
+### 已完成
+
+- 新增 `POST /v1/auth/line/exchange`；request 僅允許 raw ID token 與至少 16 字元 nonce，成功只回 `customToken` 與 `expiresIn=3600`，不建立 cookie。
+- LINE adapter 呼叫官方 verify endpoint，設定 3 秒 timeout，並 defense-check issuer、channel audience、expiry、nonce 與 subject；invalid identity 回 401，timeout/unavailable 回 503 Problem Details。
+- 新增 Prisma identity repository；transaction 與 `(provider, providerSubject)` unique constraint 保證重試與 concurrent exchange 只留下單一 User/UserIdentity。
+- 新增 Firebase Admin adapter，使用 ADC 建立 custom token並驗證後續 bearer ID token；`AUTH_ADAPTER_MODE=disabled` 預設 fail closed，firebase mode 缺必要 typed config 時啟動失敗。
+- Terraform API runtime 注入非秘密的 LINE channel/project/service account identifiers；API service account 只取得對自身的 token creator binding。移除目前流程不使用的 LINE channel secret 與 accessor。
+- 新增 ADR 0002、OpenAPI、login sequence、profile allowlist 與 runtime 設定文件；`firebase-admin` 13.9.0 鎖版，支援目前 Node 20 runtime。
+
+### 實際驗證
+
+- `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`：12 個 workspace project 全部成功；相關 unit tests 16 項通過。
+- 本機 PostGIS 啟動後，database integration 3 項通過；API integration 共 11 項通過，其中 LINE exchange 4 項、tenant/RBAC regression 7 項。
+- concurrent exchange 兩個 request 都回 200，資料庫只有一個 synthetic LINE identity 與一個 user；captured log 不含 raw token、LINE subject 或 synthetic email。
+- `infra/terraform/scripts/validate.sh`：bootstrap、module、dev/stg/prod 五個 configuration validate，3 個 mocked tests與 isolation check 全部通過。
+- Trivy Terraform HIGH/CRITICAL finding 為 0；OpenAPI YAML 與 workspace formatting 通過。
+
+### 修正紀錄與風險
+
+- 初次 integration run 因 shell 未帶 `DATABASE_URL`、本機 PostGIS 未啟動而失敗；補齊既有 `.env.example` 連線並啟動容器後通過。
+- 新增 workspace dependency 後，首次 API integration 無法解析 `@nook/line`；更新 lockfile importer、重新連結並先 build workspace packages 後通過。
+- 新 controller 初次未套 Problem Details filter，讓 application error 變成 Nest 500；補上 filter 後 401/503 contract 通過。
+- P1-D05 仍 `BLOCKED`：沒有真實 staging LINE channel/Identity Platform 設定與批准，因此未執行 provider exchange，也未建立任何外部登入或雲端資源。
+
+### 下一步
+
+- 執行 P1-005 CI/CD and observability；dependency/container scan 必須涵蓋新增的 `firebase-admin` runtime dependency。

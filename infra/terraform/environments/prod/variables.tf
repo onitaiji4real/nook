@@ -1,6 +1,10 @@
 variable "project_id" { type = string }
 variable "region" { type = string }
 variable "deploy_runtime" { type = bool }
+variable "line_channel_id" {
+  type    = string
+  default = ""
+}
 variable "container_images" { type = map(string) }
 variable "github_repository" { type = string }
 variable "monitoring_notification_channels" {

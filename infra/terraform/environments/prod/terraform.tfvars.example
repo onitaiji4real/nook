@@ -1,6 +1,7 @@
 project_id     = "beauty-platform-prod-unique"
 region         = "asia-east1"
 deploy_runtime = false
+line_channel_id = ""
 github_repository = "onitaiji4real/nook"
 
 container_images = {}

@@ -9,6 +9,11 @@ export interface HealthResponse {
 
 export type { ProblemDetails } from './problem-details';
 export {
+  lineExchangeRequestSchema,
+  type LineExchangeRequest,
+  type LineExchangeResponse,
+} from './auth';
+export {
   createTenantRequestSchema,
   tenantIdSchema,
   type CreateTenantRequest,

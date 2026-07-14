@@ -6,6 +6,25 @@ info:
 servers:
   - url: http://localhost:8080
 paths:
+  /v1/auth/line/exchange:
+    post:
+      operationId: exchangeLineIdentity
+      summary: Verify a LINE ID token and issue an Identity Platform custom token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LineExchangeRequest' }
+      responses:
+        '200':
+          description: Custom token contract; no cookie is created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LineExchangeResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /v1/tenants:
     post:
       operationId: createTenant
@@ -79,6 +98,20 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetails' }
   schemas:
+    LineExchangeRequest:
+      type: object
+      additionalProperties: false
+      required: [idToken, nonce]
+      properties:
+        idToken: { type: string, minLength: 1, maxLength: 8192, writeOnly: true }
+        nonce: { type: string, minLength: 16, maxLength: 256, writeOnly: true }
+    LineExchangeResponse:
+      type: object
+      additionalProperties: false
+      required: [customToken, expiresIn]
+      properties:
+        customToken: { type: string }
+        expiresIn: { type: integer, const: 3600 }
     CreateTenantRequest:
       type: object
       additionalProperties: false

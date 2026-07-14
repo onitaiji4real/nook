@@ -7,7 +7,7 @@
 | P1-001 | Repository foundation      | done  | 無                              |
 | P1-002 | Terraform cloud foundation | done  | GCP 外部資訊僅在 apply 時需要   |
 | P1-003 | Tenant onboarding and RBAC | done  | P1-001                          |
-| P1-004 | LINE login exchange        | ready | P1-003                          |
+| P1-004 | LINE login exchange        | done  | P1-003                          |
 | P1-005 | CI/CD and observability    | ready | P1-001、P1-002 runtime contract |
 
 ## 接手規則

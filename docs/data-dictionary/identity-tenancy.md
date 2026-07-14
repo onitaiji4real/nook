@@ -6,7 +6,7 @@
 
 ## UserIdentity
 
-外部 provider subject 與 local User 的連結。`(provider, provider_subject)` 全域唯一；subject 不得出現在 log。`profile_json` 只能保存完成登入所需的最小 metadata，P1-004 會定義具體 allowlist。
+外部 provider subject 與 local User 的連結。`(provider, provider_subject)` 全域唯一；subject 不得出現在 log。LINE `profile_json` allowlist 僅含 `displayName` 與 `avatarUrl`；不得保存 email、raw token、nonce 或完整 provider response。
 
 ## Tenant
 

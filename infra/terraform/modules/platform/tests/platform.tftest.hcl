@@ -36,7 +36,8 @@ run "rejects_mutable_or_incomplete_runtime_images" {
   command = plan
 
   variables {
-    deploy_runtime = true
+    deploy_runtime  = true
+    line_channel_id = "1234567890"
     container_images = {
       web = "asia-east1-docker.pkg.dev/nook-test-dev/nook-applications/web:latest"
     }
@@ -49,7 +50,8 @@ run "runtime_uses_private_worker_and_immutable_images" {
   command = plan
 
   variables {
-    deploy_runtime = true
+    deploy_runtime  = true
+    line_channel_id = "1234567890"
     container_images = {
       web    = "asia-east1-docker.pkg.dev/nook-test-dev/nook-applications/web@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       api    = "asia-east1-docker.pkg.dev/nook-test-dev/nook-applications/api@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"

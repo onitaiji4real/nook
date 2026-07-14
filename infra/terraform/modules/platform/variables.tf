@@ -45,6 +45,17 @@ variable "deploy_runtime" {
   default     = false
 }
 
+variable "line_channel_id" {
+  description = "LINE Login channel ID. This is an audience identifier, not a secret."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = !var.deploy_runtime || length(trimspace(var.line_channel_id)) > 0
+    error_message = "line_channel_id is required when deploy_runtime is true."
+  }
+}
+
 variable "container_images" {
   description = "Immutable image references keyed by web, api, and worker."
   type        = map(string)

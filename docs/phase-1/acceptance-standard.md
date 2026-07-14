@@ -88,9 +88,9 @@ Phase 1 只有在所有 required gate 為 `PASS` 時才可標記完成。`BLOCKE
 
 ## 外部證據 owner
 
-| Gate           | 尚需輸入/權限                                                  | Owner 解除方式                                                  |
-| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| P1-B05         | organization/folder、billing、唯一 project IDs、apply approval | Cloud owner 提供非秘密識別值並批准 saved plan。                 |
-| P1-D05         | LINE channel ID/secret、callback、Identity Platform project    | Identity owner 透過 Secret Manager 注入並批准 staging 測試。    |
-| P1-E01/E05     | GitHub ruleset、Environments 管理權限                          | Repository admin 設定 required checks 與 production reviewers。 |
-| P1-E04/E06/E07 | staging deploy、rollback、monitoring/notification 權限         | Platform owner 批准部署與演練窗口。                             |
+| Gate           | 尚需輸入/權限                                                  | Owner 解除方式                                                                                            |
+| -------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| P1-B05         | organization/folder、billing、唯一 project IDs、apply approval | Cloud owner 提供非秘密識別值並批准 saved plan。                                                           |
+| P1-D05         | LINE channel ID、callback、Identity Platform project           | Identity owner 設定 staging channel/project 並批准測試；目前 ID token verify flow 不讀取 channel secret。 |
+| P1-E01/E05     | GitHub ruleset、Environments 管理權限                          | Repository admin 設定 required checks 與 production reviewers。                                           |
+| P1-E04/E06/E07 | staging deploy、rollback、monitoring/notification 權限         | Platform owner 批准部署與演練窗口。                                                                       |

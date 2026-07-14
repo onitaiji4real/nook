@@ -10,6 +10,7 @@ module "platform" {
   environment                      = "stg"
   region                           = var.region
   deploy_runtime                   = var.deploy_runtime
+  line_channel_id                  = var.line_channel_id
   container_images                 = var.container_images
   github_repository                = var.github_repository
   monitoring_notification_channels = var.monitoring_notification_channels

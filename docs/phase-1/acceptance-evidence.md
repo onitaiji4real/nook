@@ -21,7 +21,10 @@
 | P1-C03      | `PASS`    | API integration：cross-tenant 403、inactive membership 立即 403。                                                               |
 | P1-C04      | `PASS`    | tenant.created/authorization.denied audit + captured log test，不含 synthetic name/profile。                                    |
 | P1-C05      | `PASS`    | `architecture.test.ts` 禁止 controller Prisma，並檢查 tenant repository method 的 tenantId contract。                           |
-| P1-D01～D04 | `NOT_RUN` | P1-004 尚未完成。                                                                                                               |
+| P1-D01      | `PASS`    | `@nook/line` synthetic tests 驗證 valid/expired/wrong audience/invalid nonce/timeout；API 只接受 raw token + nonce。            |
+| P1-D02      | `PASS`    | API/PostgreSQL concurrent exchange integration：兩個 200、僅一個 User 與一個 `(LINE, subject)` identity。                       |
+| P1-D03      | `PASS`    | LINE adapter 3 秒 timeout；API e2e 驗證 invalid token 401、provider timeout 503 與穩定 Problem Details。                        |
+| P1-D04      | `PASS`    | API e2e 僅回 customToken/expiresIn、無 Set-Cookie；Firebase adapter contract tests 通過。                                       |
 | P1-D05      | `BLOCKED` | 尚缺 LINE/Identity Platform staging configuration。                                                                             |
 | P1-E01～E07 | `NOT_RUN` | P1-005 尚未完成；其中遠端 required checks/deploy/rollback/alerts 需要外部證據。                                                 |
 | P1-F01～F04 | `NOT_RUN` | 最終文件與 Git/PR 稽核尚未執行。                                                                                                |

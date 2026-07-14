@@ -25,6 +25,11 @@ export async function checkDatabaseConnection(client = getPrismaClient()): Promi
 
 export { Prisma, PrismaClient } from '@prisma/client';
 export {
+  PrismaIdentityRepository,
+  type IdentityRepository,
+  type LinkLineIdentityInput,
+} from './identity-repository';
+export {
   classifyTenantConflict,
   PrismaTenantRepository,
   type CreateTenantWithOwnerInput,

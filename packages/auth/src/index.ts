@@ -16,6 +16,12 @@ export interface IdentityTokenVerifier {
 
 export const IDENTITY_TOKEN_VERIFIER = Symbol('IDENTITY_TOKEN_VERIFIER');
 
+export interface CustomTokenIssuer {
+  issue(userId: string): Promise<{ readonly customToken: string; readonly expiresIn: number }>;
+}
+
+export const CUSTOM_TOKEN_ISSUER = Symbol('CUSTOM_TOKEN_ISSUER');
+
 export class IdentityTokenVerificationError extends Error {
   constructor(
     readonly code: 'invalid_token' | 'verifier_unavailable',

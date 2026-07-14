@@ -7,7 +7,7 @@ describe('worker HealthService', () => {
   it('presents the stable health response', () => {
     const probe = { isReady: vi.fn() } as unknown as DatabaseProbeService;
     const service = new HealthService(
-      { nodeEnv: 'test', port: 8081, appVersion: 'test-sha' },
+      { nodeEnv: 'test', port: 8081, appVersion: 'test-sha', identity: { mode: 'disabled' } },
       probe,
     );
 
@@ -21,7 +21,7 @@ describe('worker HealthService', () => {
   it('reports an unavailable dependency without exposing its connection details', async () => {
     const probe = { isReady: vi.fn().mockResolvedValue(false) } as unknown as DatabaseProbeService;
     const service = new HealthService(
-      { nodeEnv: 'test', port: 8081, appVersion: 'test-sha' },
+      { nodeEnv: 'test', port: 8081, appVersion: 'test-sha', identity: { mode: 'disabled' } },
       probe,
     );
 
