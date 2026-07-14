@@ -426,3 +426,22 @@
 
 - P1-E01、E05、F04 維持 `BLOCKED`，解除順序為：明確批准 push `phase1`、repository admin 建立 ruleset/environments、遠端 CI 通過，再建立 reviewed `phase1` → `main` PR。
 - 查詢全程未使用或輸出 GitHub token，未修改任何 repository setting；本輪仍未 push 或更新 `main`。
+
+## 2026-07-14 — Push Phase 1 and verify remote CI
+
+### Push 安全界線
+
+- 使用者在明確得知下一步為 push `phase1` 後指示繼續；推送前確認工作樹乾淨、本機 `phase1@d038606` 領先遠端 12 commits。
+- `git push origin phase1` 成功，遠端由 `d1ea43d` fast-forward 至 `d038606`；再次查詢確認 `main` 仍為 `dd5f146`，沒有直接更新或合併 main。
+
+### GitHub Actions 直接證據
+
+- push 自動觸發 CI [run #1](https://github.com/onitaiji4real/nook/actions/runs/29344526296)，head branch `phase1`、head SHA `d038606`、event `push`。
+- run 於 2026-07-14T15:17:12Z 完成，結論 `success`；`verify`、`terraform`、`container-images (web)`、`container-images (api)`、`container-images (worker)` 五個 jobs 全部 success。
+- remote verify job 涵蓋 frozen install、lint、typecheck、unit、migration、integration、build 與 production audit；Terraform job 涵蓋 readonly contract validation 與 config scan；三個 image jobs涵蓋 build、non-root assertion 與 Trivy scan。
+
+### Gate 更新與剩餘限制
+
+- P1-E01 現已有 successful workflow run，但 GitHub rulesets API 仍為 `[]`，checks 尚未被設定為 required，因此 gate 維持 `BLOCKED`。
+- P1-E02 新增 remote CI 直接證據並維持 `PASS`；P1-F04 的 push 部分已完成，但仍缺 ruleset 與 reviewed `phase1` → `main` PR。
+- 嘗試只檢查 Git credential helper 是否可提供管理憑證時，被安全政策判定為不必要的 credential probing 而拒絕；沒有讀取、輸出或繞過取得 token，也沒有修改 GitHub settings。
