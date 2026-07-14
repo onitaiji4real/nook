@@ -4,12 +4,12 @@
 
 ## Branch roles
 
-| Branch | 用途 | 寫入方式 |
-|---|---|---|
-| `main` | 可發布、可部署 production 的穩定版本 | 只接受 PR；禁止直接 commit/push |
-| `phase1` | Phase 1 平台骨架整合分支 | Phase 1 任務 commit 或 task branch PR |
-| `dev` | Phase 1 後的日常整合分支 | 功能與修正 PR |
-| `codex/p1-<id>-<slug>` | 需要獨立 review 的單一垂直任務 | 完成後合併至 `phase1` |
+| Branch                 | 用途                                 | 寫入方式                              |
+| ---------------------- | ------------------------------------ | ------------------------------------- |
+| `main`                 | 可發布、可部署 production 的穩定版本 | 只接受 PR；禁止直接 commit/push       |
+| `phase1`               | Phase 1 平台骨架整合分支             | Phase 1 任務 commit 或 task branch PR |
+| `dev`                  | Phase 1 後的日常整合分支             | 功能與修正 PR                         |
+| `codex/p1-<id>-<slug>` | 需要獨立 review 的單一垂直任務       | 完成後合併至 `phase1`                 |
 
 目前所有 Phase 1 工作以 `phase1` 為 target。不得在 `main` 開始或完成開發工作。
 

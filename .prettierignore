@@ -1,0 +1,8 @@
+.next
+.terraform
+coverage
+dist
+docs/product/business-technical-plan.md
+node_modules
+pnpm-lock.yaml
+apps/web/next-env.d.ts

@@ -73,3 +73,69 @@
 - 執行環境沒有 GitHub CLI，無法直接套用遠端 branch protection。
 - repository 管理員仍須依 `docs/git-workflow.md` 在 GitHub Settings 啟用 `main` ruleset；本機 hook 不能取代 server-side protection。
 - 本次變更必須提交並推送至 `phase1`，不得更新 `main`。
+
+## 2026-07-14 — Install Microsoft commit skill
+
+### 範圍
+
+- 審查並安裝 Microsoft VS Code repository 的 `commit` Agent Skill。
+
+### 審查與結果
+
+- 已檢查 SkillsMP 頁面、GitHub tree 與完整 `SKILL.md`；來源目錄只有 `SKILL.md`，無 companion scripts、references 或 assets。
+- 風險：skill 在只有 unstaged changes 時會執行 `git add -A`；使用前仍需人工確認 status/diff 與 secrets。
+- 偏好的 `npx skills add https://github.com/microsoft/vscode --skill commit` 無法辨識該內部路徑，未安裝檔案。
+- 改用 Codex skill installer 的精確 GitHub tree URL，成功安裝至 `~/.codex/skills/commit`。
+- 安裝後 Git blob hash 為 `2bd73ac44c966cd5700b5a7b52ae19f88c3af3bc`，與審查來源完全一致；檔案數為 1。
+
+### 後續
+
+- Skill 將從下一個 turn 開始可用。
+
+## 2026-07-14 — Start P1-001 repository foundation
+
+### 範圍
+
+- 將 monorepo 文件骨架實作為可安裝、可編譯、可測試的 Next.js／NestJS／Prisma workspace。
+
+### 基線決策
+
+- 任務狀態改為 `in_progress`，所有變更留在 `phase1`。
+- Context7 未掛載，改以 Next.js、NestJS、Prisma、Turborepo 官方文件與 npm registry 核對設定。
+- 目前 Node 為 20.17.0；Next.js 16 與 NestJS 11 相容，但 Prisma 7 要求 Node 20.19 以上，因此 Phase 1 鎖定 Prisma 6.19，避免無法在目前開發環境驗證。
+- 採 Vitest 3、ESLint 9、TypeScript 5.9；不在 Phase 1 引入預約或公開業務 endpoint。
+
+### 驗證
+
+- 官方 `postgis/postgis:16-3.5` 無 ARM64 manifest；本機 compose 明確指定 `linux/amd64` 模擬，避免 Apple Silicon 啟動失敗。CI Ubuntu amd64 不受影響。
+- Docker 首次下載 image 時因主機只剩約 2.0 GiB 而回報 `no space left on device`；使用者清出空間後已解除，未由自動化清除任何既有 images、volumes 或使用者檔案。
+
+### 已完成
+
+- 建立 13-project pnpm／Turborepo workspace，包含 Next.js web、NestJS API、NestJS worker 與共用 packages。
+- 建立 PostgreSQL 16 + PostGIS Docker Compose、Prisma client、初始 schema 與顯式 deploy migration；application startup 不會自動執行 migration。
+- 建立 web、API、worker 的 health/readiness endpoint；API 與 worker readiness 會探測資料庫並在不可用時回傳 503，但不揭露 DSN。
+- 建立 request ID middleware、結構化安全 request log、敏感欄位 redaction 與對應 unit test。
+- 建立 GitHub Actions CI，依序執行 frozen install、lint、typecheck、unit test、migration、integration test 與 build。
+- 同步本機啟動 README、ADR 0001、任務狀態與 handoff；P1-003 解除依賴並改為 `ready`。
+
+### 實際驗證
+
+- `CI=true pnpm install --frozen-lockfile`：成功，13 個 workspace project 由 lockfile 重建，Prisma Client 6.19.0 成功產生。
+- `pnpm format:check`、`pnpm lint`、`pnpm typecheck`、`pnpm test`、`pnpm build`：全部成功；lint/typecheck/build 各 12 個 project 通過，unit test 共 9 項通過。
+- fresh PostGIS database 已套用 `20260714000000_phase1_foundation`；再次執行 `pnpm db:migrate` 顯示無 pending migration。
+- `pnpm test:integration`：3 項通過，確認 PostGIS extension、UserIdentity unique constraint 與 Membership tenant/user unique constraint。
+- web production server 的 `/api/health`、`/api/readiness` 均回傳 200；API 與 worker 的 health 回傳 200，無 DB 時 readiness 回傳 503，連接 DB 後回傳 200。
+- API 與 worker 的 smoke test 均回傳 `x-request-id`，結構化 log 未包含 database URL。
+- Prisma schema validate、CI/workspace YAML parse、root JSON parse、`git diff --check` 與原始產品文件 `cmp` 均通過。
+
+### 決策與風險
+
+- 目前開發機 Node 20.17.0 不符合 Prisma 7 的最低 Node 20.19，因此鎖定 Prisma 6.19；升級 Node 後需另開 dependency upgrade 任務評估 Prisma 7 migration。
+- Apple Silicon 本機透過 `linux/amd64` 執行官方 PostGIS image，啟動速度可能比原生 image 慢；GitHub Actions amd64 runner 不受影響。
+- CI workflow 已完成本機語法與等價命令驗證，但尚未取得遠端 GitHub Actions run 結果；推送 `phase1` 後需確認第一個 workflow。
+- Terraform CLI 驗證與 GCP apply 不屬於本任務，維持在 P1-002；未建立任何雲端付費資源。
+
+### 下一步
+
+- 開始 P1-003 Tenant onboarding and RBAC，或並行處理 P1-002 Terraform cloud foundation；兩者都必須使用獨立 task branch 或 `phase1`，不得直接更新 `main`。

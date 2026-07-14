@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light;
+  font-family:
+    Inter,
+    'Noto Sans TC',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  background: #f7f3ec;
+  color: #2d2925;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  display: grid;
+  min-height: 100vh;
+  align-content: center;
+  gap: 1rem;
+  max-width: 54rem;
+  padding: clamp(2rem, 8vw, 7rem);
+}
+
+h1 {
+  max-width: 12ch;
+  margin: 0;
+  font-family: Georgia, 'Noto Serif TC', serif;
+  font-size: clamp(3rem, 9vw, 6.5rem);
+  font-weight: 500;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+p {
+  max-width: 42rem;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.eyebrow {
+  color: #9a4f3b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}

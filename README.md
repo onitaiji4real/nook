@@ -4,7 +4,7 @@ LINE-first 的美業店務 SaaS 與新客媒合平台。產品與技術決策以
 
 ## 目前狀態
 
-Phase 1 平台骨架準備中。當前交付範圍與完成定義見 [Phase 1 實作計畫](docs/phase-1/implementation-plan.md)，可接手工作見 [Codex 垂直任務](docs/tasks/README.md)，進度見 [工作報告](docs/worklog.md)。
+Phase 1 平台骨架實作中。當前交付範圍與完成定義見 [Phase 1 實作計畫](docs/phase-1/implementation-plan.md)，可接手工作見 [Codex 垂直任務](docs/tasks/README.md)，進度見 [工作報告](docs/worklog.md)。
 
 ## Repository layout
 
@@ -20,6 +20,42 @@ Phase 1 平台骨架準備中。當前交付範圍與完成定義見 [Phase 1 �
 2. 從 `docs/tasks/README.md` 選取一個 `ready` 任務。
 3. 將任務改為 `in_progress`，實作並持續記錄 `docs/worklog.md`。
 4. 完成驗收與檢查後改為 `done`，留下風險及後續決策。
+
+## Local development
+
+需求：Node.js 20.17+、pnpm 9.9+、Docker Desktop 或 OrbStack。
+
+Apple Silicon 會以 Docker 的 `linux/amd64` 模擬執行官方 PostGIS image；首次啟動較慢。
+
+```bash
+cp .env.example .env
+pnpm install --frozen-lockfile
+pnpm dev:services
+pnpm db:migrate
+pnpm dev
+```
+
+預設服務：
+
+| Service            | URL                     | Health             | Readiness        |
+| ------------------ | ----------------------- | ------------------ | ---------------- |
+| web                | `http://localhost:3000` | `/api/health`      | `/api/readiness` |
+| api                | `http://localhost:8080` | `/health`          | `/ready`         |
+| worker             | `http://localhost:8081` | `/health`          | `/ready`         |
+| PostgreSQL/PostGIS | `localhost:5432`        | Docker healthcheck | `pg_isready`     |
+
+API 與 worker 在缺少或無效的 `DATABASE_URL` 時會 fail closed。應用啟動不會自動執行 migration；部署及本機均須明確執行 `pnpm db:migrate`。
+
+## Verification
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm test:integration
+pnpm build
+```
 
 ## Git workflow
 

@@ -10,16 +10,16 @@
 
 ## 交付串流
 
-| 串流 | 交付 | 驗收證據 |
-|---|---|---|
-| Repository | pnpm/Turborepo、web/api/worker、共用 packages | lint/typecheck/test/build 可執行 |
-| Local data | PostgreSQL + PostGIS、Prisma migration | integration test 可連線且 migration 可重跑 |
-| Cloud foundation | dev/stg/prod projects、APIs、state、Artifact Registry | Terraform plan 與 project checklist |
-| Runtime | Cloud Run web/api/worker、service accounts、secrets | 三服務 health check |
-| Identity | Identity Platform、LINE token exchange | contract + auth integration tests |
-| Tenancy | user/identity/tenant/membership、RBAC、audit log | cross-tenant denial tests |
-| Delivery | PR CI、staging deployment、production approval gate | workflow run 與 smoke test |
-| Observability | structured logging、request correlation | log query 與無 PII 測試 |
+| 串流             | 交付                                                  | 驗收證據                                   |
+| ---------------- | ----------------------------------------------------- | ------------------------------------------ |
+| Repository       | pnpm/Turborepo、web/api/worker、共用 packages         | lint/typecheck/test/build 可執行           |
+| Local data       | PostgreSQL + PostGIS、Prisma migration                | integration test 可連線且 migration 可重跑 |
+| Cloud foundation | dev/stg/prod projects、APIs、state、Artifact Registry | Terraform plan 與 project checklist        |
+| Runtime          | Cloud Run web/api/worker、service accounts、secrets   | 三服務 health check                        |
+| Identity         | Identity Platform、LINE token exchange                | contract + auth integration tests          |
+| Tenancy          | user/identity/tenant/membership、RBAC、audit log      | cross-tenant denial tests                  |
+| Delivery         | PR CI、staging deployment、production approval gate   | workflow run 與 smoke test                 |
+| Observability    | structured logging、request correlation               | log query 與無 PII 測試                    |
 
 ## 建議順序與依賴
 

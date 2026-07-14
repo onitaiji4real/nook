@@ -2,6 +2,7 @@
   "name": "nook",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.9.0",
   "engines": {
     "node": ">=20.17.0",
@@ -9,14 +10,29 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "db:generate": "pnpm --filter @nook/database prisma:generate",
+    "db:migrate": "pnpm --filter @nook/database prisma:migrate:deploy",
+    "dev:services": "docker compose up -d postgres",
+    "dev:services:down": "docker compose down",
     "dev": "turbo run dev --parallel",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "turbo run lint",
+    "postinstall": "pnpm db:generate",
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "turbo": "^2.5.0",
-    "typescript": "^5.8.0"
+    "@eslint/js": "9.39.2",
+    "@types/node": "^20.19.0",
+    "eslint": "9.39.2",
+    "prettier": "3.6.2",
+    "turbo": "2.10.5",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.4",
+    "vite": "6.4.1",
+    "vitest": "3.2.4"
   }
 }

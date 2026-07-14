@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.5
+    platform: linux/amd64
+    environment:
+      POSTGRES_DB: nook
+      POSTGRES_PASSWORD: nook
+      POSTGRES_USER: nook
+      TZ: Asia/Taipei
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nook -d nook']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - nook-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  nook-postgres-data:

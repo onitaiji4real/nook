@@ -1,11 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["APP_VERSION", "DATABASE_URL", "NODE_ENV", "PORT"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
@@ -13,8 +15,7 @@
       "dependsOn": ["^lint"]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"]
     },
     "test:integration": {
       "dependsOn": ["^build"],

@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum IdentityProvider {
+  LINE
+  GOOGLE
+  EMAIL
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum SubscriptionStatus {
+  FREE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum MembershipRole {
+  OWNER
+  MANAGER
+  STAFF
+  VIEWER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  REMOVED
+}
+
+model User {
+  id           String         @id @default(uuid()) @db.Uuid
+  displayName  String         @map("display_name") @db.VarChar(120)
+  email        String?        @db.VarChar(320)
+  phone        String?        @db.VarChar(32)
+  avatarUrl    String?        @map("avatar_url") @db.Text
+  status       UserStatus     @default(ACTIVE)
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  identities   UserIdentity[]
+  memberships  Membership[]
+  auditLogs    AuditLog[]     @relation("AuditLogActor")
+
+  @@map("users")
+}
+
+model UserIdentity {
+  id                String           @id @default(uuid()) @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  provider          IdentityProvider
+  providerSubject   String           @map("provider_subject") @db.VarChar(255)
+  providerTenant    String?          @map("provider_tenant") @db.VarChar(255)
+  profileJson       Json?            @map("profile_json")
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject], map: "user_identities_provider_subject_key")
+  @@index([userId], map: "user_identities_user_id_idx")
+  @@map("user_identities")
+}
+
+model Tenant {
+  id                  String             @id @default(uuid()) @db.Uuid
+  name                String             @db.VarChar(160)
+  slug                String             @unique @db.VarChar(100)
+  status              TenantStatus       @default(ACTIVE)
+  planId              String?            @map("plan_id") @db.Uuid
+  subscriptionStatus  SubscriptionStatus @default(FREE) @map("subscription_status")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  memberships         Membership[]
+  auditLogs           AuditLog[]
+
+  @@map("tenants")
+}
+
+model Membership {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  role       MembershipRole
+  status     MembershipStatus @default(ACTIVE)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId], map: "memberships_tenant_user_key")
+  @@index([tenantId, status], map: "memberships_tenant_status_idx")
+  @@index([userId, status], map: "memberships_user_status_idx")
+  @@map("memberships")
+}
+
+model AuditLog {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  actorUserId  String?   @map("actor_user_id") @db.Uuid
+  action       String    @db.VarChar(120)
+  resourceType String    @map("resource_type") @db.VarChar(120)
+  resourceId   String?   @map("resource_id") @db.VarChar(255)
+  beforeJson   Json?     @map("before_json")
+  afterJson    Json?     @map("after_json")
+  ipHash       String?   @map("ip_hash") @db.VarChar(128)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser    User?     @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt], map: "audit_logs_tenant_created_at_idx")
+  @@index([tenantId, resourceType, resourceId], map: "audit_logs_tenant_resource_idx")
+  @@map("audit_logs")
+}
