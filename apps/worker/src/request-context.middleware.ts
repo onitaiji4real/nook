@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { createRequestLog, redactValue } from '@nook/observability';
 import type { NextFunction, Request, Response } from 'express';
 
+import { runtimeConfig } from './runtime-config';
+
 const validRequestId = /^[A-Za-z0-9._-]{1,128}$/;
 
 export function requestContextMiddleware(request: Request, response: Response, next: NextFunction) {
@@ -15,6 +17,8 @@ export function requestContextMiddleware(request: Request, response: Response, n
   response.on('finish', () => {
     const entry = createRequestLog({
       service: 'worker',
+      version: runtimeConfig.appVersion,
+      environment: runtimeConfig.nodeEnv,
       requestId,
       method: request.method,
       path: request.path,

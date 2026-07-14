@@ -26,5 +26,11 @@
 | P1-D03      | `PASS`    | LINE adapter 3 秒 timeout；API e2e 驗證 invalid token 401、provider timeout 503 與穩定 Problem Details。                        |
 | P1-D04      | `PASS`    | API e2e 僅回 customToken/expiresIn、無 Set-Cookie；Firebase adapter contract tests 通過。                                       |
 | P1-D05      | `BLOCKED` | 尚缺 LINE/Identity Platform staging configuration。                                                                             |
-| P1-E01～E07 | `NOT_RUN` | P1-005 尚未完成；其中遠端 required checks/deploy/rollback/alerts 需要外部證據。                                                 |
+| P1-E01      | `BLOCKED` | workflow contract 與全部等價本機命令通過；尚缺 GitHub Actions successful run 與 required ruleset。                              |
+| P1-E02      | `PASS`    | 三個 digest-pinned distroless Node 24 image 皆以 `65532:65532` 執行；migration、smoke、healthcheck 與 Trivy 全通過。            |
+| P1-E03      | `PASS`    | Terraform/workflows 僅使用 OIDC/WIF，stg/prod identity 與 environment claim 分離；credential scan 無 service-account key。      |
+| P1-E04      | `BLOCKED` | migration-first、zero-traffic candidate、smoke、promotion/stop ordering已通過 static contract；尚缺 staging workflow run。      |
+| P1-E05      | `BLOCKED` | production 僅 manual dispatch 且綁 `prod` Environment；尚缺 reviewer protection 與未批准 run 證據。                             |
+| P1-E06      | `BLOCKED` | rollback script/runbook 已通過 shell/static checks；尚缺 staging 前後 digest 與實際 smoke 演練。                                |
+| P1-E07      | `BLOCKED` | captured-log/redaction/release dimensions 與 dashboard/5xx owner/runbook 已完成；尚缺 applied query/notification。              |
 | P1-F01～F04 | `NOT_RUN` | 最終文件與 Git/PR 稽核尚未執行。                                                                                                |

@@ -1,0 +1,72 @@
+name: Reusable deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    environment: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: asia-east1
+      REPOSITORY: nook-applications
+    steps:
+      - name: Validate environment contract
+        run: |
+          test "$ENVIRONMENT" = "stg" || test "$ENVIRONMENT" = "prod"
+          test -n "$PROJECT_ID"
+          test -n "${{ vars.WIF_PROVIDER }}"
+          test -n "${{ vars.DEPLOYER_SERVICE_ACCOUNT }}"
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Authenticate with WIF
+        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Configure Artifact Registry
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+      - name: Build and push commit images
+        run: |
+          for service in web api worker; do
+            image="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$service:$GITHUB_SHA"
+            docker build --file "apps/$service/Dockerfile" --tag "$image" .
+            docker push "$image"
+          done
+      - name: Resolve immutable digests
+        id: images
+        run: |
+          for service in web api worker; do
+            tagged="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$service:$GITHUB_SHA"
+            digest="$(gcloud artifacts docker images describe "$tagged" --format='value(image_summary.digest)')"
+            test -n "$digest"
+            echo "$service=$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$service@$digest" >> "$GITHUB_OUTPUT"
+          done
+      - name: Update migration job only
+        run: gcloud run jobs update "nook-migrate-$ENVIRONMENT" --project "$PROJECT_ID" --region "$REGION" --image "${{ steps.images.outputs.api }}" --quiet
+      - name: Run backward-compatible migration
+        run: gcloud run jobs execute "nook-migrate-$ENVIRONMENT" --project "$PROJECT_ID" --region "$REGION" --wait --quiet
+      - name: Deploy candidate revisions and smoke test
+        env:
+          WEB_IMAGE: ${{ steps.images.outputs.web }}
+          API_IMAGE: ${{ steps.images.outputs.api }}
+          WORKER_IMAGE: ${{ steps.images.outputs.worker }}
+        run: infra/ci/deploy-cloud-run.sh

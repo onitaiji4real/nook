@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.tfstate*
+**/.terraform
+**/*.tfplan
+google-github-actions-*.json
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store

@@ -73,4 +73,9 @@ run "runtime_uses_private_worker_and_immutable_images" {
     condition     = alltrue([for image in values(var.container_images) : can(regex("@sha256:[0-9a-f]{64}$", image))])
     error_message = "All runtime images must be pinned by digest."
   }
+
+  assert {
+    condition     = length(google_cloud_run_v2_job.migration[0].template[0].template[0].containers[0].command) == 1 && one(google_cloud_run_v2_job.migration[0].template[0].template[0].containers[0].command) == "/nodejs/bin/node" && contains(google_cloud_run_v2_job.migration[0].template[0].template[0].containers[0].args, "migrate")
+    error_message = "Migration must run as an explicit Cloud Run Job, never application startup."
+  }
 }

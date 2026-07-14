@@ -34,6 +34,8 @@ export function redactValue(value: unknown): unknown {
 
 export interface RequestLogInput {
   readonly service: string;
+  readonly version: string;
+  readonly environment: string;
   readonly requestId: string;
   readonly method: string;
   readonly path: string;
@@ -52,6 +54,8 @@ export function createRequestLog(input: RequestLogInput): Record<string, unknown
 export interface SecurityEventLogInput {
   readonly event: 'tenant.created' | 'authorization.denied';
   readonly requestId: string;
+  readonly version: string;
+  readonly environment: string;
   readonly actorUserId: string;
   readonly tenantId: string;
   readonly outcome: 'success' | 'denied';

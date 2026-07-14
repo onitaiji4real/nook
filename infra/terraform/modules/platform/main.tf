@@ -449,6 +449,54 @@ resource "google_cloud_run_v2_service" "application" {
   depends_on = [google_project_service.required]
 }
 
+resource "google_cloud_run_v2_job" "migration" {
+  count = var.deploy_runtime ? 1 : 0
+
+  project  = var.project_id
+  name     = "nook-migrate-${var.environment}"
+  location = var.region
+
+  template {
+    template {
+      service_account = google_service_account.runtime["api"].email
+      timeout         = "900s"
+      max_retries     = 0
+
+      vpc_access {
+        network_interfaces {
+          network    = google_compute_network.platform.name
+          subnetwork = google_compute_subnetwork.serverless.name
+        }
+        egress = "PRIVATE_RANGES_ONLY"
+      }
+
+      containers {
+        image   = var.container_images["api"]
+        command = ["/nodejs/bin/node"]
+        args = [
+          "node_modules/prisma/build/index.js",
+          "migrate",
+          "deploy",
+          "--schema",
+          "node_modules/@nook/database/prisma/schema.prisma",
+        ]
+
+        env {
+          name = "DATABASE_URL"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.runtime["database-url"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [google_project_service.required]
+}
+
 resource "google_cloud_run_v2_service_iam_member" "public" {
   for_each = var.deploy_runtime ? toset(["web", "api"]) : toset([])
 
@@ -545,6 +593,81 @@ resource "google_monitoring_alert_policy" "cloud_run_5xx" {
     environment = var.environment
     owner       = "platform-oncall"
   }
+
+  depends_on = [google_project_service.required]
+}
+
+resource "google_monitoring_dashboard" "service_health" {
+  project = var.project_id
+  dashboard_json = jsonencode({
+    displayName = "Nook ${var.environment} service health"
+    mosaicLayout = {
+      columns = 12
+      tiles = [
+        {
+          x      = 0
+          y      = 0
+          width  = 12
+          height = 2
+          widget = {
+            title = "Owner and response"
+            text = {
+              format  = "MARKDOWN"
+              content = "Owner: platform-oncall | Runbook: ${var.alert_runbook_url}"
+            }
+          }
+        },
+        {
+          x      = 0
+          y      = 2
+          width  = 6
+          height = 4
+          widget = {
+            title = "Cloud Run request rate"
+            xyChart = {
+              dataSets = [{
+                plotType = "LINE"
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_count\""
+                    aggregation = {
+                      alignmentPeriod  = "60s"
+                      perSeriesAligner = "ALIGN_RATE"
+                    }
+                  }
+                }
+              }]
+              yAxis = { label = "requests/s", scale = "LINEAR" }
+            }
+          }
+        },
+        {
+          x      = 6
+          y      = 2
+          width  = 6
+          height = 4
+          widget = {
+            title = "Cloud Run 5xx rate"
+            xyChart = {
+              dataSets = [{
+                plotType = "LINE"
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "resource.type=\"cloud_run_revision\" AND metric.type=\"run.googleapis.com/request_count\" AND metric.label.\"response_code_class\"=\"5xx\""
+                    aggregation = {
+                      alignmentPeriod  = "60s"
+                      perSeriesAligner = "ALIGN_RATE"
+                    }
+                  }
+                }
+              }]
+              yAxis = { label = "5xx/s", scale = "LINEAR" }
+            }
+          }
+        }
+      ]
+    }
+  })
 
   depends_on = [google_project_service.required]
 }

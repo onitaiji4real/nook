@@ -263,3 +263,46 @@
 ### 下一步
 
 - 執行 P1-005 CI/CD and observability；dependency/container scan 必須涵蓋新增的 `firebase-admin` runtime dependency。
+
+## 2026-07-14 — Start P1-005 CI/CD and observability
+
+### 範圍與部署界線
+
+- PR CI 不取得 GCP credential，只執行可重現的 code/database/Terraform/dependency/container checks。
+- staging 與 production 分別使用 `stg`、`prod` GitHub Environment 與對應 WIF principal；production 必須由 Environment reviewer 人工批准。
+- migration 是獨立 deployment step/job；application startup 不執行 migration，migration 或 smoke 失敗時 workflow 立即停止。
+- deploy 只使用 commit SHA tag 解析出的 image digest；Cloud Run runtime contract 不接受 mutable tag。
+
+## 2026-07-14 — Complete P1-005 CI/CD and observability implementation
+
+### 已完成
+
+- 建立 SHA-pinned GitHub Actions PR CI、staging reusable deployment 與 manual-only production workflow；PR jobs 只有 read permission，部署才透過 environment-bound OIDC/WIF 取得短期憑證。
+- 建立 web/API/worker multi-stage Dockerfiles。runtime 固定 Google distroless Node 24 Debian 13 digest，以 `65532:65532` 執行且不含 shell/package manager；API/worker production prune 後在 image build 明確產生 Prisma Client。
+- 建立 Cloud Run migration Job，直接透過 distroless Node binary 執行 Prisma CLI；application startup 不執行 migration。部署先 migration，再建立 zero-traffic candidate、smoke/Ready、promote，失敗時 best-effort 回復先前 revisions。
+- 建立 request/security log 的 service/version/environment/requestId 維度與 redaction tests；Terraform 新增 service health dashboard，既有 5xx alert 綁 owner/runbook。
+- 新增 CI contract、deployment/rollback runbook、Docker/runtime 說明與 ADR 0003；Node 基線由已 EOL 的 20.17 升級至 24.17，workspace 使用 pnpm 11.7 與 Node 24 types。
+- pnpm 11 啟用 supply-chain lockfile policy、明確允許必要 dependency build scripts、workspace injection；鎖定成熟 Turbo/`@types/superagent`，並將有 advisory 的 `effect`、Vite、Vitest 升級到修補版本。
+
+### 實際驗證
+
+- Node 24.14 / pnpm 11.7：frozen install、format/check、lint、typecheck、unit tests、build 全數成功；12 個 workspace project lint/typecheck/build 通過。
+- 本機 PostgreSQL/PostGIS migration 顯示 2 migrations、無 pending；序列化後 `pnpm test:integration` 連續兩輪皆為 database 3 tests + API 11 tests 通過。
+- workflow security/ordering checker與 `bash -n infra/ci/deploy-cloud-run.sh` 通過；production dependency audit 無 HIGH/CRITICAL，尚有 2 個 moderate。
+- Terraform bootstrap/module/dev/stg/prod 五個 configuration validate、3 個 mock tests、environment isolation 全數通過；Trivy Terraform HIGH/CRITICAL 為 0。
+- web/API/worker images 建置成功，`Config.User` 均為 `65532:65532`；三服務 health/readiness、Docker healthcheck 與 distroless migration command 均成功。
+- Trivy 使用最新本機 database 掃描最終三個 images：web 0、API 0、worker 0 個 HIGH/CRITICAL finding。
+
+### 修正紀錄與決策
+
+- pnpm 11 首次安裝拒絕 24 小時內發布的 Turbo 2.10.5 與 `@types/superagent` 8.1.11；未放寬 policy，改釘選成熟版本並依官方提示重建 lockfile。
+- pnpm 11 `deploy` 要求 workspace injection；啟用 `injectWorkspacePackages`，並在 API/worker 明確宣告 runtime Prisma Client，避免 production prune 遺漏 generated client。
+- 初版 worker image 仍使用 default 8081，與 Cloud Run 8080 contract 不符；runtime 明確設定 `PORT=8080` 後 smoke 通過。
+- 官方 Node 20 slim image掃出 Debian 16 與 npm 12 個 HIGH；升至 Node 24 後最新 Trivy 又出現 Debian 12 無 fix 的 16 HIGH/3 CRITICAL。未建立 ignore，改用 digest-pinned Google distroless Debian 13，最終三 image 歸零。
+- integration suites 原先由 Turbo 平行清理同一 database schema，最後重跑捕捉到 membership FK race；root integration contract 改為 `--concurrency=1`，連續兩次通過。
+
+### 外部 gate 與下一步
+
+- P1-005 repository implementation 標記 `done`；P1-E02、E03 有直接本機/config evidence。
+- P1-E01、E04～E07 仍 `BLOCKED`：尚缺 GitHub ruleset/Environment reviewer、遠端 successful run、staging deploy/rollback、applied dashboard query 與 notification channel。沒有執行 Terraform apply、推送 branch、建立 PR 或任何 production 變更。
+- repository admin 與 platform owner 解除外部 gate 後，從 clean checkout 執行 final acceptance，再以 reviewed PR 將 `phase1` 合併到 `main`。

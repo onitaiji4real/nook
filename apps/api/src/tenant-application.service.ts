@@ -1,14 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { CreateTenantRequest, MeResponse, TenantResponse } from '@nook/contracts';
+import type { RuntimeConfig } from '@nook/config';
 import { classifyTenantConflict, type TenantRepository } from '@nook/database';
 import { createSecurityEventLog, redactValue } from '@nook/observability';
 
 import { ApplicationError } from './application-error';
+import { RUNTIME_CONFIG } from './runtime-config.token';
 import { TENANT_REPOSITORY } from './tenant-repository.token';
 
 @Injectable()
 export class TenantApplicationService {
-  constructor(@Inject(TENANT_REPOSITORY) private readonly repository: TenantRepository) {}
+  constructor(
+    @Inject(TENANT_REPOSITORY) private readonly repository: TenantRepository,
+    @Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig,
+  ) {}
 
   async createTenant(input: {
     readonly userId: string;
@@ -29,6 +34,8 @@ export class TenantApplicationService {
         actorUserId: input.userId,
         tenantId: record.tenant.id,
         outcome: 'success',
+        version: this.config.appVersion,
+        environment: this.config.nodeEnv,
       });
 
       return { ...record.tenant, membership: record.membership };
@@ -71,6 +78,8 @@ export class TenantApplicationService {
         actorUserId: input.userId,
         tenantId: input.tenantId,
         outcome: 'denied',
+        version: this.config.appVersion,
+        environment: this.config.nodeEnv,
       });
       throw new ApplicationError(
         403,

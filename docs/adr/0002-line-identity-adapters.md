@@ -10,7 +10,7 @@ LINE-first 流程必須讓外部瀏覽器把已取得的 LINE ID token 交給後
 ## Decision
 
 - API 以 LINE 官方 `POST /oauth2/v2.1/verify` 驗證 raw ID token、channel audience 與 nonce；adapter 另行 defense-check issuer、audience、expiry、subject、nonce，timeout 固定為 3 秒。
-- Identity Platform 採 `firebase-admin` 13.9.0；此版本支援目前 Node 20 runtime。套件只封裝 custom token 與 ID token 官方契約，不讓 controller 直接依賴 SDK。
+- Identity Platform 採 `firebase-admin` 13.9.0；此版本支援目前 Node 24 runtime。套件只封裝 custom token 與 ID token 官方契約，不讓 controller 直接依賴 SDK。
 - Firebase Admin 使用 Application Default Credentials；Cloud Run API service account 只取得對自身的 `roles/iam.serviceAccountTokenCreator`，不建立 service-account JSON key。
 - `AUTH_ADAPTER_MODE=disabled` 是本機預設且 fail closed；`firebase` 模式缺少 LINE channel ID 或 Identity Platform project ID 時，應用啟動立即失敗。
 - `(LINE, providerSubject)` 以資料庫 unique constraint 與 transaction 做 find-or-create；concurrent loser 的 transaction 回滾後讀取既有 identity，不能留下 orphan user。

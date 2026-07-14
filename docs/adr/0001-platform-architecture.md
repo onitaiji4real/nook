@@ -15,7 +15,7 @@ MVP 需要交易一致性、租戶隔離、地理查詢與小團隊快速迭代�
 - 每個租戶資料存取都顯式要求 `tenantId`，authorization 位於 application service，repository 層再強制 scope。
 - dev/stg/prod 使用獨立 GCP project、state、service account、database、storage 與 secret。
 - Terraform 是 GCP 資源唯一宣告來源；migration 由獨立部署步驟執行。
-- Phase 1 runtime 基線為 Node.js 20.17、Next.js 16、NestJS 11、Prisma 6.19；升級 Prisma 7 前先將 runtime 提升至其要求的 Node 版本並另行驗證 migration/client 行為。
+- Phase 1 framework 基線為 Next.js 16、NestJS 11、Prisma 6.19；Node runtime 的安全升級由 ADR 0003 取代本文件原先的 20.17 決策。
 - health contract 由 `@nook/contracts` 共用；API 與 worker readiness 透過 application service 探測 PostgreSQL，controller 不直接存取 Prisma。
 
 ## Consequences

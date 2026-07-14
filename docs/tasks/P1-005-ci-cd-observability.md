@@ -1,6 +1,6 @@
 # P1-005：CI/CD and observability
 
-狀態：`blocked`（等待 P1-001 與 P1-002 runtime contract）  
+狀態：`done`（本機實作與可重現 gates 完成；外部環境證據列於 Phase 1 acceptance evidence）
 目標：每個變更可被自動驗證，main 可安全部署 staging，production 需要批准。
 
 ## Vertical slice
@@ -24,3 +24,9 @@
 - PR 所有 required checks 可重現；integration DB 為 ephemeral PostgreSQL/PostGIS。
 - merge main 完成 staging deploy + smoke test；production 僅在人工批准後執行。
 - rollback 已在 staging 演練並記錄；dashboard/alerts 有 owner 與處置連結。
+
+## Handoff
+
+- 本機與 CI contract 已完成：workspace quality/tests/build、Terraform mock/isolation、production dependency audit、三個 distroless image build/nonroot/smoke/scan，以及獨立 migration job 命令皆通過。
+- `P1-E01`、`P1-E04`～`P1-E07` 仍需要 GitHub/GCP 管理權限與 staging 實際證據；這些 gate 維持 `BLOCKED`，不可用本機驗證替代。
+- repository admin 下一步先設定 required checks 與 `prod` Environment reviewer；platform owner 再依 `docs/runbooks/deployment.md` 執行 staging deploy、rollback 與 alert notification 演練。

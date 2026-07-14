@@ -30,7 +30,7 @@ Terraform 可能建立付費資源。本 repo 的初始交付只做靜態檢查�
 
 每個環境必須填入 `github_repository`。模組會建立該環境專用的 GitHub deployer service account、Workload Identity Pool/Provider，並同時限制 `assertion.repository` 與 GitHub Environment (`dev`、`stg` 或 `prod`)。workflow 必須宣告對應 environment，不能以 branch claim 取代 environment approval。
 
-`deploy_runtime=true` 時 `container_images` 必須剛好包含 web、api、worker，且每個值都以 `@sha256:<64 hex>` 結尾；tag 或缺項會在 plan 前由 variable validation 拒絕。worker 只允許 internal ingress，web/api 才有 public invoker。
+`deploy_runtime=true` 時 `container_images` 必須剛好包含 web、api、worker，且每個值都以 `@sha256:<64 hex>` 結尾；tag 或缺項會在 plan 前由 variable validation 拒絕。worker 只允許 internal ingress，web/api 才有 public invoker。Terraform 同時建立獨立 migration job；application startup 不會自動執行 migration。
 
 ## Validation
 
@@ -56,13 +56,13 @@ trivy config --exit-code 1 --severity HIGH,CRITICAL infra/terraform
 
 ## Secret 與 database
 
-Terraform 只建立 Secret Manager container，不提交 secret version。secret 值由經批准的 secret workflow 寫入；API 只能讀 database URL 與 LINE channel secret，worker 只能讀 database URL。Cloud Run 使用 `latest` secret version reference，但 rollout 前仍須確認目標 version 已啟用。
+Terraform 只建立 Secret Manager container，不提交 secret version。secret 值由經批准的 secret workflow 寫入；API、worker 與 migration job 只能讀 database URL。LINE channel ID 與 Identity Platform project/service account ID 不是 secret；目前 ID token verify flow 不讀取 channel secret。Cloud Run 使用 `latest` secret version reference，但 rollout 前仍須確認目標 version 已啟用。
 
 Cloud SQL 只使用 private IP 並設為 `ENCRYPTED_ONLY`；注入的 database URL 必須啟用 TLS。PostGIS extension 由 Prisma SQL migration 建立；不得手動修改 production schema。
 
 ## Monitoring
 
-每個環境會建立 Cloud Run 5xx rate alert。notification channel 只接受既有 resource name；不得將 email、webhook token 或其他敏感值放入 tfvars/state。沒有 channel 時 policy 仍可建立，但 apply approval checklist 必須記錄由誰補上通知路由。
+每個環境會建立 Cloud Run request/5xx service-health dashboard 與 5xx rate alert，兩者都標示 platform-oncall 與 deployment runbook。notification channel 只接受既有 resource name；不得將 email、webhook token 或其他敏感值放入 tfvars/state。沒有 channel 時 policy 仍可建立，但 apply approval checklist 必須記錄由誰補上通知路由。
 
 ## Rollback 與事故
 

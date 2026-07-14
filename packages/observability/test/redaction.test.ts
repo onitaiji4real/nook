@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { redactValue } from '../src';
+import { createRequestLog, redactValue } from '../src';
 
 describe('redactValue', () => {
   it('redacts secrets, PII, and database URLs recursively', () => {
@@ -17,5 +17,27 @@ describe('redactValue', () => {
     expect(serialized).not.toContain('customer@example.com');
     expect(serialized).not.toContain('abc.def');
     expect(serialized).toContain('[REDACTED]');
+  });
+});
+
+describe('createRequestLog', () => {
+  it('includes the release and correlation dimensions required by operations', () => {
+    expect(
+      createRequestLog({
+        service: 'api',
+        version: 'synthetic-sha',
+        environment: 'staging',
+        requestId: 'request-123',
+        method: 'GET',
+        path: '/health',
+        statusCode: 200,
+        durationMs: 1.25,
+      }),
+    ).toMatchObject({
+      service: 'api',
+      version: 'synthetic-sha',
+      environment: 'staging',
+      requestId: 'request-123',
+    });
   });
 });

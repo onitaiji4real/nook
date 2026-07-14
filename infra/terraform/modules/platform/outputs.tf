@@ -14,6 +14,10 @@ output "runtime_service_urls" {
   value = { for name, service in google_cloud_run_v2_service.application : name => service.uri }
 }
 
+output "migration_job_name" {
+  value = var.deploy_runtime ? google_cloud_run_v2_job.migration[0].name : null
+}
+
 output "runtime_service_accounts" {
   value = { for name, account in google_service_account.runtime : name => account.email }
 }
@@ -32,4 +36,8 @@ output "github_workload_identity_provider" {
 
 output "cloud_run_5xx_alert_policy" {
   value = google_monitoring_alert_policy.cloud_run_5xx.name
+}
+
+output "service_health_dashboard" {
+  value = google_monitoring_dashboard.service_health.id
 }

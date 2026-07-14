@@ -37,7 +37,7 @@ Repository 管理員應在 GitHub Settings → Branches 或 Rulesets 為 `main` 
 
 - Require a pull request before merging.
 - Require conversation resolution before merging.
-- Require status checks；CI 建立後加入 lint、typecheck、tests、build、Terraform validate。
+- Require status checks：`verify`、`terraform` 與三個 `container-images` matrix results；完整契約見 `docs/ci-contract.md`。
 - Block force pushes and branch deletion.
 - Include administrators／Do not allow bypassing；若帳號與方案支援。
 - Require linear history。

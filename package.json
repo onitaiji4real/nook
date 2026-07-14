@@ -3,10 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@9.9.0",
+  "packageManager": "pnpm@11.7.0",
   "engines": {
-    "node": ">=20.17.0",
-    "pnpm": ">=9.9.0"
+    "node": ">=24.14.0",
+    "pnpm": ">=11.7.0"
   },
   "scripts": {
     "build": "turbo run build",
@@ -20,19 +20,19 @@
     "lint": "turbo run lint",
     "postinstall": "pnpm db:generate",
     "test": "turbo run test",
-    "test:integration": "turbo run test:integration",
+    "test:integration": "turbo run test:integration --concurrency=1",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
-    "@types/node": "^20.19.0",
+    "@types/node": "24.10.1",
     "eslint": "9.39.2",
     "prettier": "3.6.2",
-    "turbo": "2.10.5",
+    "turbo": "2.10.4",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.4",
-    "vite": "6.4.1",
-    "vitest": "3.2.4"
+    "vite": "6.4.3",
+    "vitest": "3.2.6"
   }
 }
