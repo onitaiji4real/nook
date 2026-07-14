@@ -118,6 +118,7 @@ model AuditLog {
   action       String    @db.VarChar(120)
   resourceType String    @map("resource_type") @db.VarChar(120)
   resourceId   String?   @map("resource_id") @db.VarChar(255)
+  requestId    String?   @map("request_id") @db.VarChar(128)
   beforeJson   Json?     @map("before_json")
   afterJson    Json?     @map("after_json")
   ipHash       String?   @map("ip_hash") @db.VarChar(128)
@@ -127,5 +128,6 @@ model AuditLog {
 
   @@index([tenantId, createdAt], map: "audit_logs_tenant_created_at_idx")
   @@index([tenantId, resourceType, resourceId], map: "audit_logs_tenant_resource_idx")
+  @@index([tenantId, requestId], map: "audit_logs_tenant_request_id_idx")
   @@map("audit_logs")
 }

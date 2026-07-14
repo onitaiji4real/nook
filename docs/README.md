@@ -8,6 +8,9 @@
 | `phase-1/acceptance-evidence.md`     | Gate 狀態與直接證據          | Phase 1 驗收進度          |
 | `tasks/README.md`                    | 可獨立交接的垂直任務清單     | 任務狀態入口              |
 | `tasks/*.md`                         | 單一垂直切片契約與驗收       | 實作交接基準              |
+| `api/openapi.yaml`                   | HTTP contract                | 公開 API 契約             |
+| `data-dictionary/*.md`               | 資料語意與敏感度             | Schema 設計基準           |
+| `security/*.md`                      | Threat notes 與控制          | 安全審查基準              |
 | `adr/*.md`                           | 已接受的架構決策             | 決策依據                  |
 | `runbooks/terraform.md`              | GCP/Terraform 操作與安全界線 | 基礎設施作業基準          |
 | `worklog.md`                         | 時序工作報告、驗證與未決事項 | 執行稽核紀錄              |

@@ -7,6 +7,15 @@ export interface HealthResponse {
   readonly timestamp: string;
 }
 
+export type { ProblemDetails } from './problem-details';
+export {
+  createTenantRequestSchema,
+  tenantIdSchema,
+  type CreateTenantRequest,
+  type MeResponse,
+  type TenantResponse,
+} from './tenant';
+
 export interface HealthResponseInput {
   readonly status: HealthStatus;
   readonly service: string;

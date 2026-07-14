@@ -16,7 +16,11 @@
 | P1-B03      | `PASS`    | Terraform tests 驗證 foundation-only、拒絕 mutable/incomplete image、接受三個 digest-pinned runtime image。                     |
 | P1-B04      | `PASS`    | Terraform tests + Trivy：state/media protection、private worker、WIF、least-privilege runtime bindings、Cloud SQL TLS。         |
 | P1-B05      | `BLOCKED` | 尚缺 GCP organization/folder、billing、唯一 project IDs 與 owner-approved apply。                                               |
-| P1-C01～C05 | `NOT_RUN` | P1-003 尚未完成。                                                                                                               |
+| P1-C01      | `PASS`    | API integration：membership FK 失敗後 tenant count 為 0，證明 transaction rollback。                                            |
+| P1-C02      | `PASS`    | 三個 endpoint e2e + `docs/api/openapi.yaml`；error 使用 application/problem+json 與 requestId。                                 |
+| P1-C03      | `PASS`    | API integration：cross-tenant 403、inactive membership 立即 403。                                                               |
+| P1-C04      | `PASS`    | tenant.created/authorization.denied audit + captured log test，不含 synthetic name/profile。                                    |
+| P1-C05      | `PASS`    | `architecture.test.ts` 禁止 controller Prisma，並檢查 tenant repository method 的 tenantId contract。                           |
 | P1-D01～D04 | `NOT_RUN` | P1-004 尚未完成。                                                                                                               |
 | P1-D05      | `BLOCKED` | 尚缺 LINE/Identity Platform staging configuration。                                                                             |
 | P1-E01～E07 | `NOT_RUN` | P1-005 尚未完成；其中遠端 required checks/deploy/rollback/alerts 需要外部證據。                                                 |

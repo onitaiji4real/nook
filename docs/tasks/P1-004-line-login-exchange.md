@@ -1,6 +1,6 @@
 # P1-004：LINE login exchange
 
-狀態：`blocked`（等待 P1-003）  
+狀態：`ready`
 目標：後端驗證 LINE token，建立/連結 local identity，再換發 Identity Platform custom token。
 
 ## Vertical slice

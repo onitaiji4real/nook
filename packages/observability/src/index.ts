@@ -48,3 +48,23 @@ export function createRequestLog(input: RequestLogInput): Record<string, unknown
     ...input,
   };
 }
+
+export interface SecurityEventLogInput {
+  readonly event: 'tenant.created' | 'authorization.denied';
+  readonly requestId: string;
+  readonly actorUserId: string;
+  readonly tenantId: string;
+  readonly outcome: 'success' | 'denied';
+}
+
+export function createSecurityEventLog(input: SecurityEventLogInput): Record<string, unknown> {
+  return {
+    severity: input.outcome === 'denied' ? 'WARNING' : 'INFO',
+    service: 'api',
+    operation: input.event,
+    requestId: input.requestId,
+    actorUserId: input.actorUserId,
+    tenantId: input.tenantId,
+    outcome: input.outcome,
+  };
+}

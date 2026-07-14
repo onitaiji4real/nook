@@ -1,0 +1,128 @@
+openapi: 3.1.0
+info:
+  title: Nook API
+  version: 0.1.0
+  description: Phase 1 tenant and identity contracts. Timestamps are UTC; product defaults use Asia/Taipei.
+servers:
+  - url: http://localhost:8080
+paths:
+  /v1/tenants:
+    post:
+      operationId: createTenant
+      summary: Create a tenant and OWNER membership atomically
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTenantRequest'
+      responses:
+        '201':
+          {
+            description: Tenant created,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Tenant' } } },
+          }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}:
+    get:
+      operationId: getTenant
+      summary: Read a tenant through an active membership
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          {
+            description: Tenant visible to the authenticated member,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Tenant' } } },
+          }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me:
+    get:
+      operationId: getMe
+      summary: Return the authenticated local user and memberships
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          {
+            description: Current user summary,
+            content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } },
+          }
+        '401': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Identity Platform ID token
+  parameters:
+    TenantId:
+      name: tenantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Problem:
+      description: RFC 9457 Problem Details with a stable Nook code
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetails' }
+  schemas:
+    CreateTenantRequest:
+      type: object
+      additionalProperties: false
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        slug: { type: string, minLength: 3, maxLength: 100, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+    Membership:
+      type: object
+      required: [role, status]
+      properties:
+        role: { type: string, enum: [OWNER, MANAGER, STAFF, VIEWER] }
+        status: { type: string, enum: [ACTIVE, INVITED, SUSPENDED, REMOVED] }
+    Tenant:
+      type: object
+      required: [id, name, slug, status, membership]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, CLOSED] }
+        membership: { $ref: '#/components/schemas/Membership' }
+    Me:
+      type: object
+      required: [id, memberships]
+      properties:
+        id: { type: string, format: uuid }
+        memberships:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Membership'
+              - type: object
+                required: [tenantId]
+                properties:
+                  tenantId: { type: string, format: uuid }
+    ProblemDetails:
+      type: object
+      required: [type, title, status, detail, instance, requestId, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        requestId: { type: string }
+        code: { type: string }

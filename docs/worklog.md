@@ -190,3 +190,33 @@
 ### 下一步
 
 - 執行 P1-003 Tenant onboarding and RBAC。
+
+## 2026-07-14 — Complete P1-003 tenant onboarding and RBAC
+
+### 已完成
+
+- 建立 `POST /v1/tenants`、`GET /v1/tenants/:tenantId`、`GET /v1/me`，以 Zod 驗證輸入並以 RFC 9457 Problem Details 回應穩定錯誤碼與 requestId。
+- 建立可替換 `IdentityTokenVerifier`、Nest authentication guard 與 fail-closed default；沒有加入可被 production 使用的測試 header 或 development token bypass。
+- 建立 Prisma tenant repository 與 application service；tenant + OWNER membership + tenant.created audit 使用單一 transaction。
+- tenant read 每次顯式帶 `tenantId` 並查 ACTIVE membership；跨租戶與 suspended membership 都拒絕，並寫入 authorization.denied audit。
+- AuditLog 以 expand-only migration 新增 nullable request_id 與 tenant/request index；新事件不保存 name、profile、request body 或 token。
+- 新增 OpenAPI 3.1、identity/tenancy data dictionary、RBAC threat notes 與 architecture tests。
+
+### 實際驗證
+
+- migration `20260714010000_audit_request_id` 已成功套用到本機 PostGIS；Prisma schema validate 通過。
+- `pnpm test`：新增 duplicate slug/membership conflict classifier 與 controller/repository architecture tests，全套 unit tests 通過。
+- `pnpm test:integration`：database 3 tests + API 7 tests 全部通過；API suite 涵蓋 atomic create、rollback、duplicate slug、cross-tenant denial、suspended membership、`GET /v1/me`、missing auth。
+- captured logs 證明 authorization.denied 不包含 synthetic tenant/user name；audit row 只含 safe IDs、action、resource、requestId。
+- OpenAPI YAML parse 且三個規定 path 完整；controller static test 證明沒有 Prisma import。
+- 初次 e2e 發現 Vitest transpilation 不產生 constructor metadata，導致 controller service undefined；改用明確 `@Inject(TenantApplicationService)` 後完整 suite 通過，production/test DI 行為一致。
+
+### 決策與剩餘風險
+
+- P1-003 不自行信任 LINE token；default verifier 回 503 fail closed。P1-004 必須以 Identity Platform ID token verifier 完成 production authentication。
+- 無 active membership 統一回 403，不區分 tenant 不存在或無權限，降低 IDOR enumeration。
+- P1-003 只定義 OWNER/MANAGER/STAFF/VIEWER enum 與 active membership gate；逐操作 permission matrix 隨 Phase 2 resource contract 定義。
+
+### 下一步
+
+- 執行 P1-004 LINE login exchange 與 Identity Platform adapters。

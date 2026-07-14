@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { createRequestLog, redactValue } from '@nook/observability';
 import type { NextFunction, Request, Response } from 'express';
 
+import type { RequestWithContext } from './request-context';
+
 const validRequestId = /^[A-Za-z0-9._-]{1,128}$/;
 
 export function requestContextMiddleware(request: Request, response: Response, next: NextFunction) {
@@ -10,6 +12,8 @@ export function requestContextMiddleware(request: Request, response: Response, n
   const requestId =
     incoming !== undefined && validRequestId.test(incoming) ? incoming : randomUUID();
   const startedAt = performance.now();
+
+  (request as RequestWithContext).requestId = requestId;
 
   response.setHeader('x-request-id', requestId);
   response.on('finish', () => {

@@ -8,12 +8,14 @@
     "lint": "eslint src test --no-error-on-unmatched-pattern",
     "start": "node dist/main.js",
     "test": "vitest run --config ../../vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
+    "@nook/auth": "workspace:*",
     "@nook/config": "workspace:*",
     "@nook/contracts": "workspace:*",
     "@nook/database": "workspace:*",
@@ -22,7 +24,9 @@
     "rxjs": "7.8.2"
   },
   "devDependencies": {
+    "@nestjs/testing": "11.1.28",
     "@types/express": "^5.0.0",
+    "@types/supertest": "6.0.3",
     "supertest": "7.1.4"
   }
 }
