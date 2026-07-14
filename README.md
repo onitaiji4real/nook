@@ -20,3 +20,7 @@ Phase 1 平台骨架準備中。當前交付範圍與完成定義見 [Phase 1 �
 2. 從 `docs/tasks/README.md` 選取一個 `ready` 任務。
 3. 將任務改為 `in_progress`，實作並持續記錄 `docs/worklog.md`。
 4. 完成驗收與檢查後改為 `done`，留下風險及後續決策。
+
+## Git workflow
+
+目前開發目標分支為 `phase1`。禁止直接 commit 或 push 至 `main`；`main` 只接受通過檢查與 review 的 pull request。完整規則與 GitHub 保護設定見 [Git workflow](docs/git-workflow.md)。

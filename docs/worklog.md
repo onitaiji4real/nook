@@ -54,3 +54,22 @@
 - 初始 commit：`dd8c0bf`（`chore: bootstrap phase 1 repository`）。
 - 已設定 `origin` 為 `https://github.com/onitaiji4real/nook.git`，並成功推送、追蹤 `origin/main`。
 - 本段發布結果將以後續 documentation commit 保存。
+
+## 2026-07-14 — Protect main development workflow
+
+### 範圍
+
+- 後續開發改在 `phase1`，禁止直接 commit 或 push 至 `main`。
+
+### 已完成
+
+- 從 `main` 建立並切換至 `phase1`。
+- 更新 `AGENTS.md` 與 README，建立 `docs/git-workflow.md`。
+- 新增版本化的 `.githooks/pre-push`，阻擋遠端 `main` 更新。
+- 已設定本機 `core.hooksPath=.githooks`，並以 synthetic pre-push input 驗證：`phase1` 可通過、`main` 被拒絕。
+
+### 限制與下一步
+
+- 執行環境沒有 GitHub CLI，無法直接套用遠端 branch protection。
+- repository 管理員仍須依 `docs/git-workflow.md` 在 GitHub Settings 啟用 `main` ruleset；本機 hook 不能取代 server-side protection。
+- 本次變更必須提交並推送至 `phase1`，不得更新 `main`。

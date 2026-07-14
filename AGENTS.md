@@ -46,6 +46,10 @@
 
 ## Git hygiene
 
+- Never commit directly on `main` and never push updates directly to `main`.
+- Phase 1 implementation targets `phase1`; use `dev` as the integration branch after Phase 1.
+- Prefer task branches such as `codex/p1-001-repository-foundation` when a slice benefits from isolated review.
+- Merge `phase1` or `dev` into `main` only through a reviewed pull request after required checks pass.
 - Keep commits scoped to one vertical slice or infrastructure change.
 - Never commit credentials, `.env` files, Terraform state, or generated provider artifacts.
 - Preserve unrelated changes already present in the worktree.
