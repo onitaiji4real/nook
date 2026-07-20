@@ -509,3 +509,25 @@
 
 - 建立 scoped commit 並推送 `phase1`，確認 draft PR 新 head 的 `verify`、`terraform` 與三個 container jobs 成功。
 - GitHub clean runner 通過後，再以獨立文件 commit 記錄 run URL 與 final evidence；不合併 `main`。
+
+## 2026-07-20 — Complete repository boundary local acceptance
+
+### Commit 與 Git 狀態核對
+
+- Repository boundary implementation 已以 scoped commit `2354a66 build(ci): 強制專案分層 / enforce repository boundaries` 完成；commit body 以中英文記錄範圍、原因、驗證與風險，首行僅保留單一重點。
+- 首次 `git push origin phase1` 因當時 Codex 工具額度上限被自動核准系統拒絕；未繞過、未更換 credential 傳遞方式，GitHub 沒有收到該次 push。
+- 2026-07-20 以不帶 credential 的 `git ls-remote --heads origin main phase1` 再次確認：遠端 `main@dd5f146`、`phase1@bbfb93d`；本機 `phase1@2354a66` 領先一個 commit。`main` 未被更新或合併。
+
+### 本機最終驗證
+
+- 先前 integration run 在預設 sandbox 內無法連線 `localhost:5432`，因此明確記為環境性失敗，沒有將失敗結果冒充為通過。
+- 工具額度恢復後，在允許本機網路且不更動 database/schema 的相同 `DATABASE_URL` 下重跑：PostGIS/database integration 3/3 通過；API integration 11/11 通過。
+- Database suite 再次驗證 PostGIS extension、provider identity unique constraint 與 membership tenant/user unique constraint。
+- API suite 再次驗證 tenant atomic create/rollback、duplicate slug、cross-tenant denial、suspended membership、`GET /v1/me`、missing auth，以及 LINE exchange success、concurrency idempotency、invalid token 與 timeout mapping。
+- 結合 2026-07-15 同一 implementation head 的結果，本輪最終本機證據為：architecture 5 tests、unit 26 tests、integration 14 tests、12 strict typechecks、full format/package-scope lint、9 package builds 與 web/API/worker production builds 全部通過。
+
+### 結論與下一步
+
+- Phase 1 頂層分層為可接手狀態，且現已有自動邊界 contract；`apps/api/src` 的平面 Phase 1 檔案不阻擋本輪驗收，但 Phase 2 新 vertical slices 必須依 module 建立子目錄。
+- 本輪指定的 repository boundary 目標在本機已完成且測試通過；遠端 clean-runner 證據仍依賴推送 `phase1`。
+- 下一個授權動作是 `git push origin phase1`；push 後必須確認 draft PR 新 head 的 verify/terraform/三個 container jobs，再以獨立文件 commit 記錄 run URL。
