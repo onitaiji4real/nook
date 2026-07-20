@@ -531,3 +531,25 @@
 - Phase 1 頂層分層為可接手狀態，且現已有自動邊界 contract；`apps/api/src` 的平面 Phase 1 檔案不阻擋本輪驗收，但 Phase 2 新 vertical slices 必須依 module 建立子目錄。
 - 本輪指定的 repository boundary 目標在本機已完成且測試通過；遠端 clean-runner 證據仍依賴推送 `phase1`。
 - 下一個授權動作是 `git push origin phase1`；push 後必須確認 draft PR 新 head 的 verify/terraform/三個 container jobs，再以獨立文件 commit 記錄 run URL。
+
+## 2026-07-20 — Review API structure for Phase 2 maintainability
+
+### 稽核結論
+
+- Repository 頂層以 `apps/web`、`apps/api`、`apps/worker`、共享 `packages`、`infra`、`docs` 與 `tests` 分離，符合 modular monolith 與三個 deployable applications 的既定方向，無須改成微服務。
+- `apps/api/src` 目前只有 health、identity 與 tenancy 等 Phase 1 能力，共 21 個來源檔、約 710 行；現階段仍可維護，但所有 controller、application service、adapter、token 與共用 HTTP 元件平放在同一層，不能沿用到 Phase 2 的 merchant/location/staff/service/schedule/booking 功能。
+- 現有 architecture checker 能阻止 workspace 間的非法依賴、未宣告的 `@nook/*` import、app-to-app import 與追蹤 generated artifacts，但尚未限制 `apps/api` 內部 feature/module 之間的依賴方向。
+- Controller 沒有直接存取 Prisma；`AppModule` 只在 composition root 建立 `@nook/database` repository adapter，符合目前規則。不過若持續把 provider registration 集中在 root module，該檔會成為後續擴充瓶頸。
+
+### Phase 2 前建議邊界
+
+- 保留 `apps/api` 作為 deployable/composition root，將共用 HTTP、認證、設定與 health 能力移入 `common` 或 `platform` 子目錄。
+- 每個業務能力建立獨立 Nest module，例如 `modules/tenancy`、`modules/identity`、`modules/merchant`、`modules/staff`、`modules/service-catalog`、`modules/scheduling` 與 `modules/booking`；module 內再依需要分 `api`、`application`、`domain`、`infrastructure`，避免為小模組建立空層級。
+- Root `AppModule` 僅組裝 feature modules；Prisma repository 與外部 adapter 的 provider registration 由各 feature module 管理。跨模組互動透過公開 application interface/domain event，不直接 import 對方內部檔案。
+- 在第一個 Phase 2 vertical slice 開始前完成現有 health/identity/tenancy 的機械式搬移，並擴充 architecture checker，阻止跨 feature 深層 import；搬移不得同時改變 API contract 或業務行為。
+
+### 風險與下一步
+
+- 現況不是立即性的維護問題，但若先新增 booking 等核心功能再重構，測試、DI provider 與 import path 的搬移成本會快速增加。
+- 建議下一個本機任務定義為「P2 API module foundation」：先寫 ADR/目錄與依賴規則，再搬移 Phase 1 能力、補負向 architecture tests，最後才開始 merchant onboarding 或 booking vertical slice。
+- 本輪只做唯讀架構稽核與工作紀錄，未調整 production source、API contract、dependency、database schema 或外部資源。
