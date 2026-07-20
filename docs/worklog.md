@@ -553,3 +553,22 @@
 - 現況不是立即性的維護問題，但若先新增 booking 等核心功能再重構，測試、DI provider 與 import path 的搬移成本會快速增加。
 - 建議下一個本機任務定義為「P2 API module foundation」：先寫 ADR/目錄與依賴規則，再搬移 Phase 1 能力、補負向 architecture tests，最後才開始 merchant onboarding 或 booking vertical slice。
 - 本輪只做唯讀架構稽核與工作紀錄，未調整 production source、API contract、dependency、database schema 或外部資源。
+
+## 2026-07-20 — Push repository boundaries and verify remote CI
+
+### Push 與分支證據
+
+- 使用者明確指示推送後，`git push origin phase1` 將遠端 `phase1` 由 `bbfb93d` fast-forward 至 `e634f50`，包含 repository boundary implementation、local acceptance evidence 與 API modularity review 三個 scoped commits。
+- 推送後唯讀核對確認 `origin/phase1@e634f50`，Draft PR #1 head 亦為 `e634f50`；`origin/main` 維持 `dd5f146`，沒有直接 push、merge 或修改 main。
+- Git credential helper 只由 Git push process 使用；未輸出或寫入 token，也未修改 GitHub/GCP/LINE secrets。
+
+### GitHub Actions 直接證據
+
+- Push workflow [run #29757249654](https://github.com/onitaiji4real/nook/actions/runs/29757249654) 在 `phase1@e634f50` 完成，結論為 `success`。
+- Draft PR workflow [run #29757255352](https://github.com/onitaiji4real/nook/actions/runs/29757255352) 在相同 head 完成，結論為 `success`。
+- 兩個 workflow 的 `verify`、`terraform`、`container-images (web)`、`container-images (api)` 與 `container-images (worker)` 全部 completed/success；repository structure 與 workspace boundary contract 已取得 GitHub clean runner 證據。
+
+### 剩餘限制
+
+- Draft PR #1 維持 open/draft，本輪未改為 ready、未 review、未合併；P1-F04 仍需完成 review/ready/merge 證據。
+- Phase 1 仍受 GCP apply、真實 LINE/Identity Platform staging、staging deployment/rollback、production approval wait 與 applied observability notification 等外部 gate 阻塞。
