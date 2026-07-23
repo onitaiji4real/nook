@@ -1,8 +1,10 @@
 # Phase 1：平台骨架實作計畫
 
 狀態：`in_progress`
-最後更新：2026-07-14  
+最後更新：2026-07-21
 來源：`docs/product/business-technical-plan.md` §18 Phase 1
+
+任務索引的 `done` 只表示單一 task 在 repository／local evidence 範圍內符合 acceptance criteria。Phase 1 仍以 `docs/phase-1/acceptance-evidence.md` 的 required gates為準；只要任一 gate為`BLOCKED`、`FAIL`或`NOT_RUN`，本文件狀態不得改為完成。
 
 ## 目標
 
@@ -28,6 +30,8 @@
 3. `P1-003` identity/tenant/RBAC，依賴 Prisma 與 API 骨架。
 4. `P1-004` LINE login exchange，依賴 identity repository 與 Secret Manager interface。
 5. `P1-005` CI/CD and observability，先接 lint/test/build，再接 staging deploy。
+
+P1-006～P1-017 是依 gap audit建立的 repository remediation tasks；它們完成 local implementation contract，不取代下列外部前置條件或 required gate。
 
 ## Phase 1 完成定義
 

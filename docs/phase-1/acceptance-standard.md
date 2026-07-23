@@ -1,7 +1,7 @@
 # Phase 1 驗收標準
 
 版本：v1.0
-適用範圍：`docs/product/business-technical-plan.md` §18 Phase 1 及 P1-001～P1-005
+適用範圍：`docs/product/business-technical-plan.md` §18 Phase 1 及 P1-001～P1-017
 驗收原則：可重現、可追溯、fail closed，不以「已有程式碼」代替實際證據。
 
 ## 狀態定義
@@ -43,7 +43,7 @@ Phase 1 只有在所有 required gate 為 `PASS` 時才可標記完成。`BLOCKE
 | ------ | ------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | P1-C01 | Atomic onboarding   | 建立 tenant 與 OWNER membership 使用同一 transaction；失敗不留 orphan。                  | database integration test。                             |
 | P1-C02 | Stable API contract | `POST /v1/tenants`、`GET /v1/tenants/:tenantId`、`GET /v1/me` 符合 OpenAPI 與 RFC 9457。 | contract/e2e tests 與 OpenAPI validation。              |
-| P1-C03 | Tenant isolation    | Tenant A 無法讀寫 Tenant B；inactive membership 立即拒絕。                               | cross-tenant authorization integration tests。          |
+| P1-C03 | Tenant isolation    | Tenant A 無法讀寫 Tenant B；inactive membership 或 local user 立即拒絕。                 | cross-tenant authorization integration tests。          |
 | P1-C04 | Safe audit          | tenant.created 與 authorization.denied 含安全 actor/resource/request ID，不含 PII。      | audit integration test 與 captured-log redaction test。 |
 | P1-C05 | Layering            | controller 不 import Prisma；tenant repository method 顯式要求 tenantId。                | architecture test/static assertion。                    |
 
@@ -53,7 +53,7 @@ Phase 1 只有在所有 required gate 為 `PASS` 時才可標記完成。`BLOCKE
 | ------ | --------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | P1-D01 | Server-side verification    | API 只接受 raw token/nonce；驗證 issuer、audience、expiry、signature/provider response 與 nonce，不信任前端 userId。 | valid/expired/wrong-audience/invalid-nonce contract tests。                        |
 | P1-D02 | Idempotent identity         | 重試與 concurrent exchange 不建立重複 User/UserIdentity。                                                            | database concurrency integration test。                                            |
-| P1-D03 | Stable failure mapping      | invalid token 與 provider timeout 有上限並映射 RFC 9457，不洩漏 token。                                              | adapter timeout/error e2e tests。                                                  |
+| P1-D03 | Stable failure mapping      | invalid token、inactive user 與 provider timeout 映射 RFC 9457，不洩漏 token。                                       | adapter timeout/error e2e tests。                                                  |
 | P1-D04 | Token issuance              | 成功只回傳 custom token/expiry，無 cookie side effect；issuer 可替換。                                               | API contract 與 adapter contract tests。                                           |
 | P1-D05 | Actual provider integration | staging 使用真實 LINE channel 與 Identity Platform 完成交換。                                                        | 不含 token 的 staging synthetic login run 與 Cloud Audit/structured log evidence。 |
 
