@@ -2,6 +2,10 @@ packages:
   - apps/*
   - packages/*
 
+# CI installs package.json's pin explicitly. Local Homebrew pnpm may use a newer version
+# allowed by engines without downloading the pin before every command.
+pmOnFail: warn
+
 injectWorkspacePackages: true
 
 allowBuilds:
