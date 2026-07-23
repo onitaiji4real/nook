@@ -1,6 +1,6 @@
 # P3-006：Reminder jobs與LINE通知邊界
 
-狀態：`in_progress`
+狀態：`done`
 
 ## Outcome
 
@@ -24,14 +24,14 @@ Dispatcher每分鐘由private worker endpoint啟動，依序投影outbox、派�
 
 支援event與效果：
 
-| Event | Projection |
-| --- | --- |
-| `appointment.confirmed.v1` | 建`appointment.confirmed`立即job；依effective entitlement建future `appointment.reminder.24h`／`appointment.reminder.2h` |
-| `appointment.cancelled.v1` | 取消該appointment所有nonterminal jobs；建`appointment.cancelled`立即job |
-| `appointment.rescheduled.v1` | 取消source所有nonterminal jobs；對replacement建`appointment.rescheduled`立即job與全新future reminders |
-| `appointment.checked_in.v1` | 取消該appointmentfuture reminders，不建message |
-| `appointment.completed.v1` | 取消該appointment所有nonterminal reminders，不建message |
-| `appointment.no_show.v1` | 取消該appointment所有nonterminal reminders，不建message |
+| Event                        | Projection                                                                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `appointment.confirmed.v1`   | 建`appointment.confirmed`立即job；依effective entitlement建future `appointment.reminder.24h`／`appointment.reminder.2h` |
+| `appointment.cancelled.v1`   | 取消該appointment所有nonterminal jobs；建`appointment.cancelled`立即job                                                 |
+| `appointment.rescheduled.v1` | 取消source所有nonterminal jobs；對replacement建`appointment.rescheduled`立即job與全新future reminders                   |
+| `appointment.checked_in.v1`  | 取消該appointmentfuture reminders，不建message                                                                          |
+| `appointment.completed.v1`   | 取消該appointment所有nonterminal reminders，不建message                                                                 |
+| `appointment.no_show.v1`     | 取消該appointment所有nonterminal reminders，不建message                                                                 |
 
 - Projector每次開一個transaction，以`FOR UPDATE SKIP LOCKED LIMIT 1`依`availableAt,id`鎖一筆`aggregate_type=appointment`、`status=PENDING`且`availableAt <= dbNow`的event；candidate必須不存在同aggregate更早的due PENDING event，讓不同appointment可平行、同appointment event依序投影。在同一transaction內重新讀tenant-scoped aggregate、執行upsert/cancel並把event標PUBLISHED；一次request最多重複100次。其他aggregate不被選取。Unsupported appointment event、payload/aggregate ID不一致、missing/cross-tenant aggregate或dedupe shape mismatch是terminal corruption：`attemptCount + 1`後標FAILED。Database/transient failure整筆rollback、event保持PENDING且endpoint回503，不用FAILED吞掉可恢復錯誤。
 - Dedupe key exact為`notification:<templateKey>:<appointmentId>`，其中template key已含`.v1`。Collision只比較tenant、consumer、appointment、channel、template與dueAt；source event與既有retry UUID不重寫也不參與shape。任一欄不同視為corruption。Concurrent projector在pre-read後若`createMany(skipDuplicates)`輸掉unique race，必須重新讀winner並執行同一個exact shape check，不能只因count=0就把event標PUBLISHED。
@@ -99,40 +99,27 @@ Cancellation只把第一行換成`預約已取消`；reschedule換成`預約已�
 
 ## Acceptance criteria
 
-- [ ] 第19個expand migration、Prisma relations/checks/indexes、default reminder entitlement與fresh replay通過。
-- [ ] Outbox projection對六種event、future availableAt、stable event-time dueAt、dedupe/cancellation replay、unknown/corrupt event、past reminder與reschedule cancellation有database integration evidence。
-- [ ] Dispatcher SKIP LOCKED、lease reclaim、dedicated queue contract、deterministic task name、AlreadyExists、partial enqueue failure、max-age sweep與bounded batch有concurrency／unit evidence。
-- [ ] Delivery current-truth/recipient lock matrix、fixed retry key、STARTED/AMBIGUOUS evidence、200/409 accepted、retry分類、10-outbound-attempt dead-letter、max-age及同job無concurrent provider call有evidence；crash/timeout可重做HTTP call，但logical job與budget reservation不得重複。
-- [ ] Monthly budget reservation在併發下不超cap；retry不重複保留，cap exhausted truthful SKIPPED且不呼叫provider。
-- [ ] LINE webhook raw signature-before-parse、event idempotency、follow/unfollow、same-timestamp unfollow wins、unknown event ignore、invalid signature no-write與30天retention有integration evidence。
-- [ ] Recipient只由verified provider subject／webhook建立，cross-user/cross-provider/mismatch/inactive/blocked一律不送且不洩漏subject。
-- [ ] 五個canonical template golden test驗證exact繁中內容、snapshot來源、timezone、固定deep link、1000字上限與invalid-data skip，且不含地址、電話、customer name、price、policy或notes。
-- [ ] Worker route/header/body與Terraform IAM/static contract、scheduler/queue defense、disabled mode與per-service runtime validation完成；applied Cloud Run IAM只列external gate，Terraform activation仍預設off。
-- [ ] ADR、data dictionary、security/design contract、OpenAPI internal contract、runbook、tests、lint/typecheck/build/architecture/migration replay/worklog完成。
+- [x] 第19個expand migration、Prisma relations/checks/indexes、default reminder entitlement與fresh replay通過。
+- [x] Outbox projection對六種event、future availableAt、stable event-time dueAt、dedupe/cancellation replay、unknown/corrupt event、past reminder與reschedule cancellation有database integration evidence。
+- [x] Dispatcher SKIP LOCKED、lease reclaim、dedicated queue contract、deterministic task name、AlreadyExists、partial enqueue failure、max-age sweep與bounded batch有concurrency／unit evidence。
+- [x] Delivery current-truth/recipient lock matrix、fixed retry key、STARTED/AMBIGUOUS evidence、200/409 accepted、retry分類、10-outbound-attempt dead-letter、max-age及同job無concurrent provider call有evidence；crash/timeout可重做HTTP call，但logical job與budget reservation不得重複。
+- [x] Monthly budget reservation在併發下不超cap；retry不重複保留，cap exhausted truthful SKIPPED且不呼叫provider。
+- [x] LINE webhook raw signature-before-parse、event idempotency、follow/unfollow、same-timestamp unfollow wins、unknown event ignore、invalid signature no-write與30天retention有integration evidence。
+- [x] Recipient只由verified provider subject／webhook建立，cross-user/cross-provider/mismatch/inactive/blocked一律不送且不洩漏subject。
+- [x] 五個canonical template golden test驗證exact繁中內容、snapshot來源、timezone、固定deep link、1000字上限與invalid-data skip，且不含地址、電話、customer name、price、policy或notes。
+- [x] Worker route/header/body與Terraform IAM/static contract、scheduler/queue defense、disabled mode與per-service runtime validation完成；applied Cloud Run IAM只列external gate，Terraform activation仍預設off。
+- [x] ADR、data dictionary、security/design contract、OpenAPI internal contract、runbook、tests、lint/typecheck/build/architecture/migration replay/worklog完成。
 
 ## Current verification checkpoint（2026-07-23）
 
-已完成但不等同本task驗收完成：
+Repository/local acceptance已完成：
 
-- 第19個expand migration、Prisma schema、projector、dispatcher、delivery、LINE webhook/provider/template、API/worker route、runtime config、OpenAPI、Terraform與操作/安全文件均已建立。
-- Dependency-independent repository/CI/deployment/local-dev contracts 27/27、Terraform release contract 4/4、TypeScript parser 269 files/0 syntax errors、OpenAPI YAML parse、Terraform recursive fmt及`git diff --check`通過。
-- Static/concurrency review已修正same-aggregate projection ordering、dedupe winner revalidation、invalid provider timestamp、middleware-owned request ID與notification-disabled LINE secret IAM。
-
-仍缺的authoritative evidence：
-
-- Root workspace的`node_modules/.bin/tsc`、`turbo`、`vitest`缺失，因此strict typecheck、Vitest unit、Prisma integration、完整build與architecture package checks尚未執行。
-- Fresh database migration replay、第二次no-pending及notification concurrency integration尚未執行。
-- Terraform mock-provider test在受限環境無法啟動既有Google provider process，0 tests executed；不得列為通過。
-- LINE/GCP真實帳號、secret、Cloud Tasks與staging裝置驗收仍屬下方external activation gates。
-
-恢復完整驗收的最短路徑：
-
-```bash
-pnpm install --frozen-lockfile
-pnpm run doctor
-```
-
-只有doctor的workspace tools皆為PASS後，才執行完整lint/typecheck/unit/integration/build、migration replay與Terraform checks。P3-006在這些repository/local evidence通過前維持`in_progress`，P3-007維持`blocked`。
+- Frozen lockfile恢復624個packages並產生Prisma Client；project doctor確認Node、pnpm、`.env` key與`tsc`／`turbo`／`vitest`可用。
+- Architecture 23/23、Prettier、12-package lint、strict typecheck、19/19 unit workspace tasks與12/12 production build通過；API CORS unit因沙箱socket限制在允許loopback後原樣重跑通過。
+- Database integration 11 files／63 tests與API integration 7 files／50 tests通過；其中包含同月份LINE budget跨connection競態，初始化與increment使用單一PostgreSQL `INSERT ... ON CONFLICT ... WHERE`原子上限。
+- 本機既有database套用第19個migration；一次性空database從零套用全部19個migrations、第二次no pending，驗證後已刪除。
+- Terraform recursive fmt、release ownership 5/5及platform mock-provider 12/12通過；notification activation仍預設off，未執行apply。
+- LINE/GCP真實帳號、secret、Cloud Tasks與staging裝置驗收仍只列下方external activation gates，不因repository完成而推定通過。
 
 ## External activation gates（不阻擋repository completion）
 

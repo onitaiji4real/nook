@@ -1538,3 +1538,16 @@
 - 每筆commit前均執行`git diff --cached --check`與常見credential pattern掃描；命中內容只有synthetic fixture、欄位名稱、公開browser identifier範例或安全文件中的secret名稱，沒有提交`.env`、credential、token或secret value。Terraform module與三環境通過`terraform fmt -check`；OpenAPI通過Ruby YAML AST parse。
 - Dependency-independent驗證通過：CI quality 3 tests、deployment readiness 3 tests、Terraform release ownership 5 tests、local development 12 tests，對應contract command亦全部通過。完整strict typecheck、Vitest/Prisma integration、fresh migration replay、workspace build與Terraform mock-provider tests仍因`node_modules/.bin/tsc`、`turbo`、`vitest`缺失而未執行，不得視為通過。
 - P3-006維持`in_progress`，P3-007維持`blocked`；本checkpoint沒有push、PR、deploy、Terraform apply、外部provider呼叫或更新`main`。
+
+### P3-006 full verification and repository completion
+
+- 依frozen lockfile恢復624個packages，沒有修改dependency版本或lockfile；Prisma Client成功產生。專案入口必須使用`pnpm run doctor`，避免誤執行pnpm內建同名command；doctor source改用lint-safe Node globals，focused ESLint與4 tests通過。
+- 第一輪完整檢查如實發現並修正：27個Prettier差異、Prisma readonly filter型別、integration matcher的unsafe assignment、worker mock的unsafe `any`、多餘template type assertion，以及development/test localhost notification worker URL被前置HTTPS schema錯誤拒絕。修正後architecture 23/23、Prettier、12-package lint、strict typecheck與12/12 production build通過。
+- `pnpm test`第一次只因Codex sandbox禁止Supertest建立`0.0.0.0` socket而使CORS 3 tests得到EPERM；在允許本機socket後原樣重跑，19/19 workspace unit tasks全綠。API 13 files／65 tests、Web 14／49、worker 7／20，config 28、contracts 42、database unit 39、domain 14、LINE 31與observability 6均通過。
+- 本機database原先只有18個migrations，先以明確`pnpm db:migrate`套用`20260723020000_notifications_line`。Integration再揭露兩個時間／一致性fixture：appointment view hold固定上午expiry晚於測試建立時間、notification fixture的`confirmedAt`與`policiesAcceptedAt`使用兩次clock；改為固定合法fixture clock與單一confirmed time。
+- Notification budget跨兩個Prisma connections同時初始化月份row時，Prisma upsert仍可在provider/month unique key競態得到23505。改為單一PostgreSQL `INSERT ... ON CONFLICT DO UPDATE ... WHERE reserved_count < cap RETURNING`，把首次初始化與條件式increment合併成原子操作；focused notification integration 9/9通過。
+- 完整`pnpm test:integration`最終database 11 files／63 tests、API 7 files／50 tests、9/9 workspace tasks全綠。PII-free operational snapshot測試明確建立due pending outbox，不再假設共享database完全沒有其他合法pending event。
+- 一次性`nook_p3_006_replay_20260723`空database從零順序套用全部19個migrations，第二次deploy為no pending，驗證後已刪除。既有`nook` database亦為19 migrations已套用。
+- Terraform provider本次可啟動；初次6 pass／1 fail是plan assertion混用apply-time service-account email unknown，拆成plan-time queue/role assertions並保留release static contract驗證exact member後，recursive fmt、release ownership 5/5與platform mock-provider 12/12通過。未執行Terraform apply。
+- P3-006全部repository/local acceptance criteria已核對並標為`done`；P3-007依賴解除改為`ready`。真實LINE OA/provider、兩個secret、Cloud Tasks、staging follow/retry/quota/device與owner monthly cap仍是external activation gates，沒有在本輪推定通過。
+- 本輪沒有push、PR、deploy、Terraform apply、外部LINE/GCP provider呼叫或更新`main`，也沒有輸出、寫入或持久化credential/token。

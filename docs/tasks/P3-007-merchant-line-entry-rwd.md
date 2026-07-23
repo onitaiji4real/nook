@@ -1,6 +1,6 @@
 # P3-007：Merchant LINE entry與RWD營運入口
 
-狀態：`blocked`
+狀態：`ready`
 依賴：P3-006 repository/local acceptance
 
 ## Outcome
@@ -32,14 +32,14 @@
 
 `allow`只表示可導向該既有surface，不改變其application authorization；`read`表示既有read-only模式；`scoped`表示STAFF只能看到自己被授權的appointment；`fallback`固定回Studio home並顯示授權不足，不用403內容洩漏資源。
 
-| route | OWNER | MANAGER | VIEWER | STAFF |
-| --- | --- | --- | --- | --- |
-| `home` | allow | allow | read | read |
-| `appointments` | allow | allow | read | scoped |
-| `services` | allow | allow | read | fallback |
-| `availability` | allow | allow | read | fallback |
-| `portfolio` | allow | allow | read | fallback |
-| `policies` | allow | allow | read | fallback |
+| route          | OWNER | MANAGER | VIEWER | STAFF    |
+| -------------- | ----- | ------- | ------ | -------- |
+| `home`         | allow | allow   | read   | read     |
+| `appointments` | allow | allow   | read   | scoped   |
+| `services`     | allow | allow   | read   | fallback |
+| `availability` | allow | allow   | read   | fallback |
+| `portfolio`    | allow | allow   | read   | fallback |
+| `policies`     | allow | allow   | read   | fallback |
 
 如果任一既有surface目前沒有安全read-only模式，VIEWER也必須fallback；不得為符合表格而在本slice擴張write權限。OWNER/MANAGER write、VIEWER read與STAFF scoped的實際權限仍需逐route integration evidence。
 

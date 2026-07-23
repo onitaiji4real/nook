@@ -18,14 +18,14 @@ Cloud Task target與OIDC audience共用runtime驗證後的exact worker origin，
 
 ## Lifecycle behavior
 
-| Appointment event | Result message | Reminder effect |
-| --- | --- | --- |
-| Confirmed | 建立確認通知 | 依0..2 entitlement建立24h／2h |
-| Cancelled | 建立取消結果 | 取消除本次取消result dedupe key外的nonterminal jobs |
-| Rescheduled | replacement建立改期結果 | 取消source；為replacement重建future reminders |
-| Checked in | 無 | 取消future reminders |
-| Completed | 無 | 取消nonterminal reminders |
-| No-show | 無 | 取消nonterminal reminders |
+| Appointment event | Result message          | Reminder effect                                     |
+| ----------------- | ----------------------- | --------------------------------------------------- |
+| Confirmed         | 建立確認通知            | 依0..2 entitlement建立24h／2h                       |
+| Cancelled         | 建立取消結果            | 取消除本次取消result dedupe key外的nonterminal jobs |
+| Rescheduled       | replacement建立改期結果 | 取消source；為replacement重建future reminders       |
+| Checked in        | 無                      | 取消future reminders                                |
+| Completed         | 無                      | 取消nonterminal reminders                           |
+| No-show           | 無                      | 取消nonterminal reminders                           |
 
 Reschedule current leaf與direct/root chain不一致時fail closed。已enqueue的source task之後執行也會因job／appointment current truth被skip。
 

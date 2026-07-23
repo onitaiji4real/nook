@@ -16,11 +16,11 @@
 
 ## 三條LINE能力必須分開
 
-| 泳道 | 第一版provider／用途 | Recipient與同意 | 成本與方案 | Fallback |
-| --- | --- | --- | --- | --- |
-| A. 平台OA入口 | Rich menu／LIFF URL開啟Web；不發交易訊息、不直接mutation | 點擊者仍須LINE Login與ACTIVE membership | 點擊不產生Messaging API訊息費；所有方案基本入口 | External browser走同一Web auth |
+| 泳道            | 第一版provider／用途                                                        | Recipient與同意                                                                          | 成本與方案                                                                                | Fallback                                          |
+| --------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| A. 平台OA入口   | Rich menu／LIFF URL開啟Web；不發交易訊息、不直接mutation                    | 點擊者仍須LINE Login與ACTIVE membership                                                  | 點擊不產生Messaging API訊息費；所有方案基本入口                                           | External browser走同一Web auth                    |
 | B. 平台交易通知 | P3-006只使用平台OA Messaging API Push；MINI App service message保留disabled | 只送已驗簽FOLLOWING且同provider identity exact match的顧客；blocked/inactive fail closed | 平台承擔訊息費；reminder entitlement 0..2且平台monthly hard cap；HTTP 200/409只記ACCEPTED | 第一版無Email fallback，未送不影響預約transaction |
-| C. 店家自有OA | Phase 6每tenant Messaging API channel，品牌化交易通知與經同意的回訪 | 每tenant follow/block、purpose consent、退訂與suppression | NT$299/月automation entitlement；provider訊息費由店家負擔並獨立cost ledger | 不得自動退回平台OA造成成本或同意混淆 |
+| C. 店家自有OA   | Phase 6每tenant Messaging API channel，品牌化交易通知與經同意的回訪         | 每tenant follow/block、purpose consent、退訂與suppression                                | NT$299/月automation entitlement；provider訊息費由店家負擔並獨立cost ledger                | 不得自動退回平台OA造成成本或同意混淆              |
 
 ### A. 平台OA作為入口
 
@@ -46,17 +46,17 @@ P3-006使用平台Messaging API channel發送預約成立、取消、改期與24
 
 ## 交付順序
 
-| 階段 | 可被使用者感知的成果 | 收入／成本目的 | 外部gate |
-| --- | --- | --- | --- |
-| P3-006 | 平台OA交易通知與24h／2h提醒 | 證明通知成本可控，不承諾已送達 | LINE provider/OA、兩個secret、staging device smoke |
-| P3-007 | 店家從平台OA一鍵進入RWD後台 | 提高自助率、降低每店客服時間 | Rich menu／LIFF設定與真機入口驗證 |
-| Phase 4 | CRM、completed-only評論、搜尋、收藏、moderation | 建立留存與平台導流價值 | 評論／隱私政策owner核准；地理資料品質 |
-| Phase 5A | Production/payment foundation與法遵 | 先證明可安全收費，不先開真實扣款 | GCP/domain/WIF、Cloud Armor、HA/PITR、on-call、Terms/Privacy |
-| Phase 5B | SaaS subscription、年繳、加購、entitlement lifecycle | 產生可稽核MRR／ARR | Provider/KYC、產品價格、billing portal、對帳、稅務／發票 |
-| Phase 5C | Marketplace attribution shadow ledger | 驗證規則但不認列或收取8% | Attribution window、退款/爭議/appeal與settlement規則 |
-| Phase 5D | 定金／退款provider adapter | 降低no-show；定金代收不冒充平台收入 | Webhook secret、reconciliation、chargeback、退款政策 |
-| Phase 5E | 正式Beta activation | 20–50家真實店安全使用與有限真實扣款 | 前述foundation、restore drill、support與incident gates全通過 |
-| Phase 6 | 店家自己的OA、分群與回訪 | NT$299/月加購＋訊息費由店家負擔 | 每店channel/token、consent與退訂、cost attribution |
+| 階段     | 可被使用者感知的成果                                 | 收入／成本目的                      | 外部gate                                                     |
+| -------- | ---------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------ |
+| P3-006   | 平台OA交易通知與24h／2h提醒                          | 證明通知成本可控，不承諾已送達      | LINE provider/OA、兩個secret、staging device smoke           |
+| P3-007   | 店家從平台OA一鍵進入RWD後台                          | 提高自助率、降低每店客服時間        | Rich menu／LIFF設定與真機入口驗證                            |
+| Phase 4  | CRM、completed-only評論、搜尋、收藏、moderation      | 建立留存與平台導流價值              | 評論／隱私政策owner核准；地理資料品質                        |
+| Phase 5A | Production/payment foundation與法遵                  | 先證明可安全收費，不先開真實扣款    | GCP/domain/WIF、Cloud Armor、HA/PITR、on-call、Terms/Privacy |
+| Phase 5B | SaaS subscription、年繳、加購、entitlement lifecycle | 產生可稽核MRR／ARR                  | Provider/KYC、產品價格、billing portal、對帳、稅務／發票     |
+| Phase 5C | Marketplace attribution shadow ledger                | 驗證規則但不認列或收取8%            | Attribution window、退款/爭議/appeal與settlement規則         |
+| Phase 5D | 定金／退款provider adapter                           | 降低no-show；定金代收不冒充平台收入 | Webhook secret、reconciliation、chargeback、退款政策         |
+| Phase 5E | 正式Beta activation                                  | 20–50家真實店安全使用與有限真實扣款 | 前述foundation、restore drill、support與incident gates全通過 |
+| Phase 6  | 店家自己的OA、分群與回訪                             | NT$299/月加購＋訊息費由店家負擔     | 每店channel/token、consent與退訂、cost attribution           |
 
 ## 下一批垂直任務
 
@@ -64,7 +64,7 @@ P3-006使用平台Messaging API channel發送預約成立、取消、改期與24
 
 ### 預約核心收尾
 
-- `P3-006` Reminders & LINE notifications：完成repository/local verification後才能done。
+- `P3-006` Reminders & LINE notifications：repository/local verification已完成；真實provider與staging裝置仍依external activation gates啟用。
 - `P3-007` Merchant LINE entry & RWD operations：平台OA只作安全入口，店家write仍由RWD確認。
 
 ### Phase 4：留存與探索
@@ -128,16 +128,16 @@ P3-006使用平台Messaging API channel發送預約成立、取消、改期與24
 
 ## 必須持續量測的單位經濟
 
-| 指標 | 定義 | 初期guardrail |
-| --- | --- | --- |
-| Paid ARPU | 已付訂閱＋加購／付費tenant月數 | NT$600–750是假設；需以月繳/年繳/創始方案mix情境驗證 |
-| Gross margin | 收入減金流、LINE、GCP與直接支援成本 | 長期≥80% |
-| CAC payback | 獲客成本／每店月毛利 | <6個月 |
-| Logo churn | 月內流失付費tenant／月初付費tenant | 成熟後<2.5% |
-| Self-serve onboarding | 無人工介入完成上線店家比例 | >70% |
-| Support minutes | 每tenant每月人工支援分鐘 | <20分鐘 |
-| Reminder cost | 平台OA計費訊息／active tenant與accepted appointment | 需受monthly cap與entitlement控制 |
-| Marketplace take rate | 實收媒合費／符合資格完成服務GMV | 8%，單筆上限NT$250 |
+| 指標                  | 定義                                                | 初期guardrail                                       |
+| --------------------- | --------------------------------------------------- | --------------------------------------------------- |
+| Paid ARPU             | 已付訂閱＋加購／付費tenant月數                      | NT$600–750是假設；需以月繳/年繳/創始方案mix情境驗證 |
+| Gross margin          | 收入減金流、LINE、GCP與直接支援成本                 | 長期≥80%                                            |
+| CAC payback           | 獲客成本／每店月毛利                                | <6個月                                              |
+| Logo churn            | 月內流失付費tenant／月初付費tenant                  | 成熟後<2.5%                                         |
+| Self-serve onboarding | 無人工介入完成上線店家比例                          | >70%                                                |
+| Support minutes       | 每tenant每月人工支援分鐘                            | <20分鐘                                             |
+| Reminder cost         | 平台OA計費訊息／active tenant與accepted appointment | 需受monthly cap與entitlement控制                    |
+| Marketplace take rate | 實收媒合費／符合資格完成服務GMV                     | 8%，單筆上限NT$250                                  |
 
 指標只讀可稽核ledger與terminal business state，不從application log或未驗證browser analytics推算營收。
 
@@ -147,14 +147,14 @@ ARPU forecast至少分monthly、annual與founder cohort，使用各自實際月�
 
 可先完成repository工作，以下項目沒有真實證據前維持`external gate`。`TBD`不是通過；activation owner必須更新狀態、期限與evidence link。
 
-| Gate | Accountable owner | 狀態 | 目標期限 | Evidence |
-| --- | --- | --- | --- | --- |
-| 平台OA、Login/MINI App/Messaging channels同provider、rich menu、webhook與secret workflow | Product/LINE owner | `not_provided` | TBD | — |
-| Dev/stg/prod GCP、billing、Terraform state、WIF、domain與production approval | Platform owner | `not_provided` | TBD | — |
-| Payment provider、merchant KYC、products/prices與webhook secrets | Finance/product owner | `not_selected` | TBD | — |
-| 稅務、電子發票／receipt、退款與chargeback責任 | Finance/legal owner | `not_approved` | TBD | — |
-| Terms/Privacy、LINE跨channel、評論、媒合爭議、行銷同意與retention | Legal/product owner | `not_approved` | TBD | — |
-| 20–50家Beta名單、support SLA、incident escalation、status communication與on-call | Operations owner | `not_staffed` | TBD | — |
+| Gate                                                                                     | Accountable owner     | 狀態           | 目標期限 | Evidence |
+| ---------------------------------------------------------------------------------------- | --------------------- | -------------- | -------- | -------- |
+| 平台OA、Login/MINI App/Messaging channels同provider、rich menu、webhook與secret workflow | Product/LINE owner    | `not_provided` | TBD      | —        |
+| Dev/stg/prod GCP、billing、Terraform state、WIF、domain與production approval             | Platform owner        | `not_provided` | TBD      | —        |
+| Payment provider、merchant KYC、products/prices與webhook secrets                         | Finance/product owner | `not_selected` | TBD      | —        |
+| 稅務、電子發票／receipt、退款與chargeback責任                                            | Finance/legal owner   | `not_approved` | TBD      | —        |
+| Terms/Privacy、LINE跨channel、評論、媒合爭議、行銷同意與retention                        | Legal/product owner   | `not_approved` | TBD      | —        |
+| 20–50家Beta名單、support SLA、incident escalation、status communication與on-call         | Operations owner      | `not_staffed`  | TBD      | —        |
 
 External gate不得用假token或硬編production ID通過；fixture/local fake只證明repository contract。
 
