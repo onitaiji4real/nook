@@ -4,6 +4,7 @@ import {
   Prisma,
   type PrismaClient,
   type TenantStatus,
+  UserStatus,
 } from '@prisma/client';
 
 export interface CreateTenantWithOwnerInput {
@@ -28,6 +29,10 @@ export interface TenantMembershipRecord {
 
 export interface UserMembershipRecord {
   readonly tenantId: string;
+  readonly tenantName: string;
+  readonly tenantSlug: string;
+  readonly tenantStatus: TenantStatus;
+  readonly tenantTimezone: string;
   readonly role: MembershipRole;
   readonly status: MembershipStatus;
 }
@@ -76,8 +81,20 @@ export class PrismaTenantRepository implements TenantRepository {
 
   async createTenantWithOwner(input: CreateTenantWithOwnerInput): Promise<TenantMembershipRecord> {
     return this.prisma.$transaction(async (transaction) => {
+      const defaultPlan = await transaction.plan.findFirst({
+        where: { isDefault: true },
+        select: { id: true },
+      });
+      if (defaultPlan === null) {
+        throw new Error('default plan is not configured');
+      }
       const tenant = await transaction.tenant.create({
-        data: { name: input.name, slug: input.slug },
+        data: {
+          name: input.name,
+          slug: input.slug,
+          planId: defaultPlan.id,
+          bookingPolicy: { create: {} },
+        },
         select: { id: true, name: true, slug: true, status: true },
       });
 
@@ -116,6 +133,7 @@ export class PrismaTenantRepository implements TenantRepository {
         userId: input.userId,
         status: MembershipStatus.ACTIVE,
         tenant: { status: 'ACTIVE' },
+        user: { status: UserStatus.ACTIVE },
       },
       select: {
         role: true,
@@ -135,11 +153,24 @@ export class PrismaTenantRepository implements TenantRepository {
   }
 
   async listMembershipsForUser(userId: string): Promise<readonly UserMembershipRecord[]> {
-    return this.prisma.membership.findMany({
-      where: { userId },
+    const memberships = await this.prisma.membership.findMany({
+      where: { userId, user: { status: UserStatus.ACTIVE } },
       orderBy: { createdAt: 'asc' },
-      select: { tenantId: true, role: true, status: true },
+      select: {
+        tenantId: true,
+        role: true,
+        status: true,
+        tenant: { select: { name: true, slug: true, status: true, usageTimezone: true } },
+      },
     });
+
+    return memberships.map(({ tenant, ...membership }) => ({
+      ...membership,
+      tenantName: tenant.name,
+      tenantSlug: tenant.slug,
+      tenantStatus: tenant.status,
+      tenantTimezone: tenant.usageTimezone,
+    }));
   }
 
   async recordAuthorizationDeniedIfTenantExists(input: {
