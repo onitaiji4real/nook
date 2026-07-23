@@ -14,7 +14,7 @@ export interface ReadinessResult {
 export class HealthService {
   constructor(
     @Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig,
-    private readonly databaseProbe: DatabaseProbeService,
+    @Inject(DatabaseProbeService) private readonly databaseProbe: DatabaseProbeService,
   ) {}
 
   health(): HealthResponse {

@@ -1,4 +1,4 @@
-import { Controller, Get, Header, Res } from '@nestjs/common';
+import { Controller, Get, Header, Inject, Res } from '@nestjs/common';
 import type { HealthResponse } from '@nook/contracts';
 import type { Response } from 'express';
 
@@ -6,7 +6,7 @@ import { HealthService } from './health.service';
 
 @Controller()
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(@Inject(HealthService) private readonly healthService: HealthService) {}
 
   @Get('health')
   @Header('Cache-Control', 'no-store')
