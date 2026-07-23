@@ -4,10 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { GcpNotificationTaskGateway } from '../src/modules/notifications/notification-task-gateway';
 
-const config: Extract<
-  RuntimeConfig['notification'],
-  { mode: 'line_push'; service: 'worker' }
-> = {
+const config: Extract<RuntimeConfig['notification'], { mode: 'line_push'; service: 'worker' }> = {
   mode: 'line_push',
   service: 'worker',
   accessToken: 'synthetic-token',
@@ -21,10 +18,18 @@ const config: Extract<
 };
 
 function client() {
+  const createTask =
+    vi.fn<
+      (input: {
+        readonly parent: string;
+        readonly task: protos.google.cloud.tasks.v2.ITask;
+      }) => Promise<unknown>
+    >();
+  createTask.mockResolvedValue({});
   return {
     queuePath: vi.fn().mockReturnValue('queues/nook-notifications'),
     taskPath: vi.fn().mockReturnValue('tasks/notification-job-id'),
-    createTask: vi.fn().mockResolvedValue({}),
+    createTask,
   };
 }
 
@@ -32,9 +37,7 @@ describe('GcpNotificationTaskGateway', () => {
   it('enqueues an ID-only body with deterministic task name and OIDC', async () => {
     const tasks = client();
     const gateway = new GcpNotificationTaskGateway(config, tasks);
-    await expect(gateway.enqueue('10000000-0000-4000-8000-000000000001')).resolves.toBe(
-      'enqueued',
-    );
+    await expect(gateway.enqueue('10000000-0000-4000-8000-000000000001')).resolves.toBe('enqueued');
     expect(tasks.taskPath).toHaveBeenCalledWith(
       'synthetic-project',
       'asia-east1',
@@ -50,18 +53,19 @@ describe('GcpNotificationTaskGateway', () => {
         audience: 'https://worker.nook.example',
       },
     });
-    expect(
-      JSON.parse(Buffer.from(request?.task.httpRequest?.body ?? '', 'base64').toString('utf8')),
-    ).toEqual({ jobId: '10000000-0000-4000-8000-000000000001' });
+    const body = request?.task.httpRequest?.body;
+    expect(typeof body).toBe('string');
+    if (typeof body !== 'string') throw new Error('expected base64 task body');
+    expect(Buffer.from(body, 'base64').toString('utf8')).toBe(
+      JSON.stringify({ jobId: '10000000-0000-4000-8000-000000000001' }),
+    );
   });
 
   it('treats deterministic AlreadyExists as an idempotent replay', async () => {
     const tasks = client();
     tasks.createTask.mockRejectedValueOnce({ code: 6 });
     await expect(
-      new GcpNotificationTaskGateway(config, tasks).enqueue(
-        '10000000-0000-4000-8000-000000000001',
-      ),
+      new GcpNotificationTaskGateway(config, tasks).enqueue('10000000-0000-4000-8000-000000000001'),
     ).resolves.toBe('replayed');
   });
 
@@ -70,9 +74,7 @@ describe('GcpNotificationTaskGateway', () => {
     const failure = new Error('synthetic queue failure');
     tasks.createTask.mockRejectedValueOnce(failure);
     await expect(
-      new GcpNotificationTaskGateway(config, tasks).enqueue(
-        '10000000-0000-4000-8000-000000000001',
-      ),
+      new GcpNotificationTaskGateway(config, tasks).enqueue('10000000-0000-4000-8000-000000000001'),
     ).rejects.toBe(failure);
   });
 });

@@ -13,7 +13,10 @@ import { NotificationDispatchController } from './notification-dispatch.controll
 import { NotificationDispatchService } from './notification-dispatch.service';
 import { NotificationDeliveryController } from './notification-delivery.controller';
 import { NotificationDeliveryService } from './notification-delivery.service';
-import { GcpNotificationTaskGateway, type NotificationTaskGateway } from './notification-task-gateway';
+import {
+  GcpNotificationTaskGateway,
+  type NotificationTaskGateway,
+} from './notification-task-gateway';
 import {
   LINE_WEBHOOK_REPOSITORY,
   LINE_PUSH_CLIENT,

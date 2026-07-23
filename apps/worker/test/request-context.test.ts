@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  requireRequestId,
-  safeRequestId,
-  type RequestWithContext,
-} from '../src/request-context';
+import { requireRequestId, safeRequestId, type RequestWithContext } from '../src/request-context';
 
 describe('worker request context', () => {
   it('keeps bounded correlation IDs and replaces untrusted values', () => {

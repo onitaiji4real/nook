@@ -5,11 +5,7 @@ import type {
   NotificationProviderResult,
   NotificationTemplateData,
 } from '@nook/database';
-import {
-  type LineNotificationTemplateKey,
-  type LinePushClient,
-  renderLineNotificationTemplate,
-} from '@nook/line';
+import { type LinePushClient, renderLineNotificationTemplate } from '@nook/line';
 
 import { RUNTIME_CONFIG } from '../../runtime-config.token';
 import { LINE_PUSH_CLIENT, NOTIFICATION_DELIVERY_REPOSITORY } from './notification.tokens';
@@ -35,10 +31,7 @@ export class NotificationDeliveryService {
       throw new NotificationDeliveryRequestError(400, 'request_body_invalid');
     }
     const body = value as Record<string, unknown>;
-    if (
-      Object.keys(body).length !== 1 ||
-      !isUuid(body.jobId)
-    ) {
+    if (Object.keys(body).length !== 1 || !isUuid(body.jobId)) {
       throw new NotificationDeliveryRequestError(400, 'request_body_invalid');
     }
     return { jobId: body.jobId };
@@ -94,7 +87,10 @@ export class NotificationDeliveryService {
     RuntimeConfig['notification'],
     { mode: 'line_push'; service: 'worker' }
   > {
-    if (this.config.notification.mode !== 'line_push' || this.config.notification.service !== 'worker') {
+    if (
+      this.config.notification.mode !== 'line_push' ||
+      this.config.notification.service !== 'worker'
+    ) {
       throw new NotificationDeliveryRequestError(503, 'notification_disabled');
     }
     return this.config.notification;
@@ -103,14 +99,17 @@ export class NotificationDeliveryService {
   private render(data: NotificationTemplateData, publicWebBaseUrl: string): string | null {
     const result = renderLineNotificationTemplate({
       ...data,
-      templateKey: data.templateKey as LineNotificationTemplateKey,
       publicWebBaseUrl,
       allowLocalHttp: ['development', 'test'].includes(this.config.nodeEnv),
     });
     return result.ok ? result.text : null;
   }
 
-  private log(requestId: string, jobId: string, outcome: NotificationDeliveryResult['outcome']): void {
+  private log(
+    requestId: string,
+    jobId: string,
+    outcome: NotificationDeliveryResult['outcome'],
+  ): void {
     process.stdout.write(
       `${JSON.stringify({
         severity: 'INFO',
@@ -125,13 +124,7 @@ export class NotificationDeliveryService {
 }
 
 export interface NotificationDeliveryResult {
-  readonly outcome:
-    | 'success'
-    | 'accepted'
-    | 'replayed'
-    | 'skipped'
-    | 'retryable'
-    | 'dead_letter';
+  readonly outcome: 'success' | 'accepted' | 'replayed' | 'skipped' | 'retryable' | 'dead_letter';
 }
 
 export class NotificationDeliveryRequestError extends Error {
@@ -152,8 +145,6 @@ export class NotificationDeliveryRequestError extends Error {
 function isUuid(value: unknown): value is string {
   return (
     typeof value === 'string' &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value)
   );
 }

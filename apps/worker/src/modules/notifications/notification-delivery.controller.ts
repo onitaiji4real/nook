@@ -1,4 +1,13 @@
-import { Body, Controller, Headers, HttpCode, HttpException, Inject, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  HttpException,
+  Inject,
+  Post,
+  Req,
+} from '@nestjs/common';
 
 import { requireRequestId, type RequestWithContext } from '../../request-context';
 import {
@@ -23,10 +32,7 @@ export class NotificationDeliveryController {
     try {
       this.service.requireTask(queueName);
       const input = this.service.parseBody(body);
-      return await this.service.deliver(
-        input.jobId,
-        requireRequestId(request),
-      );
+      return await this.service.deliver(input.jobId, requireRequestId(request));
     } catch (error) {
       if (error instanceof NotificationDeliveryRequestError) {
         throw new HttpException({ status: error.status, code: error.code }, error.status);

@@ -69,8 +69,7 @@ export class NotificationDispatchService {
     const deletedWebhookCount = await this.lineWebhookRepository.deleteExpired({ limit: 1_000 });
     const storedSnapshot = await this.dispatchRepository.readOperationalSnapshot();
     const lineBudgetMonthlyCap =
-      this.config.notification.mode === 'line_push' &&
-      this.config.notification.service === 'worker'
+      this.config.notification.mode === 'line_push' && this.config.notification.service === 'worker'
         ? this.config.notification.monthlyCap
         : null;
     const operationalSnapshot = {
