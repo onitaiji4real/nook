@@ -260,16 +260,12 @@ describe('notification repositories', () => {
       }),
     ).resolves.toEqual({ kind: 'accepted', replayed: false });
 
-    await expect(
-      prisma.notificationProviderMonthlyUsage.findMany({
-        select: { usageMonth: true, reservedCount: true },
-      }),
-    ).resolves.toEqual([
-      {
-        usageMonth: expect.stringMatching(/^\d{4}-(0[1-9]|1[0-2])$/u),
-        reservedCount: 1,
-      },
-    ]);
+    const monthlyUsage = await prisma.notificationProviderMonthlyUsage.findMany({
+      select: { usageMonth: true, reservedCount: true },
+    });
+    expect(monthlyUsage).toHaveLength(1);
+    expect(monthlyUsage[0]?.usageMonth).toMatch(/^\d{4}-(0[1-9]|1[0-2])$/u);
+    expect(monthlyUsage[0]?.reservedCount).toBe(1);
     await expect(
       prisma.notificationDelivery.findMany({
         where: { notificationJobId: resultJob.id },
@@ -289,9 +285,9 @@ describe('notification repositories', () => {
     await expect(
       delivery.claim({ jobId: cappedJob.id, monthlyCap: 1, render: () => 'safe' }),
     ).resolves.toEqual({ kind: 'skipped', code: 'line_monthly_cap_exhausted' });
-    await expect(
-      prisma.notificationProviderMonthlyUsage.findFirstOrThrow(),
-    ).resolves.toMatchObject({ reservedCount: 1 });
+    await expect(prisma.notificationProviderMonthlyUsage.findFirstOrThrow()).resolves.toMatchObject(
+      { reservedCount: 1 },
+    );
   });
 
   it('does not claim for blocked, inactive or stale appointment truth', async () => {
@@ -418,13 +414,19 @@ describe('notification repositories', () => {
     } finally {
       await Promise.all([firstClient.$disconnect(), secondClient.$disconnect()]);
     }
-    await expect(
-      prisma.notificationProviderMonthlyUsage.findFirstOrThrow(),
-    ).resolves.toMatchObject({ reservedCount: 1 });
+    await expect(prisma.notificationProviderMonthlyUsage.findFirstOrThrow()).resolves.toMatchObject(
+      { reservedCount: 1 },
+    );
   });
 
   it('reports a PII-free operational snapshot for backlog, failures and monthly cost', async () => {
     const fixture = await projectConfirmedFixture('operational-snapshot', 2);
+    await createOutboxEvent(
+      fixture,
+      'appointment.cancelled.v1',
+      { appointmentId: fixture.appointmentId, tenantId: fixture.tenantId },
+      { createdAt: new Date(Date.now() - 5_000) },
+    );
     const resultJob = await job(fixture.appointmentId, 'appointment.confirmed.v1');
     const deadLetterJob = await job(fixture.appointmentId, 'appointment.reminder.24h.v1');
     const acceptedJob = await job(fixture.appointmentId, 'appointment.reminder.2h.v1');
@@ -475,7 +477,7 @@ describe('notification repositories', () => {
     });
 
     const snapshot = await dispatch.readOperationalSnapshot();
-    expect(snapshot.oldestPendingOutboxAgeSeconds).toBeNull();
+    expect(snapshot.oldestPendingOutboxAgeSeconds).toBeGreaterThanOrEqual(0);
     expect(snapshot.oldestDueJobDelaySeconds).toBeGreaterThanOrEqual(0);
     expect(snapshot).toMatchObject({
       deadLetterJobCount: 1,
@@ -596,6 +598,7 @@ async function createFixture(suffix: string, reminderCount: number): Promise<Fix
       requestFingerprint: hash(`${unique}:hold-request`),
     },
   });
+  const confirmedAt = new Date();
   const appointment = await prisma.appointment.create({
     data: {
       tenantId: tenant.id,
@@ -609,7 +612,7 @@ async function createFixture(suffix: string, reminderCount: number): Promise<Fix
       paymentStatus: 'NOT_REQUIRED',
       startAt,
       endAt,
-      confirmedAt: new Date(),
+      confirmedAt,
       usageTimezoneSnapshot: 'Asia/Taipei',
       usageMonth: taipeiMonth(startAt),
       locationTimezoneSnapshot: location.timezone,
@@ -620,7 +623,7 @@ async function createFixture(suffix: string, reminderCount: number): Promise<Fix
       bookingPolicySnapshot: '完全預約制',
       cancellationPolicySnapshot: '請提前通知',
       policyVersion,
-      policiesAcceptedAt: new Date(),
+      policiesAcceptedAt: confirmedAt,
       locationNameSnapshot: location.name,
       addressTextSnapshot: location.addressText,
       citySnapshot: location.city,

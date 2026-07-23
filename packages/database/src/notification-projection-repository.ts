@@ -49,9 +49,7 @@ export interface NotificationProjectionRepository {
   projectNext(): Promise<NotificationProjectionOutcome>;
 }
 
-export class PrismaNotificationProjectionRepository
-  implements NotificationProjectionRepository
-{
+export class PrismaNotificationProjectionRepository implements NotificationProjectionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   projectNext(): Promise<NotificationProjectionOutcome> {
@@ -91,9 +89,7 @@ export class PrismaNotificationProjectionRepository
   }
 }
 
-async function lockNextEvent(
-  tx: Prisma.TransactionClient,
-): Promise<LockedOutboxEvent | null> {
+async function lockNextEvent(tx: Prisma.TransactionClient): Promise<LockedOutboxEvent | null> {
   const rows = await tx.$queryRaw<LockedOutboxEvent[]>(Prisma.sql`
     SELECT
       candidate."id",
@@ -215,7 +211,7 @@ async function cancelJobs(
       appointmentId: plan.appointmentId,
       status: { in: ['PENDING', 'DISPATCHING', 'ENQUEUED', 'DELIVERING'] },
       ...(plan.excludedDedupeKey === null ? {} : { dedupeKey: { not: plan.excludedDedupeKey } }),
-      ...(plan.remindersOnly ? { templateKey: { in: reminderTemplateKeys } } : {}),
+      ...(plan.remindersOnly ? { templateKey: { in: [...reminderTemplateKeys] } } : {}),
       ...(plan.futureOnly ? { dueAt: { gt: dbNow } } : {}),
     },
     data: {
@@ -295,10 +291,7 @@ async function reminderSpecs(
     .map(({ templateKey, dueAt }) => jobSpec(event, appointment, templateKey, dueAt));
 }
 
-async function readReminderCount(
-  tx: Prisma.TransactionClient,
-  tenantId: string,
-): Promise<number> {
+async function readReminderCount(tx: Prisma.TransactionClient, tenantId: string): Promise<number> {
   const tenant = await tx.tenant.findUnique({
     where: { id: tenantId },
     select: {
@@ -371,7 +364,9 @@ async function createJobIfMissing(
   dbNow: Date,
 ): Promise<number> {
   const result = await tx.notificationJob.createMany({
-    data: [{ ...spec, channel: 'LINE_PUSH', status: 'PENDING', createdAt: dbNow, updatedAt: dbNow }],
+    data: [
+      { ...spec, channel: 'LINE_PUSH', status: 'PENDING', createdAt: dbNow, updatedAt: dbNow },
+    ],
     skipDuplicates: true,
   });
   if (result.count === 0) {
@@ -475,9 +470,7 @@ function isJsonObject(value: Prisma.JsonValue): value is Prisma.JsonObject {
 function isUuid(value: unknown): value is string {
   return (
     typeof value === 'string' &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
-      value,
-    )
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value)
   );
 }
 
@@ -500,10 +493,7 @@ function corrupt(code: string): never {
   throw new NotificationProjectionCorruption(code);
 }
 
-const reminderTemplateKeys = [
-  'appointment.reminder.24h.v1',
-  'appointment.reminder.2h.v1',
-] as const;
+const reminderTemplateKeys = ['appointment.reminder.24h.v1', 'appointment.reminder.2h.v1'] as const;
 
 type ResultTemplateKey =
   | 'appointment.confirmed.v1'

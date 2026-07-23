@@ -72,7 +72,10 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
     return this.prisma.$transaction(async (tx) => {
       const dbNow = await transactionNow(tx);
       const job = await lockJob(tx, input.jobId);
-      if (job === null || terminalStatuses.includes(job.status as (typeof terminalStatuses)[number])) {
+      if (
+        job === null ||
+        terminalStatuses.includes(job.status as (typeof terminalStatuses)[number])
+      ) {
         return { kind: 'terminal' };
       }
       if (job.status === 'DELIVERING' && job.deliveryLeaseUntil !== null) {
@@ -214,8 +217,7 @@ export class PrismaNotificationDeliveryRepository implements NotificationDeliver
         });
         return { kind: 'retryable' };
       }
-      const code =
-        input.result.kind === 'retryable' ? 'delivery_attempt_limit' : input.result.code;
+      const code = input.result.kind === 'retryable' ? 'delivery_attempt_limit' : input.result.code;
       await deadLetter(tx, job.id, code, dbNow);
       return { kind: 'dead_letter', code };
     });
@@ -236,10 +238,7 @@ interface LockedJob {
   readonly budgetMonth: string | null;
 }
 
-async function lockJob(
-  tx: Prisma.TransactionClient,
-  jobId: string,
-): Promise<LockedJob | null> {
+async function lockJob(tx: Prisma.TransactionClient, jobId: string): Promise<LockedJob | null> {
   const rows = await tx.$queryRaw<LockedJob[]>(Prisma.sql`
     SELECT
       "id",
@@ -405,26 +404,27 @@ async function reserveBudget(
   monthlyCap: number,
   dbNow: Date,
 ): Promise<boolean> {
-  await tx.notificationProviderMonthlyUsage.upsert({
-    where: { provider_usageMonth: { provider: 'LINE_MESSAGING', usageMonth } },
-    create: { provider: 'LINE_MESSAGING', usageMonth, reservedCount: 0, updatedAt: dbNow },
-    update: {},
-  });
   const rows = await tx.$queryRaw<Array<{ reservedCount: number }>>(Prisma.sql`
-    SELECT "reserved_count" AS "reservedCount"
-    FROM "notification_provider_monthly_usage"
-    WHERE "provider" = 'LINE_MESSAGING'::"NotificationProvider"
-      AND "usage_month" = ${usageMonth}
-    FOR UPDATE
+    INSERT INTO "notification_provider_monthly_usage" (
+      "provider",
+      "usage_month",
+      "reserved_count",
+      "updated_at"
+    )
+    VALUES (
+      'LINE_MESSAGING'::"NotificationProvider",
+      ${usageMonth},
+      1,
+      ${dbNow}
+    )
+    ON CONFLICT ("provider", "usage_month") DO UPDATE
+    SET
+      "reserved_count" = "notification_provider_monthly_usage"."reserved_count" + 1,
+      "updated_at" = EXCLUDED."updated_at"
+    WHERE "notification_provider_monthly_usage"."reserved_count" < ${monthlyCap}
+    RETURNING "reserved_count" AS "reservedCount"
   `);
-  const usage = rows[0];
-  if (usage === undefined) throw new Error('notification_budget_missing');
-  if (usage.reservedCount >= monthlyCap) return false;
-  await tx.notificationProviderMonthlyUsage.update({
-    where: { provider_usageMonth: { provider: 'LINE_MESSAGING', usageMonth } },
-    data: { reservedCount: { increment: 1 }, updatedAt: dbNow },
-  });
-  return true;
+  return rows.length === 1;
 }
 
 function completionEvidence(result: NotificationProviderResult, dbNow: Date) {
@@ -504,7 +504,8 @@ function taipeiUsageMonth(value: Date): string {
   }).formatToParts(value);
   const year = parts.find(({ type }) => type === 'year')?.value;
   const month = parts.find(({ type }) => type === 'month')?.value;
-  if (year === undefined || month === undefined) throw new Error('notification_budget_month_invalid');
+  if (year === undefined || month === undefined)
+    throw new Error('notification_budget_month_invalid');
   return `${year}-${month}`;
 }
 

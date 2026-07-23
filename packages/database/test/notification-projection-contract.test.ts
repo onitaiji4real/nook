@@ -13,7 +13,7 @@ describe('notification projection repository contract', () => {
     expect(source).toContain('FOR UPDATE SKIP LOCKED');
     expect(source).toContain('LIMIT 1');
     expect(source).toContain('candidate."available_at" <= transaction_timestamp()');
-    expect(source).toContain("candidate.\"aggregate_type\" = 'appointment'");
+    expect(source).toContain('candidate."aggregate_type" = \'appointment\'');
     expect(source).toContain('AND NOT EXISTS (');
     expect(source).toContain('earlier."aggregate_id" = candidate."aggregate_id"');
   });

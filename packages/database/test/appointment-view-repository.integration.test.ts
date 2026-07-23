@@ -255,6 +255,8 @@ async function createAppointment(
       expiresAt: new Date(input.startAt.getTime() + 10 * 60_000),
       idempotencyKeyHash: hash(`${input.key}:hold`),
       requestFingerprint: hash(`${input.key}:request`),
+      createdAt: new Date('2026-07-22T00:00:00.000Z'),
+      updatedAt: new Date('2026-07-22T00:00:00.000Z'),
     },
   });
   const status = input.status ?? 'CONFIRMED';
