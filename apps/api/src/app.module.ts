@@ -1,57 +1,79 @@
 import { Module } from '@nestjs/common';
-import { CUSTOM_TOKEN_ISSUER, IDENTITY_TOKEN_VERIFIER } from '@nook/auth';
-import { getPrismaClient, PrismaIdentityRepository, PrismaTenantRepository } from '@nook/database';
+import {
+  getPrismaClient,
+  PrismaMerchantOnboardingRepository,
+  PrismaLineWebhookRepository,
+  PrismaRateLimitRepository,
+  PrismaServiceCatalogRepository,
+} from '@nook/database';
 import { LineIdTokenVerifier } from '@nook/line';
 
-import { AuthenticationGuard } from './authentication.guard';
 import { DatabaseProbeService } from './database-probe.service';
-import { createFirebaseIdentityAdapter } from './firebase-identity.adapter';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
-import { IDENTITY_REPOSITORY, LINE_IDENTITY_VERIFIER } from './identity.tokens';
+import { LINE_IDENTITY_VERIFIER } from './identity.tokens';
 import { LineAuthApplicationService } from './line-auth-application.service';
 import { LineAuthController } from './line-auth.controller';
+import { LineAuthRateLimitService } from './line-auth-rate-limit.service';
+import { LineWebhookApplicationService } from './line-webhook-application.service';
+import { LineWebhookController } from './line-webhook.controller';
+import { LINE_WEBHOOK_REPOSITORY } from './line-webhook.tokens';
+import { MerchantOnboardingApplicationService } from './merchant-onboarding-application.service';
+import { MerchantOnboardingController } from './merchant-onboarding.controller';
+import { MERCHANT_ONBOARDING_REPOSITORY } from './merchant-onboarding-repository.token';
+import { PlatformCoreModule } from './modules/core/platform-core.module';
+import { SchedulingModule } from './modules/scheduling/scheduling.module';
+import { PortfolioModule } from './modules/portfolio/portfolio.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+import { RATE_LIMIT_REPOSITORY } from './rate-limit.tokens';
 import { runtimeConfig } from './runtime-config';
-import { RUNTIME_CONFIG } from './runtime-config.token';
 import { TenantApplicationService } from './tenant-application.service';
+import { ServiceCatalogApplicationService } from './service-catalog-application.service';
+import { ServiceCatalogController } from './service-catalog.controller';
+import { SERVICE_CATALOG_REPOSITORY } from './service-catalog-repository.token';
 import { TenantController } from './tenant.controller';
-import { TENANT_REPOSITORY } from './tenant-repository.token';
-import { UnavailableCustomTokenIssuer } from './unavailable-custom-token-issuer';
-import { UnavailableIdentityTokenVerifier } from './unavailable-identity-token-verifier';
 import { UnavailableLineIdentityVerifier } from './unavailable-line-identity-verifier';
-
-const firebaseAdapter =
-  runtimeConfig.identity.mode === 'firebase'
-    ? createFirebaseIdentityAdapter(runtimeConfig.identity)
-    : undefined;
 const lineVerifier =
   runtimeConfig.identity.mode === 'firebase'
     ? new LineIdTokenVerifier({ channelId: runtimeConfig.identity.lineChannelId })
     : new UnavailableLineIdentityVerifier();
 
 @Module({
-  controllers: [HealthController, LineAuthController, TenantController],
+  imports: [PlatformCoreModule, SchedulingModule, PortfolioModule, MarketplaceModule],
+  controllers: [
+    HealthController,
+    LineAuthController,
+    TenantController,
+    MerchantOnboardingController,
+    ServiceCatalogController,
+    LineWebhookController,
+  ],
   providers: [
-    AuthenticationGuard,
     DatabaseProbeService,
     HealthService,
     LineAuthApplicationService,
+    LineAuthRateLimitService,
+    MerchantOnboardingApplicationService,
+    ServiceCatalogApplicationService,
     TenantApplicationService,
-    {
-      provide: IDENTITY_TOKEN_VERIFIER,
-      useValue: firebaseAdapter ?? new UnavailableIdentityTokenVerifier(),
-    },
-    {
-      provide: CUSTOM_TOKEN_ISSUER,
-      useValue: firebaseAdapter ?? new UnavailableCustomTokenIssuer(),
-    },
+    LineWebhookApplicationService,
     { provide: LINE_IDENTITY_VERIFIER, useValue: lineVerifier },
     {
-      provide: IDENTITY_REPOSITORY,
-      useFactory: () => new PrismaIdentityRepository(getPrismaClient()),
+      provide: RATE_LIMIT_REPOSITORY,
+      useFactory: () => new PrismaRateLimitRepository(getPrismaClient()),
     },
-    { provide: TENANT_REPOSITORY, useFactory: () => new PrismaTenantRepository(getPrismaClient()) },
-    { provide: RUNTIME_CONFIG, useValue: runtimeConfig },
+    {
+      provide: MERCHANT_ONBOARDING_REPOSITORY,
+      useFactory: () => new PrismaMerchantOnboardingRepository(getPrismaClient()),
+    },
+    {
+      provide: SERVICE_CATALOG_REPOSITORY,
+      useFactory: () => new PrismaServiceCatalogRepository(getPrismaClient()),
+    },
+    {
+      provide: LINE_WEBHOOK_REPOSITORY,
+      useFactory: () => new PrismaLineWebhookRepository(getPrismaClient()),
+    },
   ],
 })
 export class AppModule {}

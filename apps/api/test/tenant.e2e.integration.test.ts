@@ -161,6 +161,55 @@ describe('tenant onboarding and RBAC', () => {
       .expect(403);
   });
 
+  it.each(['SUSPENDED', 'DELETED'] as const)(
+    'revokes all tenant access when the local user is %s',
+    async (status) => {
+      const tenant = await createTenant(
+        'token-a',
+        `${status} Studio`,
+        `${status.toLowerCase()}-studio`,
+      );
+      await prisma.user.update({ where: { id: userAId }, data: { status } });
+
+      const responses = [
+        await request(httpServer)
+          .get(`/v1/tenants/${tenant.id}`)
+          .set('authorization', 'Bearer token-a')
+          .expect(403),
+        await request(httpServer).get('/v1/me').set('authorization', 'Bearer token-a').expect(403),
+        await request(httpServer)
+          .post('/v1/tenants')
+          .set('authorization', 'Bearer token-a')
+          .send({ name: 'Blocked Studio', slug: `blocked-${status.toLowerCase()}` })
+          .expect(403),
+      ];
+
+      for (const result of responses) {
+        expect(result.body as unknown as ProblemDetails).toMatchObject({
+          status: 403,
+          code: 'account_inactive',
+        });
+      }
+
+      await expect(
+        prisma.tenant.count({ where: { slug: `blocked-${status.toLowerCase()}` } }),
+      ).resolves.toBe(0);
+    },
+  );
+
+  it('rejects a verified bearer principal that has no local user', async () => {
+    verifier.identities.set('unknown-user-token', '00000000-0000-4000-8000-000000000123');
+
+    const response = await request(httpServer)
+      .get('/v1/me')
+      .set('authorization', 'Bearer unknown-user-token')
+      .expect(403);
+    expect(response.body as unknown as ProblemDetails).toMatchObject({
+      status: 403,
+      code: 'account_inactive',
+    });
+  });
+
   it('returns the authenticated user memberships without tenant headers', async () => {
     const tenant = await createTenant('token-a', 'Me Studio', 'me-studio');
 
@@ -171,7 +220,17 @@ describe('tenant onboarding and RBAC', () => {
 
     expect(response.body as unknown).toEqual({
       id: userAId,
-      memberships: [{ tenantId: tenant.id, role: 'OWNER', status: 'ACTIVE' }],
+      memberships: [
+        {
+          tenantId: tenant.id,
+          tenantName: 'Me Studio',
+          tenantSlug: 'me-studio',
+          tenantStatus: 'ACTIVE',
+          tenantTimezone: 'Asia/Taipei',
+          role: 'OWNER',
+          status: 'ACTIVE',
+        },
+      ],
     });
   });
 
