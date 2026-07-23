@@ -30,6 +30,10 @@ export interface MeResponse {
   readonly id: string;
   readonly memberships: ReadonlyArray<{
     readonly tenantId: string;
+    readonly tenantName: string;
+    readonly tenantSlug: string;
+    readonly tenantStatus: 'ACTIVE' | 'SUSPENDED' | 'CLOSED';
+    readonly tenantTimezone: string;
     readonly role: 'OWNER' | 'MANAGER' | 'STAFF' | 'VIEWER';
     readonly status: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
   }>;
