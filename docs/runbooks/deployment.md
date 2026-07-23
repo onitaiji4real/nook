@@ -9,12 +9,17 @@ Only reviewed `main` commits may deploy staging. Production starts through manua
 - Required CI checks are green for the exact commit SHA.
 - Terraform foundation/runtime has been applied through an approved saved plan; the migration job and database secret version exist.
 - Images were scanned and Artifact Registry contains the exact commit tag/digest.
+- Terraform owns Cloud Run configuration while this workflow owns service/job image revisions; an approved plan must not propose reverting a released image.
 - Database migration follows expand-and-contract and can run while the previous revision serves traffic.
 - The platform-oncall owner has an active notification channel and access to the service-health dashboard.
 
 ## Normal release
 
-The workflow runs the migration job first, then deploys zero-traffic candidate revisions. Web `/api/health`, API `/health`, and worker Ready must pass before traffic promotion. Record the workflow URL, commit, image digests, migration execution, candidate revisions, smoke results, and approver in `docs/worklog.md`.
+The workflow updates the migration job image, runs it, then deploys zero-traffic candidate revisions. Web `/api/readiness` and API `/ready` must pass on their candidate URLs. Worker remains internal-only: its Cloud Run HTTP startup probe calls application `/ready`, and the workflow verifies the resulting revision Ready condition before promotion. Record the workflow URL, commit, image digests, migration execution, candidate revisions, smoke results, and approver in `docs/worklog.md`; these records are the release source of truth because Terraform intentionally ignores later image changes.
+
+Health and readiness have different meanings. `/health` only proves the process is alive and is used for liveness; it must not gate traffic promotion. `/ready` includes required dependencies such as PostgreSQL. If any update/startup probe, Web/API candidate readiness request, or worker Ready check fails, the existing `ERR` trap restores the prior routed revisions.
+
+The notification Scheduler remains absent while `enable_notification_dispatcher=false`. Do not enable it during a routine release; activation requires the endpoint/authentication/idempotency/staging acceptance defined by ADR 0004.
 
 ## Automatic rollback
 
@@ -25,7 +30,7 @@ The workflow runs the migration job first, then deploys zero-traffic candidate r
 1. Stop or cancel any newer deployment and declare the incident owner.
 2. Find the last known-good revision and digest in the prior successful workflow/worklog.
 3. Route 100% traffic back with `gcloud run services update-traffic SERVICE --to-revisions REVISION=100 --region asia-east1 --project PROJECT`.
-4. Verify web/API health, worker Ready, request rate, 5xx rate, and authorization/login synthetic checks.
+4. Verify web/API health and readiness, worker Ready, request rate, 5xx rate, and authorization/login synthetic checks.
 5. Do not run a down migration. Schedule contract cleanup only after every live revision no longer depends on the old schema.
 6. Record timestamps, commands, outcome, affected environment, approver, and follow-up issue without copying tokens, customer data, database URLs, or payloads.
 
