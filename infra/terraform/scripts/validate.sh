@@ -16,4 +16,6 @@ for directory in \
 done
 
 terraform -chdir="$terraform_root/modules/platform" test
+node --test "$terraform_root/scripts/check-release-contract.test.mjs"
+node "$terraform_root/scripts/check-release-contract.mjs"
 node "$terraform_root/scripts/check-isolation.mjs"
