@@ -60,6 +60,9 @@ jobs:
       - name: Architecture contracts
         run: pnpm check:architecture
 
+      - name: Format
+        run: pnpm format:check
+
       - name: Lint
         run: pnpm lint
 
