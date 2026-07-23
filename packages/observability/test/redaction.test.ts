@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createRequestLog, redactValue } from '../src';
+import { createApplicationOperationLog, createRequestLog, redactValue } from '../src';
 
 describe('redactValue', () => {
   it('redacts secrets, PII, and database URLs recursively', () => {
@@ -78,6 +78,42 @@ describe('createRequestLog', () => {
       severity: 'INFO',
       operation: 'http.request',
       outcome: 'failure',
+    });
+  });
+});
+
+describe('createApplicationOperationLog', () => {
+  it('returns only the lifecycle allowlist and omits unavailable safe identifiers', () => {
+    expect(
+      createApplicationOperationLog({
+        requestId: 'request-lifecycle',
+        operation: 'consumer.cancel',
+        outcome: 'rejected',
+        httpStatus: 404,
+      }),
+    ).toEqual({
+      requestId: 'request-lifecycle',
+      operation: 'consumer.cancel',
+      outcome: 'rejected',
+      httpStatus: 404,
+    });
+  });
+
+  it('includes only identifiers explicitly marked safe after authorization', () => {
+    expect(
+      createApplicationOperationLog({
+        requestId: 'request-policy',
+        operation: 'booking_policy.update',
+        outcome: 'success',
+        httpStatus: 200,
+        tenantId: '10000000-0000-4000-8000-000000000001',
+      }),
+    ).toEqual({
+      requestId: 'request-policy',
+      operation: 'booking_policy.update',
+      outcome: 'success',
+      httpStatus: 200,
+      tenantId: '10000000-0000-4000-8000-000000000001',
     });
   });
 });

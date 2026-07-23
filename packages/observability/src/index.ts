@@ -55,12 +55,68 @@ export function createRequestLog(input: RequestLogInput): Record<string, unknown
   };
 }
 
+export type ApplicationOperation =
+  | 'consumer.cancel'
+  | 'consumer.reschedule'
+  | 'merchant.cancel'
+  | 'merchant.check_in'
+  | 'merchant.complete'
+  | 'merchant.no_show'
+  | 'booking_policy.get'
+  | 'booking_policy.update';
+
+export interface ApplicationOperationLogInput {
+  readonly requestId: string;
+  readonly operation: ApplicationOperation;
+  readonly outcome: 'success' | 'replayed' | 'rejected' | 'unavailable';
+  readonly httpStatus: number;
+  readonly tenantId?: string;
+  readonly appointmentId?: string;
+}
+
+export function createApplicationOperationLog(
+  input: ApplicationOperationLogInput,
+): Record<string, unknown> {
+  return {
+    requestId: input.requestId,
+    operation: input.operation,
+    outcome: input.outcome,
+    httpStatus: input.httpStatus,
+    ...(input.tenantId === undefined ? {} : { tenantId: input.tenantId }),
+    ...(input.appointmentId === undefined ? {} : { appointmentId: input.appointmentId }),
+  };
+}
+
 export interface SecurityEventLogInput {
-  readonly event: 'tenant.created' | 'authorization.denied';
+  readonly event:
+    | 'tenant.created'
+    | 'authorization.denied'
+    | 'merchant.onboarding.saved'
+    | 'service.created'
+    | 'service.updated'
+    | 'service.status_changed'
+    | 'service.reordered'
+    | 'staff.created'
+    | 'staff.updated'
+    | 'staff.status_changed'
+    | 'staff.reordered'
+    | 'staff.weekly_schedule_replaced'
+    | 'staff.exception_created'
+    | 'staff.exception_updated'
+    | 'staff.exception_status_changed'
+    | 'portfolio.upload_intent_created'
+    | 'portfolio.upload_completed'
+    | 'portfolio.updated'
+    | 'portfolio.reordered'
+    | 'portfolio.deleted'
+    | 'portfolio.publication_status_changed'
+    | 'merchant.publication_status_changed'
+    | 'media.verification_succeeded'
+    | 'media.verification_rejected';
   readonly requestId: string;
   readonly version: string;
   readonly environment: string;
-  readonly actorUserId: string;
+  readonly actorUserId?: string;
   readonly tenantId: string;
   readonly outcome: 'success' | 'denied';
 }
@@ -71,7 +127,7 @@ export function createSecurityEventLog(input: SecurityEventLogInput): Record<str
     service: 'api',
     operation: input.event,
     requestId: input.requestId,
-    actorUserId: input.actorUserId,
+    ...(input.actorUserId === undefined ? {} : { actorUserId: input.actorUserId }),
     tenantId: input.tenantId,
     outcome: input.outcome,
   };
