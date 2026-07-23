@@ -195,7 +195,7 @@ export function parseRuntimeConfig(
     NOTIFICATION_TASK_QUEUE: optionalNonEmptyString,
     NOTIFICATION_WORKER_URL: z.preprocess(
       (value) => (typeof value === 'string' && value.trim().length === 0 ? undefined : value),
-      z.string().url().startsWith('https://').optional(),
+      z.string().url().optional(),
     ),
     NOTIFICATION_TASK_INVOKER_SERVICE_ACCOUNT: optionalEmail,
     PUBLIC_WEB_BASE_URL: optionalNonEmptyString,

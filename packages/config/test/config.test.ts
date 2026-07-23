@@ -198,10 +198,7 @@ describe('parseRuntimeConfig', () => {
 
   it('fails closed for incomplete or unsafe LINE messaging configuration', () => {
     expect(() =>
-      parseRuntimeConfig(
-        { NOTIFICATION_MODE: 'line_push' },
-        { defaultPort: 8080, service: 'api' },
-      ),
+      parseRuntimeConfig({ NOTIFICATION_MODE: 'line_push' }, { defaultPort: 8080, service: 'api' }),
     ).toThrow('LINE_MESSAGING_CHANNEL_SECRET');
     expect(() =>
       parseRuntimeConfig(
@@ -235,8 +232,7 @@ describe('parseRuntimeConfig', () => {
             GCP_REGION: 'asia-east1',
             NOTIFICATION_TASK_QUEUE: 'nook-notifications',
             NOTIFICATION_WORKER_URL: workerUrl,
-            NOTIFICATION_TASK_INVOKER_SERVICE_ACCOUNT:
-              'tasks@example.iam.gserviceaccount.com',
+            NOTIFICATION_TASK_INVOKER_SERVICE_ACCOUNT: 'tasks@example.iam.gserviceaccount.com',
             PUBLIC_WEB_BASE_URL: 'https://app.nook.example',
             LINE_MESSAGING_MONTHLY_CAP: '1000',
           },
@@ -254,8 +250,7 @@ describe('parseRuntimeConfig', () => {
           GCP_REGION: 'asia-east1',
           NOTIFICATION_TASK_QUEUE: 'nook-notifications',
           NOTIFICATION_WORKER_URL: 'http://localhost:8081',
-          NOTIFICATION_TASK_INVOKER_SERVICE_ACCOUNT:
-            'tasks@example.iam.gserviceaccount.com',
+          NOTIFICATION_TASK_INVOKER_SERVICE_ACCOUNT: 'tasks@example.iam.gserviceaccount.com',
           PUBLIC_WEB_BASE_URL: 'http://localhost:3000',
           LINE_MESSAGING_MONTHLY_CAP: '1000',
         },
