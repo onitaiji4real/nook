@@ -7,12 +7,14 @@ import { createSecurityEventLog, redactValue } from '@nook/observability';
 import { ApplicationError } from './application-error';
 import { RUNTIME_CONFIG } from './runtime-config.token';
 import { TENANT_REPOSITORY } from './tenant-repository.token';
+import { UserAccessService } from './user-access.service';
 
 @Injectable()
 export class TenantApplicationService {
   constructor(
     @Inject(TENANT_REPOSITORY) private readonly repository: TenantRepository,
     @Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig,
+    @Inject(UserAccessService) private readonly users: UserAccessService,
   ) {}
 
   async createTenant(input: {
@@ -20,6 +22,7 @@ export class TenantApplicationService {
     readonly requestId: string;
     readonly body: CreateTenantRequest;
   }): Promise<TenantResponse> {
+    await this.users.requireActive(input.userId);
     try {
       const record = await this.repository.createTenantWithOwner({
         ownerUserId: input.userId,

@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException } from '@nestjs/common';
 import type { ProblemDetails } from '@nook/contracts';
 import type { Response } from 'express';
 
@@ -11,15 +11,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const http = host.switchToHttp();
     const request = http.getRequest<RequestWithContext>();
     const response = http.getResponse<Response>();
-    const applicationError =
-      error instanceof ApplicationError
-        ? error
-        : new ApplicationError(
-            503,
-            'internal_error',
-            'Service Unavailable',
-            'The request could not be completed.',
-          );
+    const applicationError = toApplicationError(error);
 
     const problem: ProblemDetails = {
       type: `https://nook.example/problems/${applicationError.code}`,
@@ -31,6 +23,28 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       code: applicationError.code,
     };
 
+    if (applicationError.retryAfterSeconds !== undefined) {
+      response.setHeader('Retry-After', String(applicationError.retryAfterSeconds));
+    }
+
     response.status(applicationError.status).type('application/problem+json').send(problem);
   }
+}
+
+function toApplicationError(error: unknown): ApplicationError {
+  if (error instanceof ApplicationError) return error;
+  if (error instanceof HttpException && error.getStatus() === 413) {
+    return new ApplicationError(
+      413,
+      'request_payload_too_large',
+      'Content Too Large',
+      'The request payload is too large.',
+    );
+  }
+  return new ApplicationError(
+    503,
+    'internal_error',
+    'Service Unavailable',
+    'The request could not be completed.',
+  );
 }

@@ -7,7 +7,24 @@ describe('api HealthService', () => {
   it('presents the stable health response', () => {
     const probe = { isReady: vi.fn() } as unknown as DatabaseProbeService;
     const service = new HealthService(
-      { nodeEnv: 'test', port: 8080, appVersion: 'test-sha', identity: { mode: 'disabled' } },
+      {
+        nodeEnv: 'test',
+        port: 8080,
+        appVersion: 'test-sha',
+        apiCorsAllowedOrigins: [],
+        appointmentConfirmationEnabled: true,
+        bookingPolicyV2WritesEnabled: true,
+        appointmentLifecycleEnabled: true,
+        lineAuthRateLimit: {
+          globalLimit: 120,
+          tokenLimit: 5,
+          windowSeconds: 60,
+          bucketTtlSeconds: 600,
+        },
+        identity: { mode: 'disabled' },
+        media: { mode: 'disabled' },
+        notification: { mode: 'disabled' },
+      },
       probe,
     );
 
@@ -21,7 +38,24 @@ describe('api HealthService', () => {
   it('reports an unavailable dependency without exposing its connection details', async () => {
     const probe = { isReady: vi.fn().mockResolvedValue(false) } as unknown as DatabaseProbeService;
     const service = new HealthService(
-      { nodeEnv: 'test', port: 8080, appVersion: 'test-sha', identity: { mode: 'disabled' } },
+      {
+        nodeEnv: 'test',
+        port: 8080,
+        appVersion: 'test-sha',
+        apiCorsAllowedOrigins: [],
+        appointmentConfirmationEnabled: true,
+        bookingPolicyV2WritesEnabled: true,
+        appointmentLifecycleEnabled: true,
+        lineAuthRateLimit: {
+          globalLimit: 120,
+          tokenLimit: 5,
+          windowSeconds: 60,
+          bucketTtlSeconds: 600,
+        },
+        identity: { mode: 'disabled' },
+        media: { mode: 'disabled' },
+        notification: { mode: 'disabled' },
+      },
       probe,
     );
 

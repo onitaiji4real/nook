@@ -16,13 +16,39 @@ describe('FirebaseIdentityAdapter', () => {
     await expect(adapter.verify('synthetic-id-token')).resolves.toEqual({
       userId: 'local-user-id',
     });
+    expect(auth.verifyIdToken).toHaveBeenCalledWith('synthetic-id-token', true);
   });
 
-  it('maps rejected Firebase tokens to a stable verification error', async () => {
+  it.each([
+    'auth/argument-error',
+    'auth/id-token-expired',
+    'auth/id-token-revoked',
+    'auth/invalid-id-token',
+    'auth/tenant-id-mismatch',
+    'auth/user-disabled',
+    'auth/user-not-found',
+  ])('maps rejected Firebase token code %s to invalid_token', async (code) => {
     const adapter = new FirebaseIdentityAdapter({
       createCustomToken: vi.fn(),
-      verifyIdToken: vi.fn().mockRejectedValue(new Error('provider detail')),
+      verifyIdToken: vi.fn().mockRejectedValue({ code, message: 'provider detail' }),
     });
     await expect(adapter.verify('rejected-token')).rejects.toMatchObject({ code: 'invalid_token' });
+  });
+
+  it.each([
+    { code: 'auth/certificate-fetch-failed', message: 'provider detail' },
+    { code: 'auth/insufficient-permission', message: 'provider detail' },
+    { code: 'auth/internal-error', message: 'provider detail' },
+    { code: 'app/network-error', message: 'provider detail' },
+    new Error('network detail'),
+  ])('maps provider/infrastructure failure to verifier_unavailable', async (error) => {
+    const adapter = new FirebaseIdentityAdapter({
+      createCustomToken: vi.fn(),
+      verifyIdToken: vi.fn().mockRejectedValue(error),
+    });
+
+    await expect(adapter.verify('synthetic-token')).rejects.toMatchObject({
+      code: 'verifier_unavailable',
+    });
   });
 });

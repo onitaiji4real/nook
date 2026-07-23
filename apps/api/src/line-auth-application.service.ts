@@ -8,7 +8,9 @@ import { redactValue } from '@nook/observability';
 
 import { ApplicationError } from './application-error';
 import { IDENTITY_REPOSITORY, LINE_IDENTITY_VERIFIER } from './identity.tokens';
+import { LineAuthRateLimitService } from './line-auth-rate-limit.service';
 import { RUNTIME_CONFIG } from './runtime-config.token';
+import { UserAccessService } from './user-access.service';
 
 @Injectable()
 export class LineAuthApplicationService {
@@ -17,18 +19,35 @@ export class LineAuthApplicationService {
     @Inject(IDENTITY_REPOSITORY) private readonly identities: IdentityRepository,
     @Inject(CUSTOM_TOKEN_ISSUER) private readonly issuer: CustomTokenIssuer,
     @Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig,
+    @Inject(UserAccessService) private readonly users: UserAccessService,
+    @Inject(LineAuthRateLimitService) private readonly rateLimit: LineAuthRateLimitService,
   ) {}
 
   async exchange(idToken: string, nonce: string, requestId: string): Promise<LineExchangeResponse> {
     const startedAt = performance.now();
+    let providerLatencyMs: number | undefined;
     try {
-      const identity = await this.verifier.verify(idToken, nonce);
+      await this.rateLimit.consume(idToken);
+      const providerStartedAt = performance.now();
+      let identity: Awaited<ReturnType<LineIdentityVerifier['verify']>>;
+      try {
+        identity = await this.verifier.verify(idToken, nonce);
+      } finally {
+        providerLatencyMs = elapsedMilliseconds(providerStartedAt);
+      }
       const user = await this.identities.findOrCreateLineIdentity(identity);
+      if (this.config.notification.mode === 'line_push') {
+        await this.identities.linkLineMessagingRecipient({
+          subject: identity.subject,
+          userId: user.userId,
+        });
+      }
+      await this.users.requireActive(user.userId);
       const token = await this.issuer.issue(user.userId);
-      this.log(requestId, 'success', startedAt);
+      this.log(requestId, 'success', startedAt, providerLatencyMs);
       return token;
     } catch (error) {
-      this.log(requestId, 'failure', startedAt);
+      this.log(requestId, 'failure', startedAt, providerLatencyMs);
       if (error instanceof LineVerificationError) {
         if (error.code === 'provider_timeout' || error.code === 'provider_unavailable') {
           throw new ApplicationError(
@@ -47,6 +66,7 @@ export class LineAuthApplicationService {
           'The LINE identity token is invalid.',
         );
       }
+      if (error instanceof ApplicationError) throw error;
       throw new ApplicationError(
         503,
         'identity_exchange_unavailable',
@@ -56,7 +76,12 @@ export class LineAuthApplicationService {
     }
   }
 
-  private log(requestId: string, outcome: 'success' | 'failure', startedAt: number): void {
+  private log(
+    requestId: string,
+    outcome: 'success' | 'failure',
+    startedAt: number,
+    providerLatencyMs: number | undefined,
+  ): void {
     const entry = {
       severity: outcome === 'success' ? 'INFO' : 'WARNING',
       service: 'api',
@@ -65,8 +90,13 @@ export class LineAuthApplicationService {
       operation: 'auth.line.exchange',
       requestId,
       outcome,
-      providerLatencyMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      durationMs: elapsedMilliseconds(startedAt),
+      ...(providerLatencyMs === undefined ? {} : { providerLatencyMs }),
     };
     process.stdout.write(`${JSON.stringify(redactValue(entry))}\n`);
   }
+}
+
+function elapsedMilliseconds(startedAt: number): number {
+  return Math.round((performance.now() - startedAt) * 100) / 100;
 }
