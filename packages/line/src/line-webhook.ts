@@ -24,9 +24,7 @@ export interface LineRecipientObservation {
 }
 
 export class LineWebhookError extends Error {
-  constructor(
-    readonly code: 'payload_too_large' | 'signature_invalid' | 'invalid_payload',
-  ) {
+  constructor(readonly code: 'payload_too_large' | 'signature_invalid' | 'invalid_payload') {
     super(code);
     this.name = 'LineWebhookError';
   }
@@ -50,9 +48,7 @@ export function verifyLineWebhookSignature(
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
-export function parseVerifiedLineWebhook(
-  rawBody: Uint8Array,
-): readonly ParsedLineWebhookEvent[] {
+export function parseVerifiedLineWebhook(rawBody: Uint8Array): readonly ParsedLineWebhookEvent[] {
   if (rawBody.byteLength > lineWebhookMaxBytes) throw new LineWebhookError('payload_too_large');
   let parsed: unknown;
   try {

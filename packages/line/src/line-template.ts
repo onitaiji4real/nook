@@ -143,8 +143,8 @@ function formatAppointmentTime(value: Date, timezone: string): string | null {
 
 function parts(values: readonly Intl.DateTimeFormatPart[]): Partial<Record<string, string>> {
   return Object.fromEntries(
-    values.filter((part) => ['year', 'month', 'day', 'hour', 'minute'].includes(part.type)).map(
-      (part) => [part.type, part.value],
-    ),
+    values
+      .filter((part) => ['year', 'month', 'day', 'hour', 'minute'].includes(part.type))
+      .map((part) => [part.type, part.value]),
   );
 }

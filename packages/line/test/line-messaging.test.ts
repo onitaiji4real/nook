@@ -65,11 +65,11 @@ describe('LINE push client', () => {
       retryKey: '00000000-0000-4000-8000-000000000001',
       text: '預約已成立',
     };
-    await expect(new LinePushClient({ accessToken: 'x', fetch: timeout }).send(input)).resolves.toEqual(
-      { kind: 'retryable', code: 'line_timeout' },
-    );
-    await expect(new LinePushClient({ accessToken: 'x', fetch: network }).send(input)).resolves.toEqual(
-      { kind: 'retryable', code: 'line_network_error' },
-    );
+    await expect(
+      new LinePushClient({ accessToken: 'x', fetch: timeout }).send(input),
+    ).resolves.toEqual({ kind: 'retryable', code: 'line_timeout' });
+    await expect(
+      new LinePushClient({ accessToken: 'x', fetch: network }).send(input),
+    ).resolves.toEqual({ kind: 'retryable', code: 'line_network_error' });
   });
 });

@@ -15,7 +15,11 @@ export class LineWebhookController {
   receive(
     @Req() request: RawBodyRequest<RequestWithContext>,
     @Headers('x-line-signature') signature: string | undefined,
-  ): Promise<{ readonly accepted: true; readonly processedCount: number; readonly replayedCount: number }> {
+  ): Promise<{
+    readonly accepted: true;
+    readonly processedCount: number;
+    readonly replayedCount: number;
+  }> {
     return this.service.receive({
       rawBody: request.rawBody,
       signature,

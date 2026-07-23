@@ -44,7 +44,9 @@ describe('LINE webhook boundary', () => {
       parseVerifiedLineWebhook(body([event('follow', 'event-1'), { type: 'message' }])),
     ).toThrow(new LineWebhookError('invalid_payload'));
     expect(() =>
-      parseVerifiedLineWebhook(body([event('follow', 'event-invalid-date', Number.MAX_SAFE_INTEGER)])),
+      parseVerifiedLineWebhook(
+        body([event('follow', 'event-invalid-date', Number.MAX_SAFE_INTEGER)]),
+      ),
     ).toThrow(new LineWebhookError('invalid_payload'));
   });
 

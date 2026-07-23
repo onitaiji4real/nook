@@ -23,7 +23,11 @@ export class LineWebhookApplicationService {
     readonly rawBody: Uint8Array | undefined;
     readonly signature: string | undefined;
     readonly requestId: string;
-  }): Promise<{ readonly accepted: true; readonly processedCount: number; readonly replayedCount: number }> {
+  }): Promise<{
+    readonly accepted: true;
+    readonly processedCount: number;
+    readonly replayedCount: number;
+  }> {
     const notification = this.config.notification;
     if (notification.mode !== 'line_push' || notification.service !== 'api') {
       this.log(input.requestId, 'unavailable', 503, 0);
@@ -82,15 +86,18 @@ export class LineWebhookApplicationService {
         eventType: event.eventType,
         routedType: event.routedType,
         sourceType: event.sourceType,
-        ...(event.providerSubject === undefined
-          ? {}
-          : { providerSubject: event.providerSubject }),
+        ...(event.providerSubject === undefined ? {} : { providerSubject: event.providerSubject }),
         providerTimestamp: new Date(event.timestamp),
         payloadJson: event.payload,
       });
       if (result.replayed) replayedCount += 1;
     }
-    this.log(input.requestId, replayedCount === events.length ? 'replayed' : 'success', 200, events.length);
+    this.log(
+      input.requestId,
+      replayedCount === events.length ? 'replayed' : 'success',
+      200,
+      events.length,
+    );
     return { accepted: true, processedCount: events.length, replayedCount };
   }
 

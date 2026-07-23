@@ -66,8 +66,10 @@ export class LinePushClient {
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       const requestId = safeRequestId(response.headers.get('x-line-request-id'));
-      if (response.status === 200) return withRequestId({ kind: 'accepted', httpStatus: 200 }, requestId);
-      if (response.status === 409) return withRequestId({ kind: 'replayed', httpStatus: 409 }, requestId);
+      if (response.status === 200)
+        return withRequestId({ kind: 'accepted', httpStatus: 200 }, requestId);
+      if (response.status === 409)
+        return withRequestId({ kind: 'replayed', httpStatus: 409 }, requestId);
       if ([408, 425, 429].includes(response.status) || response.status >= 500) {
         return withRequestId(
           { kind: 'retryable', httpStatus: response.status, code: 'line_retryable_response' },
@@ -86,7 +88,10 @@ export class LinePushClient {
         requestId,
       );
     } catch (error) {
-      if (error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')) {
+      if (
+        error instanceof Error &&
+        (error.name === 'TimeoutError' || error.name === 'AbortError')
+      ) {
         return { kind: 'retryable', code: 'line_timeout' };
       }
       return { kind: 'retryable', code: 'line_network_error' };
