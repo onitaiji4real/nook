@@ -83,12 +83,12 @@ test('rejects project-wide enqueue or missing worker OIDC actAs activation', () 
 
   const failures = checkReleaseContract(contract);
   assert.ok(
-    failures.includes('task producers must not receive project-wide Cloud Tasks enqueue permission'),
+    failures.includes(
+      'task producers must not receive project-wide Cloud Tasks enqueue permission',
+    ),
   );
   assert.ok(failures.includes('task enqueue permission must be scoped to each dedicated queue'));
   assert.ok(
-    failures.includes(
-      'task producers must receive activation-scoped OIDC service-account actAs',
-    ),
+    failures.includes('task producers must receive activation-scoped OIDC service-account actAs'),
   );
 });

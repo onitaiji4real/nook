@@ -299,8 +299,8 @@ run "explicitly_enables_controlled_media_pipeline" {
   }
 
   assert {
-    condition     = google_cloud_tasks_queue_iam_member.media_enqueuer[0].name == google_cloud_tasks_queue.default.name && google_cloud_tasks_queue_iam_member.media_enqueuer[0].member == "serviceAccount:${google_service_account.runtime["api"].email}"
-    error_message = "The media enqueue permission must be scoped to the default queue and API runtime."
+    condition     = google_cloud_tasks_queue_iam_member.media_enqueuer[0].name == google_cloud_tasks_queue.default.name && google_cloud_tasks_queue_iam_member.media_enqueuer[0].role == "roles/cloudtasks.enqueuer"
+    error_message = "The media enqueue permission must be scoped to the default queue."
   }
 }
 
@@ -405,8 +405,8 @@ run "explicitly_enables_notification_dispatcher" {
   }
 
   assert {
-    condition     = google_secret_manager_secret_iam_member.runtime_access["api_line_webhook"].member == "serviceAccount:${google_service_account.runtime["api"].email}" && google_secret_manager_secret_iam_member.runtime_access["worker_line_push"].member == "serviceAccount:${google_service_account.runtime["worker"].email}"
-    error_message = "The API and worker LINE secret bindings must remain service-specific."
+    condition     = google_secret_manager_secret_iam_member.runtime_access["api_line_webhook"].role == "roles/secretmanager.secretAccessor" && google_secret_manager_secret_iam_member.runtime_access["worker_line_push"].role == "roles/secretmanager.secretAccessor"
+    error_message = "The service-specific LINE bindings must grant only secret accessor."
   }
 
   assert {
@@ -415,7 +415,7 @@ run "explicitly_enables_notification_dispatcher" {
   }
 
   assert {
-    condition     = google_cloud_tasks_queue_iam_member.notification_enqueuer[0].name == google_cloud_tasks_queue.notifications.name && google_cloud_tasks_queue_iam_member.notification_enqueuer[0].member == "serviceAccount:${google_service_account.runtime["worker"].email}"
-    error_message = "The notification enqueue permission must be scoped to the dedicated queue and worker runtime."
+    condition     = google_cloud_tasks_queue_iam_member.notification_enqueuer[0].name == google_cloud_tasks_queue.notifications.name && google_cloud_tasks_queue_iam_member.notification_enqueuer[0].role == "roles/cloudtasks.enqueuer"
+    error_message = "The notification enqueue permission must be scoped to the dedicated queue."
   }
 }

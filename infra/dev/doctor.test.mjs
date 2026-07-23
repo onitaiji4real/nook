@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  compareVersions,
-  environmentKeys,
-  inspectLocalDevelopment,
-} from './doctor.mjs';
+import { compareVersions, environmentKeys, inspectLocalDevelopment } from './doctor.mjs';
 
 const packageJson = {
   engines: { node: '>=24.14.0', pnpm: '>=11.7.0' },
@@ -34,7 +30,10 @@ test('reports a complete local toolchain as ready', () => {
     toolExists: () => true,
   });
 
-  assert.equal(results.every((result) => result.level === 'pass'), true);
+  assert.equal(
+    results.every((result) => result.level === 'pass'),
+    true,
+  );
 });
 
 test('reports incomplete dependencies and missing environment without exposing values', () => {

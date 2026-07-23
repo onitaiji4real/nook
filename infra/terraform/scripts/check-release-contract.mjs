@@ -34,12 +34,8 @@ export function checkReleaseContract({ moduleMain, moduleVariables, environments
   }
 
   if (
-    !moduleMain.includes(
-      'resource "google_cloud_tasks_queue_iam_member" "media_enqueuer"',
-    ) ||
-    !moduleMain.includes(
-      'resource "google_cloud_tasks_queue_iam_member" "notification_enqueuer"',
-    )
+    !moduleMain.includes('resource "google_cloud_tasks_queue_iam_member" "media_enqueuer"') ||
+    !moduleMain.includes('resource "google_cloud_tasks_queue_iam_member" "notification_enqueuer"')
   ) {
     failures.push('task enqueue permission must be scoped to each dedicated queue');
   }
