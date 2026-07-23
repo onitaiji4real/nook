@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Nook API
   version: 0.1.0
-  description: Phase 1 tenant and identity contracts. Timestamps are UTC; product defaults use Asia/Taipei.
+  description: Phase 1 identity, Phase 2 merchant, and Phase 3 booking contracts. Timestamps are UTC; product defaults use Asia/Taipei.
 servers:
   - url: http://localhost:8080
 paths:
@@ -24,6 +24,16 @@ paths:
               schema: { $ref: '#/components/schemas/LineExchangeResponse' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429':
+          description: LINE exchange rate limit exceeded before provider verification
+          headers:
+            Retry-After:
+              description: Whole seconds until the current fixed window ends
+              schema: { type: integer, minimum: 1 }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
         '503': { $ref: '#/components/responses/Problem' }
   /v1/tenants:
     post:
@@ -45,6 +55,7 @@ paths:
           }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
   /v1/tenants/{tenantId}:
@@ -65,6 +76,401 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/merchant-onboarding:
+    get:
+      operationId: getMerchantOnboarding
+      summary: Read the tenant merchant onboarding aggregate as an active member
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Merchant profile, primary location, starter service, and readiness
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantOnboardingResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: saveMerchantOnboarding
+      summary: Atomically upsert the tenant merchant profile, primary location, and starter service
+      description: Requires an active OWNER membership. Stable client resource UUIDs make retries idempotent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MerchantOnboardingRequest' }
+      responses:
+        '200':
+          description: Onboarding aggregate saved; profile remains draft and unverified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantOnboardingResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/services:
+    get:
+      operationId: listServices
+      summary: List the tenant service catalog and MAX_SERVICES usage
+      description: Any active tenant member may read active and inactive services in stable sort order.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant service catalog with its generic entitlement usage
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceCatalogResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createService
+      summary: Append an active service within the tenant entitlement
+      description: Requires OWNER or MANAGER. Entitlement check and creation are serializable.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateServiceRequest' }
+      responses:
+        '201':
+          description: Service created and full catalog returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceCatalogResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/services/order:
+    put:
+      operationId: reorderServices
+      summary: Replace the complete tenant service ordering
+      description: Requires OWNER or MANAGER. The request must contain every active and inactive service exactly once.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReorderServicesRequest' }
+      responses:
+        '200':
+          description: Reordered full catalog
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceCatalogResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/services/{serviceId}:
+    patch:
+      operationId: updateService
+      summary: Update selected service fields
+      description: Requires OWNER or MANAGER. At least one mutable field is required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ServiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateServiceRequest' }
+      responses:
+        '200':
+          description: Updated full catalog
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceCatalogResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/services/{serviceId}/status:
+    put:
+      operationId: changeServiceStatus
+      summary: Activate or deactivate one service
+      description: Requires OWNER or MANAGER. The final active service cannot be deactivated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ServiceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeServiceStatusRequest' }
+      responses:
+        '200':
+          description: Updated full catalog
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServiceCatalogResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff:
+    get:
+      operationId: listStaffAvailability
+      summary: List tenant staff, weekly rules, exceptions, and MAX_STAFF usage
+      description: Any active tenant member may read active and inactive staff scheduling data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Staff scheduling aggregate in stable display order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createStaff
+      summary: Create active staff within MAX_STAFF
+      description: Requires OWNER or MANAGER. The entitlement check and creation are serializable.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateStaffRequest' }
+      responses:
+        '201':
+          description: Staff created and full scheduling aggregate returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/order:
+    put:
+      operationId: reorderStaff
+      summary: Replace the complete tenant staff ordering
+      description: Requires OWNER or MANAGER. The request must contain every active and inactive staff ID exactly once.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReorderStaffRequest' }
+      responses:
+        '200':
+          description: Reordered scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}:
+    patch:
+      operationId: updateStaff
+      summary: Update selected staff profile and service assignments
+      description: Requires OWNER or MANAGER. Location and services must be active and owned by the same tenant.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateStaffRequest' }
+      responses:
+        '200':
+          description: Updated scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}/status:
+    put:
+      operationId: changeStaffStatus
+      summary: Activate or deactivate one staff member
+      description: Requires OWNER or MANAGER. The final active staff member cannot be deactivated; deactivation closes booking.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeStaffStatusRequest' }
+      responses:
+        '200':
+          description: Updated scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}/weekly-schedule:
+    put:
+      operationId: replaceWeeklyAvailability
+      summary: Atomically replace one staff member's weekly availability rules
+      description: Requires OWNER or MANAGER. Rules use ISO weekday, a 15-minute grid, and non-overlapping date/time ranges.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceWeeklyAvailabilityRequest' }
+      responses:
+        '200':
+          description: Updated scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}/exceptions:
+    post:
+      operationId: createAvailabilityException
+      summary: Create a UTC-backed availability exception
+      description: Requires OWNER or MANAGER. Active exceptions for the same staff member cannot overlap.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAvailabilityExceptionRequest' }
+      responses:
+        '201':
+          description: Exception created and full scheduling aggregate returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}/exceptions/{exceptionId}:
+    patch:
+      operationId: updateAvailabilityException
+      summary: Update selected availability exception fields
+      description: Requires OWNER or MANAGER. The merged final interval is validated against active exceptions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+        - $ref: '#/components/parameters/ExceptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAvailabilityExceptionRequest' }
+      responses:
+        '200':
+          description: Updated scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/staff/{staffId}/exceptions/{exceptionId}/status:
+    put:
+      operationId: changeAvailabilityExceptionStatus
+      summary: Activate or cancel an availability exception without deleting it
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StaffId'
+        - $ref: '#/components/parameters/ExceptionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeAvailabilityExceptionStatusRequest' }
+      responses:
+        '200':
+          description: Updated scheduling aggregate
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /v1/me:
     get:
       operationId: getMe
@@ -78,6 +484,839 @@ paths:
             content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } },
           }
         '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/portfolio:
+    get:
+      operationId: listPortfolio
+      summary: List the tenant portfolio and MAX_PORTFOLIO_IMAGES usage
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200':
+          description: Ordered non-deleted portfolio items and entitlement usage
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/portfolio/upload-intents:
+    post:
+      operationId: createPortfolioUploadIntent
+      summary: Create DRAFT/PENDING metadata and a 15-minute direct upload policy
+      description: Requires OWNER, MANAGER, or STAFF. The API controls bucket and object key and never receives image bytes.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePortfolioUploadIntentRequest' }
+      responses:
+        '201':
+          description: Metadata saved and exact signed POST policy returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioUploadIntentResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/portfolio/media/{mediaAssetId}/complete:
+    post:
+      operationId: completePortfolioUpload
+      summary: Enqueue idempotent media verification after browser upload
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/MediaAssetId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+      responses:
+        '201':
+          description: Verification task accepted; the media remains PENDING
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioUploadCompleteResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/portfolio/order:
+    put:
+      operationId: reorderPortfolio
+      summary: Replace the complete ordering of non-deleted tenant portfolio items
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReorderPortfolioRequest' }
+      responses:
+        '200':
+          description: Reordered portfolio
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/portfolio/{portfolioItemId}:
+    patch:
+      operationId: updatePortfolioItem
+      summary: Update tenant-owned portfolio metadata
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/PortfolioItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePortfolioItemRequest' }
+      responses:
+        '200':
+          description: Updated portfolio
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deletePortfolioItem
+      summary: Soft-delete a tenant portfolio item and media metadata
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/PortfolioItemId'
+      responses:
+        '200':
+          description: Remaining portfolio after soft delete
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PortfolioResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /internal/media/verify:
+    post:
+      operationId: verifyPortfolioMedia
+      summary: Private worker target for a Cloud Tasks OIDC request
+      description: Cloud Run IAM is authoritative; x-cloudtasks-queuename is defense in depth only.
+      security: [{ cloudTasksOidc: [] }]
+      parameters:
+        - name: x-cloudtasks-queuename
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerifyMediaTaskRequest' }
+      responses:
+        '201':
+          description: Media reached a terminal READY or REJECTED state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifyMediaTaskResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/publication:
+    get:
+      operationId: getMerchantPublication
+      summary: Read merchant publication state and server-computed readiness
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      responses:
+        '200':
+          description: Publication state visible to an active tenant member
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantPublicationResponse' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: changeMerchantPublication
+      summary: Publish or unpublish a merchant page
+      description: Requires OWNER or MANAGER. Publishing fails unless every readiness item is complete; SUSPENDED cannot be self-restored.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/TenantId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [visibilityStatus]
+              properties:
+                visibilityStatus: { type: string, enum: [DRAFT, PUBLISHED] }
+      responses:
+        '200':
+          description: Updated publication state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantPublicationResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/publication/portfolio/{portfolioItemId}:
+    put:
+      operationId: changePortfolioPublication
+      summary: Change the publication status of one tenant-owned portfolio item
+      description: Requires OWNER or MANAGER. Only READY media may be published.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/PortfolioItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status: { type: string, enum: [DRAFT, PUBLISHED, HIDDEN] }
+      responses:
+        '200':
+          description: Updated readiness after the portfolio transition
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantPublicationResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/marketplace/merchants/{slug}:
+    get:
+      operationId: getPublicMerchant
+      summary: Read the privacy-filtered public merchant page by permanent slug
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+      responses:
+        '200':
+          description: Published merchant allowlist; image URLs are short lived
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicMerchantResponse' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/marketplace/merchants/{slug}/availability:
+    get:
+      operationId: getPublicMerchantAvailability
+      summary: Calculate public candidate start times without creating a reservation
+      description: Dates use the merchant timezone. Results are retry-safe snapshots and are never holds.
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+        - name: serviceId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: staffId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: date
+          in: query
+          required: true
+          description: Merchant-local calendar date.
+          schema: { type: string, format: date }
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 7, default: 1 }
+      responses:
+        '200':
+          description: Candidate slots; reservation is always false
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicAvailabilityResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/marketplace/merchants/{slug}/booking-holds:
+    post:
+      operationId: createBookingHold
+      summary: Atomically hold one still-available candidate for ten minutes
+      description: The authenticated consumer identity comes only from the verified bearer principal. The server recalculates availability, chooses a concrete staff member for any-staff requests, and never treats a hold as an appointment.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: UUID scoped to this consumer and create endpoint. Exact replay returns the original hold and expiry without extending it.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBookingHoldRequest' }
+      responses:
+        '201':
+          description: Ten-minute hold created, or exact idempotent replay returned
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingHoldResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '429':
+          description: More than ten distinct idempotency keys were attempted in the current ten-minute consumer window
+          headers:
+            Retry-After:
+              description: Whole seconds until the fixed rate window ends
+              schema: { type: integer, minimum: 1 }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetails' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/booking-holds/{holdId}:
+    delete:
+      operationId: releaseBookingHold
+      summary: Release the authenticated consumer's booking hold
+      description: RELEASED and EXPIRED retries are idempotent. A consumed hold conflicts, and a hold owned by another consumer is indistinguishable from an unknown ID.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: holdId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Hold released or already terminal in a retry-safe state }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/appointments:
+    post:
+      operationId: createAppointment
+      summary: Confirm the authenticated consumer's active hold as a no-deposit appointment
+      description: Atomically creates the appointment aggregate and transfers the existing ACTIVE occupancy from hold ownership. Exact and natural replays return the same owner-only representation with HTTP 201.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Canonical UUID scoped to this consumer and create endpoint.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAppointmentRequest' }
+      responses:
+        '201':
+          description: Appointment created or its original create representation replayed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/appointments:
+    get:
+      operationId: listMyAppointments
+      summary: List the authenticated consumer's upcoming or past appointments
+      description: Uses an opaque, view-bound cursor with a stable database asOf. The consumer identity is always taken from the bearer principal.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: view
+          in: query
+          required: true
+          schema: { type: string, enum: [upcoming, past] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - name: cursor
+          in: query
+          schema: { type: string, minLength: 1, maxLength: 512, pattern: '^[A-Za-z0-9_-]+$' }
+      responses:
+        '200':
+          description: Owner-only appointment page
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsumerAppointmentListResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/appointments/{appointmentId}:
+    get:
+      operationId: getMyAppointment
+      summary: Get one authenticated consumer-owned appointment
+      description: Malformed, unknown, and foreign appointment IDs are indistinguishable and return 404.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Owner-only appointment detail with confirmed address and accepted policy snapshot
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsumerAppointmentDetail' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/appointments/{appointmentId}/cancel:
+    post:
+      operationId: cancelMyAppointment
+      summary: Cancel the authenticated consumer's confirmed appointment
+      description: Uses the accepted structured lead snapshot and database time. Exact replay returns the original transition; malformed, unknown, and foreign appointment IDs share the same 404.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConsumerCancelAppointmentRequest' }
+      responses:
+        '200':
+          description: Appointment cancelled or the exact transition replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/appointments/{appointmentId}/reschedule:
+    post:
+      operationId: rescheduleMyAppointment
+      summary: Replace one confirmed appointment using an authenticated consumer-owned v2 hold
+      description: In one Serializable transaction, preserves the old RESCHEDULED row, creates a linked replacement from target hold snapshots, releases old occupancy, transfers target occupancy, and preserves root source and usage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RescheduleAppointmentRequest' }
+      responses:
+        '200':
+          description: Appointment rescheduled, same-key replayed, or naturally replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/booking-policy:
+    get:
+      operationId: getTenantBookingPolicy
+      summary: Read the structured booking policy as an active tenant member
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Current structured booking policy
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingPolicyResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    put:
+      operationId: updateTenantBookingPolicy
+      summary: Replace the structured booking policy using revision CAS
+      description: OWNER or MANAGER only. The tenant must be ACTIVE and v2 policy writes enabled; a stale expectedRevision returns 409.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookingPolicyUpdateRequest' }
+      responses:
+        '200':
+          description: Updated policy with revision incremented once
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingPolicyResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments:
+    get:
+      operationId: listTenantAppointments
+      summary: List an authorized tenant member's bounded appointment calendar
+      description: OWNER, MANAGER, and VIEWER may read the tenant calendar. STAFF is restricted to exactly one ACTIVE profile linked to the bearer user.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: from
+          in: query
+          required: true
+          description: Inclusive overlap boundary; canonical UTC with milliseconds.
+          schema: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        - name: to
+          in: query
+          required: true
+          description: Exclusive overlap boundary; must be after from and no more than 31 elapsed days later.
+          schema: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        - name: staffId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/AppointmentStatus' }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+        - name: cursor
+          in: query
+          schema: { type: string, minLength: 1, maxLength: 512, pattern: '^[A-Za-z0-9_-]+$' }
+      responses:
+        '200':
+          description: Tenant-scoped calendar page; items overlap the half-open from/to window
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantAppointmentListResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments/{appointmentId}:
+    get:
+      operationId: getTenantAppointment
+      summary: Get one authorized tenant appointment
+      description: STAFF can only read appointments assigned to their linked ACTIVE profile. Other staff, unknown, and foreign appointment IDs return the same 404.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AppointmentId'
+      responses:
+        '200':
+          description: Operational detail without consumer contact data, full address, or policy text
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MerchantAppointmentDetail' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments/{appointmentId}/cancel:
+    post:
+      operationId: cancelTenantAppointment
+      summary: Cancel a tenant appointment with a controlled merchant reason
+      description: OWNER and MANAGER may act tenant-wide. STAFF may act only on the appointment assigned to their unique ACTIVE profile. VIEWER is read-only.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MerchantCancelAppointmentRequest' }
+      responses:
+        '200':
+          description: Appointment cancelled or exact transition replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments/{appointmentId}/check-in:
+    post:
+      operationId: checkInTenantAppointment
+      summary: Mark an authorized confirmed appointment as checked in
+      description: Available from 120 minutes before start, using database time. Occupancy remains ACTIVE.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmptyAppointmentTransitionRequest' }
+      responses:
+        '200':
+          description: Appointment checked in or exact transition replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments/{appointmentId}/complete:
+    post:
+      operationId: completeTenantAppointment
+      summary: Complete an authorized checked-in appointment
+      description: Available at or after start, using database time. Occupancy remains ACTIVE and no marketplace fee is recognized by this transition alone.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmptyAppointmentTransitionRequest' }
+      responses:
+        '200':
+          description: Appointment completed or exact transition replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/appointments/{appointmentId}/no-show:
+    post:
+      operationId: noShowTenantAppointment
+      summary: Mark an authorized confirmed appointment as no-show
+      description: Available at or after end, using database time. Releases occupancy but does not refund monthly booking usage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/AppointmentTransitionIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmptyAppointmentTransitionRequest' }
+      responses:
+        '200':
+          description: Appointment marked no-show or exact transition replayed
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AppointmentTransitionResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/webhooks/line/messaging:
+    post:
+      operationId: receiveLineMessagingWebhook
+      summary: Receive a signed LINE Messaging API webhook envelope
+      description: Signature verification uses the exact raw body before JSON parsing. Each valid event is retained and projected idempotently; raw event data is never logged.
+      security: []
+      parameters:
+        - name: x-line-signature
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 256 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: LINE webhook envelope, limited to 256 KiB and one hundred events
+      responses:
+        '200':
+          description: Envelope accepted, including idempotent event replays
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [accepted, processedCount, replayedCount]
+                properties:
+                  accepted: { type: boolean, const: true }
+                  processedCount: { type: integer, minimum: 0, maximum: 100 }
+                  replayedCount: { type: integer, minimum: 0, maximum: 100 }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '413': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /internal/notifications/dispatch:
+    post:
+      operationId: dispatchNotifications
+      summary: Project appointment outbox events and enqueue due notification jobs
+      description: Private Cloud Run ingress and Scheduler OIDC are authoritative. Each phase is bounded; notification mode disabled still projects and expires jobs but never enqueues them.
+      security: [{ cloudSchedulerOidc: [] }]
+      parameters:
+        - name: x-cloudscheduler
+          in: header
+          required: true
+          schema: { type: string, const: 'true' }
+      responses:
+        '200':
+          description: Bounded projection, expiry, enqueue, and webhook cleanup pass completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDispatchResult'
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /internal/notifications/deliver:
+    post:
+      operationId: deliverNotification
+      summary: Deliver one database-owned notification job through LINE Push
+      description: Private Cloud Run IAM is authoritative. The exact queue header and ID-only body are defense in depth. A 503 response requests Cloud Tasks retry; terminal and accepted outcomes return 200.
+      security: [{ cloudTasksOidc: [] }]
+      parameters:
+        - name: x-cloudtasks-queuename
+          in: header
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [jobId]
+              properties:
+                jobId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Job was accepted, replayed, truthfully skipped, dead-lettered, or already terminal
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [outcome]
+                properties:
+                  outcome:
+                    type: string
+                    enum: [success, accepted, replayed, skipped, dead_letter]
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /internal/booking-holds/expire:
+    post:
+      operationId: expireBookingHolds
+      summary: Retry-safe private worker operation for expiring booking holds
+      description: Private Cloud Run ingress and IAM-validated Scheduler OIDC are authoritative. The scheduler marker is defense in depth and must not be trusted as standalone authentication.
+      security: [{ cloudSchedulerOidc: [] }]
+      parameters:
+        - name: x-cloudscheduler
+          in: header
+          required: true
+          schema: { type: string, const: 'true' }
+      responses:
+        '201':
+          description: Up to one hundred expired ACTIVE holds were transitioned
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [expiredCount]
+                properties:
+                  expiredCount: { type: integer, minimum: 0, maximum: 100 }
+        '403': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
@@ -85,9 +1324,53 @@ components:
       type: http
       scheme: bearer
       bearerFormat: Identity Platform ID token
+    cloudTasksOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: Google-signed OIDC ID token validated by Cloud Run IAM
+    cloudSchedulerOidc:
+      type: http
+      scheme: bearer
+      bearerFormat: Google-signed OIDC ID token validated by Cloud Run IAM
   parameters:
     TenantId:
       name: tenantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ServiceId:
+      name: serviceId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    StaffId:
+      name: staffId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AppointmentId:
+      name: appointmentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AppointmentTransitionIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Visible ASCII, 16 to 128 characters. Stored only as SHA-256.
+      schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[!-~]+$' }
+    ExceptionId:
+      name: exceptionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PortfolioItemId:
+      name: portfolioItemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MediaAssetId:
+      name: mediaAssetId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -98,6 +1381,58 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetails' }
   schemas:
+    NotificationDispatchResult:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          projectedCount,
+          failedProjectionCount,
+          expiredCount,
+          enqueuedCount,
+          deletedWebhookCount,
+          operationalSnapshot,
+        ]
+      properties:
+        projectedCount: { type: integer, minimum: 0, maximum: 100 }
+        failedProjectionCount: { type: integer, minimum: 0, maximum: 100 }
+        expiredCount: { type: integer, minimum: 0, maximum: 100 }
+        enqueuedCount: { type: integer, minimum: 0, maximum: 100 }
+        deletedWebhookCount: { type: integer, minimum: 0, maximum: 1000 }
+        operationalSnapshot:
+          $ref: '#/components/schemas/NotificationOperationalSnapshot'
+    NotificationOperationalSnapshot:
+      type: object
+      additionalProperties: false
+      description: Platform-wide aggregate counters only; contains no tenant, recipient or message data.
+      required:
+        [
+          oldestPendingOutboxAgeSeconds,
+          oldestDueJobDelaySeconds,
+          deadLetterJobCount,
+          retryableAttemptCount24h,
+          acceptedAttemptCount24h,
+          lineBudgetReservedCount,
+          lineBudgetMonthlyCap,
+          lineBudgetUtilizationBps,
+        ]
+      properties:
+        oldestPendingOutboxAgeSeconds:
+          type: [integer, 'null']
+          minimum: 0
+        oldestDueJobDelaySeconds:
+          type: [integer, 'null']
+          minimum: 0
+        deadLetterJobCount: { type: integer, minimum: 0 }
+        retryableAttemptCount24h: { type: integer, minimum: 0 }
+        acceptedAttemptCount24h: { type: integer, minimum: 0 }
+        lineBudgetReservedCount: { type: integer, minimum: 0 }
+        lineBudgetMonthlyCap:
+          type: [integer, 'null']
+          minimum: 1
+        lineBudgetUtilizationBps:
+          type: [integer, 'null']
+          minimum: 0
     LineExchangeRequest:
       type: object
       additionalProperties: false
@@ -145,9 +1480,1252 @@ components:
             allOf:
               - $ref: '#/components/schemas/Membership'
               - type: object
-                required: [tenantId]
+                required: [tenantId, tenantName, tenantSlug, tenantStatus, tenantTimezone]
                 properties:
                   tenantId: { type: string, format: uuid }
+                  tenantName: { type: string }
+                  tenantSlug: { type: string }
+                  tenantStatus: { type: string, enum: [ACTIVE, SUSPENDED, CLOSED] }
+                  tenantTimezone: { type: string, description: Tenant IANA usage timezone }
+    MerchantOnboardingRequest:
+      type: object
+      additionalProperties: false
+      required: [profile, location, service]
+      properties:
+        profile: { $ref: '#/components/schemas/MerchantProfileInput' }
+        location: { $ref: '#/components/schemas/MerchantLocationInput' }
+        service: { $ref: '#/components/schemas/MerchantStarterServiceInput' }
+    MerchantProfileInput:
+      type: object
+      additionalProperties: false
+      required: [category]
+      properties:
+        category: { type: string, enum: [NAIL, LASH, BROW, BEAUTY, HAIR, OTHER] }
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        phone: { type: string, minLength: 8, maxLength: 24, pattern: '^\+?[0-9][0-9 ()-]+$' }
+        lineOaUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: HTTPS URL on lin.ee, line.me, or page.line.me
+        instagramUrl:
+          type: string
+          format: uri
+          maxLength: 2048
+          description: HTTPS URL on instagram.com
+        bookingPolicy: { type: string, minLength: 1, maxLength: 2000 }
+        cancellationPolicy: { type: string, minLength: 1, maxLength: 2000 }
+    MerchantLocationInput:
+      type: object
+      additionalProperties: false
+      required: [id, name, addressText, city, district]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        addressText: { type: string, minLength: 1, maxLength: 500, writeOnly: true }
+        postalCode: { type: string, minLength: 3, maxLength: 10 }
+        city: { type: string, minLength: 1, maxLength: 80 }
+        district: { type: string, minLength: 1, maxLength: 80 }
+        isPublicAddress: { type: boolean, default: false }
+    MerchantStarterServiceInput:
+      type: object
+      additionalProperties: false
+      required: [id, name, durationMinutes, price]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+        bufferBeforeMinutes: { type: integer, minimum: 0, maximum: 180, default: 0 }
+        bufferAfterMinutes: { type: integer, minimum: 0, maximum: 180, default: 0 }
+        price: { $ref: '#/components/schemas/ServicePrice' }
+        bookingEnabled: { type: boolean, default: true }
+    ServicePrice:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [type, amount]
+          properties:
+            type: { type: string, const: FIXED }
+            amount: { type: integer, minimum: 0, maximum: 10000000 }
+        - type: object
+          additionalProperties: false
+          required: [type, amount]
+          properties:
+            type: { type: string, const: FROM }
+            amount: { type: integer, minimum: 0, maximum: 10000000 }
+        - type: object
+          additionalProperties: false
+          required: [type, min, max]
+          properties:
+            type: { type: string, const: RANGE }
+            min: { type: integer, minimum: 0, maximum: 10000000 }
+            max: { type: integer, minimum: 0, maximum: 10000000, description: Must be >= min }
+        - type: object
+          additionalProperties: false
+          required: [type]
+          properties:
+            type: { type: string, const: QUOTE }
+      discriminator:
+        propertyName: type
+    CreateServiceRequest:
+      type: object
+      additionalProperties: false
+      required: [id, name, durationMinutes, price]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+        bufferBeforeMinutes: { type: integer, minimum: 0, maximum: 180, default: 0 }
+        bufferAfterMinutes: { type: integer, minimum: 0, maximum: 180, default: 0 }
+        price: { $ref: '#/components/schemas/ServicePrice' }
+        bookingEnabled: { type: boolean, default: true }
+    UpdateServiceRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: [string, 'null'], minLength: 1, maxLength: 2000 }
+        durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+        bufferBeforeMinutes: { type: integer, minimum: 0, maximum: 180 }
+        bufferAfterMinutes: { type: integer, minimum: 0, maximum: 180 }
+        price: { $ref: '#/components/schemas/ServicePrice' }
+        bookingEnabled: { type: boolean }
+    ChangeServiceStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    ReorderServicesRequest:
+      type: object
+      additionalProperties: false
+      required: [serviceIds]
+      properties:
+        serviceIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    ServiceCatalogItem:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          name,
+          description,
+          durationMinutes,
+          bufferBeforeMinutes,
+          bufferAfterMinutes,
+          price,
+          currency,
+          bookingEnabled,
+          status,
+          sortOrder,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        durationMinutes: { type: integer }
+        bufferBeforeMinutes: { type: integer }
+        bufferAfterMinutes: { type: integer }
+        price: { $ref: '#/components/schemas/ServicePrice' }
+        currency: { type: string, const: TWD }
+        bookingEnabled: { type: boolean }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        sortOrder: { type: integer, minimum: 0 }
+    ServiceEntitlementUsage:
+      type: object
+      additionalProperties: false
+      required: [code, limit, used, remaining]
+      properties:
+        code: { type: string, const: MAX_SERVICES }
+        limit: { type: integer, minimum: 0 }
+        used: { type: integer, minimum: 0 }
+        remaining: { type: integer, minimum: 0 }
+    ServiceCatalogResponse:
+      type: object
+      additionalProperties: false
+      required: [tenantId, services, entitlement]
+      properties:
+        tenantId: { type: string, format: uuid }
+        services:
+          type: array
+          items: { $ref: '#/components/schemas/ServiceCatalogItem' }
+        entitlement: { $ref: '#/components/schemas/ServiceEntitlementUsage' }
+    CreateStaffRequest:
+      type: object
+      additionalProperties: false
+      required: [id, locationId, displayName, serviceIds]
+      properties:
+        id: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        bio: { type: string, minLength: 1, maxLength: 2000 }
+        bookingEnabled: { type: boolean, default: true }
+        serviceIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    UpdateStaffRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        locationId: { type: string, format: uuid }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        bio: { type: [string, 'null'], minLength: 1, maxLength: 2000 }
+        bookingEnabled: { type: boolean }
+        serviceIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    ChangeStaffStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    ReorderStaffRequest:
+      type: object
+      additionalProperties: false
+      required: [staffIds]
+      properties:
+        staffIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    WeeklyAvailabilityRule:
+      type: object
+      additionalProperties: false
+      required: [id, weekday, startTime, endTime, validFrom, validUntil]
+      properties:
+        id: { type: string, format: uuid }
+        weekday: { type: integer, minimum: 1, maximum: 7 }
+        startTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+        endTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+        validFrom: { type: string, format: date }
+        validUntil: { type: [string, 'null'], format: date }
+    ReplaceWeeklyAvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [rules]
+      properties:
+        rules:
+          type: array
+          maxItems: 42
+          items: { $ref: '#/components/schemas/WeeklyAvailabilityRule' }
+    AvailabilityException:
+      type: object
+      additionalProperties: false
+      required: [id, type, startAt, endAt, reason, status]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [TIME_OFF, EXTRA_HOURS, BLOCK] }
+        startAt: { type: string, format: date-time, description: UTC in responses }
+        endAt: { type: string, format: date-time, description: UTC in responses }
+        reason: { type: [string, 'null'] }
+        status: { type: string, enum: [ACTIVE, CANCELLED] }
+    CreateAvailabilityExceptionRequest:
+      type: object
+      additionalProperties: false
+      required: [id, type, startAt, endAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [TIME_OFF, EXTRA_HOURS, BLOCK] }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        reason: { type: string, minLength: 1, maxLength: 500 }
+    UpdateAvailabilityExceptionRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        type: { type: string, enum: [TIME_OFF, EXTRA_HOURS, BLOCK] }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        reason: { type: [string, 'null'], minLength: 1, maxLength: 500 }
+    ChangeAvailabilityExceptionStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [ACTIVE, CANCELLED] }
+    StaffAvailabilityItem:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          userId,
+          locationId,
+          displayName,
+          bio,
+          bookingEnabled,
+          sortOrder,
+          status,
+          serviceIds,
+          weeklyRules,
+          exceptions,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: [string, 'null'], format: uuid }
+        locationId: { type: string, format: uuid }
+        displayName: { type: string }
+        bio: { type: [string, 'null'] }
+        bookingEnabled: { type: boolean }
+        sortOrder: { type: integer, minimum: 0 }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+        serviceIds:
+          type: array
+          items: { type: string, format: uuid }
+        weeklyRules:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyAvailabilityRule' }
+        exceptions:
+          type: array
+          items: { $ref: '#/components/schemas/AvailabilityException' }
+    StaffEntitlementUsage:
+      type: object
+      additionalProperties: false
+      required: [code, limit, used, remaining]
+      properties:
+        code: { type: string, const: MAX_STAFF }
+        limit: { type: integer, minimum: 1 }
+        used: { type: integer, minimum: 0 }
+        remaining: { type: integer, minimum: 0 }
+    StaffAvailabilityResponse:
+      type: object
+      additionalProperties: false
+      required: [tenantId, timezone, staff, entitlement]
+      properties:
+        tenantId: { type: string, format: uuid }
+        timezone: { type: string, const: Asia/Taipei }
+        staff:
+          type: array
+          items: { $ref: '#/components/schemas/StaffAvailabilityItem' }
+        entitlement: { $ref: '#/components/schemas/StaffEntitlementUsage' }
+    MerchantOnboardingResponse:
+      type: object
+      additionalProperties: false
+      required: [tenantId, profile, primaryLocation, starterService, readiness]
+      properties:
+        tenantId: { type: string, format: uuid }
+        profile:
+          type: object
+          required:
+            [
+              category,
+              description,
+              phone,
+              lineOaUrl,
+              instagramUrl,
+              bookingPolicy,
+              cancellationPolicy,
+              visibilityStatus,
+              verificationStatus,
+            ]
+          properties:
+            category: { type: string, enum: [NAIL, LASH, BROW, BEAUTY, HAIR, OTHER] }
+            description: { type: [string, 'null'] }
+            phone: { type: [string, 'null'] }
+            lineOaUrl: { type: [string, 'null'], format: uri }
+            instagramUrl: { type: [string, 'null'], format: uri }
+            bookingPolicy: { type: [string, 'null'] }
+            cancellationPolicy: { type: [string, 'null'] }
+            visibilityStatus: { type: string, enum: [DRAFT, PUBLISHED, SUSPENDED] }
+            verificationStatus: { type: string, enum: [UNVERIFIED, PENDING, VERIFIED, REJECTED] }
+        primaryLocation:
+          type: object
+          required:
+            [id, name, addressText, postalCode, city, district, timezone, isPublicAddress, status]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            addressText: { type: string }
+            postalCode: { type: [string, 'null'] }
+            city: { type: string }
+            district: { type: string }
+            timezone: { type: string, const: Asia/Taipei }
+            isPublicAddress: { type: boolean }
+            status: { type: string, enum: [ACTIVE, INACTIVE] }
+        starterService:
+          type: object
+          required:
+            [
+              id,
+              name,
+              description,
+              durationMinutes,
+              bufferBeforeMinutes,
+              bufferAfterMinutes,
+              price,
+              currency,
+              bookingEnabled,
+              status,
+            ]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            description: { type: [string, 'null'] }
+            durationMinutes: { type: integer }
+            bufferBeforeMinutes: { type: integer }
+            bufferAfterMinutes: { type: integer }
+            price: { $ref: '#/components/schemas/ServicePrice' }
+            currency: { type: string, const: TWD }
+            bookingEnabled: { type: boolean }
+            status: { type: string, enum: [ACTIVE, INACTIVE] }
+        readiness:
+          type: object
+          required: [completedSteps, readyForSchedule, readyToPublish]
+          properties:
+            completedSteps:
+              type: array
+              prefixItems:
+                - { type: string, const: PROFILE }
+                - { type: string, const: LOCATION }
+                - { type: string, const: SERVICE }
+              minItems: 3
+              maxItems: 3
+            readyForSchedule: { type: boolean, const: true }
+            readyToPublish: { type: boolean, const: false }
+    CreatePortfolioUploadIntentRequest:
+      type: object
+      additionalProperties: false
+      required: [portfolioItemId, mediaAssetId, title, tags, mimeType, byteSize]
+      properties:
+        portfolioItemId: { type: string, format: uuid }
+        mediaAssetId: { type: string, format: uuid }
+        title: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        staffId: { type: string, format: uuid }
+        serviceId: { type: string, format: uuid }
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 50 }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+        byteSize: { type: integer, minimum: 1, maximum: 15728640 }
+    UpdatePortfolioItemRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        description: { type: [string, 'null'], minLength: 1, maxLength: 2000 }
+        staffId: { type: [string, 'null'], format: uuid }
+        serviceId: { type: [string, 'null'], format: uuid }
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 50 }
+    ReorderPortfolioRequest:
+      type: object
+      additionalProperties: false
+      required: [portfolioItemIds]
+      properties:
+        portfolioItemIds:
+          type: array
+          maxItems: 3000
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    PortfolioMedia:
+      type: object
+      additionalProperties: false
+      required: [id, status, mimeType, byteSize, width, height, rejectionCode]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, READY, REJECTED] }
+        mimeType: { type: [string, 'null'] }
+        byteSize: { type: [integer, 'null'], minimum: 1 }
+        width: { type: [integer, 'null'], minimum: 1 }
+        height: { type: [integer, 'null'], minimum: 1 }
+        rejectionCode: { type: [string, 'null'] }
+    PortfolioItem:
+      type: object
+      additionalProperties: false
+      required: [id, staffId, serviceId, title, description, tags, status, sortOrder, media]
+      properties:
+        id: { type: string, format: uuid }
+        staffId: { type: [string, 'null'], format: uuid }
+        serviceId: { type: [string, 'null'], format: uuid }
+        title: { type: string }
+        description: { type: [string, 'null'] }
+        tags:
+          type: array
+          items: { type: string }
+        status: { type: string, enum: [DRAFT, PUBLISHED, HIDDEN] }
+        sortOrder: { type: integer, minimum: 0 }
+        media: { $ref: '#/components/schemas/PortfolioMedia' }
+    PortfolioEntitlementUsage:
+      type: object
+      additionalProperties: false
+      required: [code, limit, used, remaining]
+      properties:
+        code: { type: string, const: MAX_PORTFOLIO_IMAGES }
+        limit: { type: integer, minimum: 1 }
+        used: { type: integer, minimum: 0 }
+        remaining: { type: integer, minimum: 0 }
+    PortfolioResponse:
+      type: object
+      additionalProperties: false
+      required: [tenantId, items, entitlement]
+      properties:
+        tenantId: { type: string, format: uuid }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PortfolioItem' }
+        entitlement: { $ref: '#/components/schemas/PortfolioEntitlementUsage' }
+    PortfolioUploadIntentResponse:
+      type: object
+      additionalProperties: false
+      required: [portfolio, upload]
+      properties:
+        portfolio: { $ref: '#/components/schemas/PortfolioResponse' }
+        upload:
+          type: object
+          additionalProperties: false
+          required: [mediaAssetId, method, url, fields, expiresAt, maxBytes]
+          properties:
+            mediaAssetId: { type: string, format: uuid }
+            method: { type: string, const: POST }
+            url: { type: string, format: uri }
+            fields:
+              type: object
+              additionalProperties: { type: string }
+            expiresAt: { type: string, format: date-time }
+            maxBytes: { type: integer, const: 15728640 }
+    PortfolioUploadCompleteResponse:
+      type: object
+      additionalProperties: false
+      required: [mediaAssetId, status]
+      properties:
+        mediaAssetId: { type: string, format: uuid }
+        status: { type: string, const: PENDING }
+    VerifyMediaTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, mediaAssetId]
+      properties:
+        tenantId: { type: string, format: uuid }
+        mediaAssetId: { type: string, format: uuid }
+    VerifyMediaTaskResponse:
+      type: object
+      additionalProperties: false
+      required: [mediaAssetId, status, idempotent]
+      properties:
+        mediaAssetId: { type: string, format: uuid }
+        status: { type: string, enum: [READY, REJECTED] }
+        idempotent: { type: boolean }
+    PublicationReadinessItem:
+      type: object
+      additionalProperties: false
+      required: [code, label, ready, actionPath]
+      properties:
+        code:
+          {
+            type: string,
+            enum:
+              [
+                PROFILE_CONTENT,
+                ACTIVE_LOCATION,
+                ACTIVE_SERVICE,
+                ACTIVE_STAFF,
+                WEEKLY_AVAILABILITY,
+                PUBLISHED_PORTFOLIO,
+              ],
+          }
+        label: { type: string }
+        ready: { type: boolean }
+        actionPath: { type: string }
+    MerchantPublicationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          tenantId,
+          slug,
+          visibilityStatus,
+          verificationStatus,
+          publishedAt,
+          publicPath,
+          readyToPublish,
+          readiness,
+        ]
+      properties:
+        tenantId: { type: string, format: uuid }
+        slug: { type: string }
+        visibilityStatus: { type: string, enum: [DRAFT, PUBLISHED, SUSPENDED] }
+        verificationStatus: { type: string, enum: [UNVERIFIED, PENDING, VERIFIED, REJECTED] }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        publicPath: { type: string }
+        readyToPublish: { type: boolean }
+        readiness:
+          type: array
+          items: { $ref: '#/components/schemas/PublicationReadinessItem' }
+    PublicMerchantResponse:
+      type: object
+      description: Explicit public allowlist. Private location data, phone, user IDs, storage keys, and exception reasons are excluded.
+      additionalProperties: false
+      required:
+        [
+          slug,
+          name,
+          category,
+          description,
+          verificationStatus,
+          publishedAt,
+          contact,
+          location,
+          services,
+          staff,
+          weeklyHours,
+          portfolio,
+          policies,
+          bookingAvailability,
+        ]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string, enum: [NAIL, LASH, BROW, BEAUTY, HAIR, OTHER] }
+        description: { type: string }
+        verificationStatus: { type: string, enum: [UNVERIFIED, PENDING, VERIFIED] }
+        publishedAt: { type: string, format: date-time }
+        contact: { type: object, additionalProperties: false }
+        location:
+          type: object
+          description: name/address/postalCode are null when disclosure is DISTRICT_ONLY.
+          additionalProperties: false
+          required: [disclosure, name, address, postalCode, city, district, timezone]
+          properties:
+            disclosure: { type: string, enum: [FULL, DISTRICT_ONLY] }
+            name: { type: [string, 'null'] }
+            address: { type: [string, 'null'] }
+            postalCode: { type: [string, 'null'] }
+            city: { type: string }
+            district: { type: string }
+            timezone: { type: string, const: Asia/Taipei }
+        services: { type: array, items: { type: object } }
+        staff: { type: array, items: { type: object } }
+        weeklyHours: { type: array, items: { type: object } }
+        portfolio: { type: array, items: { type: object } }
+        policies: { type: object, additionalProperties: false }
+        bookingAvailability: { type: string, const: CANDIDATE_SLOTS }
+    PublicAvailabilityResponse:
+      type: object
+      description: Explicit public allowlist. This is a point-in-time calculation, not a hold.
+      additionalProperties: false
+      required: [timezone, generatedAt, reservation, service, staff, slots]
+      properties:
+        timezone: { type: string, description: Merchant IANA timezone }
+        generatedAt: { type: string, format: date-time }
+        reservation: { type: boolean, const: false }
+        service:
+          type: object
+          additionalProperties: false
+          required: [id, name, durationMinutes]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            durationMinutes: { type: integer }
+        staff:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, displayName]
+            properties:
+              id: { type: string, format: uuid }
+              displayName: { type: string }
+        slots:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [startAt, endAt, eligibleStaffIds]
+            properties:
+              startAt: { type: string, format: date-time }
+              endAt: { type: string, format: date-time }
+              eligibleStaffIds:
+                type: array
+                uniqueItems: true
+                items: { type: string, format: uuid }
+    CreateBookingHoldRequest:
+      type: object
+      additionalProperties: false
+      required: [serviceId, startAt]
+      properties:
+        serviceId: { type: string, format: uuid }
+        staffId:
+          type: string
+          format: uuid
+          description: Omit for stable server-side any-staff selection.
+        startAt:
+          type: string
+          format: date-time
+          pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
+          description: UTC instant with millisecond precision and a trailing Z. Client-supplied duration, price, tenant, consumer, buffer, and expiry are rejected.
+    BookingHoldResponse:
+      type: object
+      description: Public allowlist for a temporary hold. It is not an appointment and never includes buffer, occupancy, tenant ID, consumer data, or a private address.
+      additionalProperties: false
+      required:
+        [
+          id,
+          bookingState,
+          status,
+          appointmentCreated,
+          timezone,
+          startAt,
+          endAt,
+          expiresAt,
+          policies,
+          service,
+          staff,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        bookingState: { type: string, const: HELD }
+        status: { type: string, enum: [ACTIVE, RELEASED, EXPIRED, CONSUMED] }
+        appointmentCreated: { type: boolean, const: false }
+        timezone: { type: string, description: Merchant IANA timezone }
+        startAt: { type: string, format: date-time, description: UTC service start }
+        endAt: { type: string, format: date-time, description: UTC service end }
+        expiresAt:
+          {
+            type: string,
+            format: date-time,
+            description: Original server expiry; replay never extends it,
+          }
+        policies:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              version,
+              bookingPolicy,
+              cancellationPolicy,
+              consumerCancelLeadMinutes,
+              consumerRescheduleLeadMinutes,
+              cancelUntil,
+              rescheduleUntil,
+              cancelUntilInclusive,
+              rescheduleUntilInclusive,
+            ]
+          properties:
+            version: { type: string, pattern: '^v[12]:[0-9a-f]{64}$' }
+            bookingPolicy: { type: string, minLength: 1 }
+            cancellationPolicy: { type: string, minLength: 1 }
+            consumerCancelLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+            consumerRescheduleLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+            cancelUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            rescheduleUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            cancelUntilInclusive: { type: boolean }
+            rescheduleUntilInclusive: { type: boolean }
+        service:
+          type: object
+          additionalProperties: false
+          required:
+            [id, name, durationMinutes, priceType, priceAmount, priceMin, priceMax, currency]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+            priceType: { type: string, enum: [FIXED, FROM, RANGE, QUOTE] }
+            priceAmount: { type: [integer, 'null'], minimum: 0 }
+            priceMin: { type: [integer, 'null'], minimum: 0 }
+            priceMax: { type: [integer, 'null'], minimum: 0 }
+            currency: { type: string, pattern: '^[A-Z]{3}$' }
+          oneOf:
+            - properties:
+                priceType: { const: FIXED }
+                priceAmount: { type: integer, minimum: 0 }
+                priceMin: { type: 'null' }
+                priceMax: { type: 'null' }
+            - properties:
+                priceType: { const: FROM }
+                priceAmount: { type: integer, minimum: 0 }
+                priceMin: { type: 'null' }
+                priceMax: { type: 'null' }
+            - properties:
+                priceType: { const: RANGE }
+                priceAmount: { type: 'null' }
+                priceMin: { type: integer, minimum: 0 }
+                priceMax: { type: integer, minimum: 0 }
+            - properties:
+                priceType: { const: QUOTE }
+                priceAmount: { type: 'null' }
+                priceMin: { type: 'null' }
+                priceMax: { type: 'null' }
+        staff:
+          type: object
+          additionalProperties: false
+          required: [id, displayName]
+          properties:
+            id: { type: string, format: uuid }
+            displayName: { type: string }
+    CreateAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [holdId, policiesAccepted, policyVersion]
+      properties:
+        holdId:
+          type: string
+          description: Malformed UUID values are mapped to the same privacy-safe 404 as unknown holds.
+        policiesAccepted: { type: boolean, const: true }
+        policyVersion: { type: string, pattern: '^v[12]:[0-9a-f]{64}$' }
+    AppointmentResponse:
+      type: object
+      description: Owner-only confirmed appointment representation. It excludes tenant ID, consumer ID, occupancy, entitlement values, and delivery claims.
+      additionalProperties: false
+      required:
+        [
+          id,
+          appointmentCreated,
+          status,
+          source,
+          pricingStatus,
+          paymentStatus,
+          timezone,
+          startAt,
+          endAt,
+          confirmedAt,
+          currency,
+          subtotalAmount,
+          depositAmount,
+          totalAmount,
+          service,
+          staff,
+          policies,
+          location,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        appointmentCreated: { type: boolean, const: true }
+        status: { type: string, const: CONFIRMED }
+        source: { type: string, enum: [MERCHANT_LINK, MARKETPLACE, ADMIN, STAFF, IMPORT] }
+        pricingStatus: { type: string, enum: [EXACT, ESTIMATE, QUOTE_REQUIRED] }
+        paymentStatus: { type: string, const: NOT_REQUIRED }
+        timezone: { type: string, description: Snapshotted location IANA timezone }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        subtotalAmount: { type: [integer, 'null'], minimum: 0 }
+        depositAmount: { type: integer, const: 0 }
+        totalAmount: { type: [integer, 'null'], minimum: 0 }
+        service:
+          type: object
+          additionalProperties: false
+          required:
+            [id, name, durationMinutes, priceType, priceAmount, priceMin, priceMax, currency]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+            priceType: { type: string, enum: [FIXED, FROM, RANGE, QUOTE] }
+            priceAmount: { type: [integer, 'null'], minimum: 0 }
+            priceMin: { type: [integer, 'null'], minimum: 0 }
+            priceMax: { type: [integer, 'null'], minimum: 0 }
+            currency: { type: string, pattern: '^[A-Z]{3}$' }
+        staff:
+          type: object
+          additionalProperties: false
+          required: [id, displayName]
+          properties:
+            id: { type: string, format: uuid }
+            displayName: { type: string }
+        policies:
+          type: object
+          additionalProperties: false
+          required:
+            [
+              version,
+              bookingPolicy,
+              cancellationPolicy,
+              acceptedAt,
+              consumerCancelLeadMinutes,
+              consumerRescheduleLeadMinutes,
+              cancelUntil,
+              rescheduleUntil,
+              cancelUntilInclusive,
+              rescheduleUntilInclusive,
+            ]
+          properties:
+            version: { type: string, pattern: '^v[12]:[0-9a-f]{64}$' }
+            bookingPolicy: { type: string, minLength: 1 }
+            cancellationPolicy: { type: string, minLength: 1 }
+            acceptedAt: { type: string, format: date-time }
+            consumerCancelLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+            consumerRescheduleLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+            cancelUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            rescheduleUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            cancelUntilInclusive: { type: boolean }
+            rescheduleUntilInclusive: { type: boolean }
+        location:
+          type: object
+          additionalProperties: false
+          required: [name, addressText, postalCode, city, district]
+          properties:
+            name: { type: string }
+            addressText: { type: string }
+            postalCode: { type: [string, 'null'] }
+            city: { type: string }
+            district: { type: string }
+    CanonicalUtcTimestamp:
+      type: string
+      format: date-time
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$'
+    AppointmentStatus:
+      type: string
+      enum: [CONFIRMED, CHECKED_IN, COMPLETED, CANCELLED, NO_SHOW, RESCHEDULED]
+    AppointmentViewService:
+      type: object
+      additionalProperties: false
+      required: [id, name, durationMinutes, priceType, priceAmount, priceMin, priceMax, currency]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        durationMinutes: { type: integer, minimum: 5, maximum: 720 }
+        priceType: { type: string, enum: [FIXED, FROM, RANGE, QUOTE] }
+        priceAmount: { type: [integer, 'null'], minimum: 0 }
+        priceMin: { type: [integer, 'null'], minimum: 0 }
+        priceMax: { type: [integer, 'null'], minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+    AppointmentViewStaff:
+      type: object
+      description: Immutable display-name snapshot from the consumed booking hold.
+      additionalProperties: false
+      required: [id, displayName]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string }
+    AppointmentLocationSummary:
+      type: object
+      additionalProperties: false
+      required: [name, city, district]
+      properties:
+        name: { type: string }
+        city: { type: string }
+        district: { type: string }
+    AppointmentLocationDetail:
+      type: object
+      additionalProperties: false
+      required: [name, addressText, postalCode, city, district]
+      properties:
+        name: { type: string }
+        addressText: { type: string }
+        postalCode: { type: [string, 'null'] }
+        city: { type: string }
+        district: { type: string }
+    AppointmentHistoryItem:
+      type: object
+      additionalProperties: false
+      required: [fromStatus, toStatus, createdAt, reasonCode]
+      properties:
+        fromStatus:
+          oneOf:
+            - { $ref: '#/components/schemas/AppointmentStatus' }
+            - { type: 'null' }
+        toStatus: { $ref: '#/components/schemas/AppointmentStatus' }
+        createdAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        reasonCode:
+          oneOf:
+            - { $ref: '#/components/schemas/AppointmentReasonCode' }
+            - { type: 'null' }
+    AppointmentViewCommon:
+      type: object
+      required:
+        [
+          id,
+          status,
+          pricingStatus,
+          paymentStatus,
+          timezone,
+          startAt,
+          endAt,
+          confirmedAt,
+          currency,
+          subtotalAmount,
+          depositAmount,
+          totalAmount,
+          service,
+          staff,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/AppointmentStatus' }
+        pricingStatus: { type: string, enum: [EXACT, ESTIMATE, QUOTE_REQUIRED] }
+        paymentStatus: { type: string, const: NOT_REQUIRED }
+        timezone: { type: string, description: Snapshotted location IANA timezone }
+        startAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        endAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        confirmedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        subtotalAmount: { type: [integer, 'null'], minimum: 0 }
+        depositAmount: { type: integer, const: 0 }
+        totalAmount: { type: [integer, 'null'], minimum: 0 }
+        service: { $ref: '#/components/schemas/AppointmentViewService' }
+        staff: { $ref: '#/components/schemas/AppointmentViewStaff' }
+    ConsumerAppointmentSummary:
+      description: Strict owner list allowlist. It excludes source, consumer identity, full address, policies, hold, occupancy, and internal attribution data.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/AppointmentViewCommon'
+        - type: object
+          required: [location]
+          properties:
+            location: { $ref: '#/components/schemas/AppointmentLocationSummary' }
+    ConsumerAppointmentDetail:
+      description: Strict owner detail allowlist with the confirmed address and accepted policy snapshot.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/AppointmentViewCommon'
+        - type: object
+          required: [location, policies, history, lifecycle, rescheduleContext]
+          properties:
+            location: { $ref: '#/components/schemas/AppointmentLocationDetail' }
+            policies:
+              type: object
+              additionalProperties: false
+              required:
+                [
+                  version,
+                  bookingPolicy,
+                  cancellationPolicy,
+                  acceptedAt,
+                  consumerCancelLeadMinutes,
+                  consumerRescheduleLeadMinutes,
+                  cancelUntil,
+                  rescheduleUntil,
+                  cancelUntilInclusive,
+                  rescheduleUntilInclusive,
+                ]
+              properties:
+                version: { type: string, pattern: '^v[12]:[0-9a-f]{64}$' }
+                bookingPolicy: { type: string }
+                cancellationPolicy: { type: string }
+                acceptedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+                consumerCancelLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+                consumerRescheduleLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+                cancelUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+                rescheduleUntil: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+                cancelUntilInclusive: { type: boolean }
+                rescheduleUntilInclusive: { type: boolean }
+            history:
+              type: array
+              items: { $ref: '#/components/schemas/AppointmentHistoryItem' }
+            lifecycle: { $ref: '#/components/schemas/ConsumerAppointmentLifecycle' }
+            rescheduleContext:
+              oneOf:
+                - { $ref: '#/components/schemas/ConsumerRescheduleContext' }
+                - { type: 'null' }
+    MerchantAppointmentSummary:
+      description: Strict operational allowlist. Consumer contact/profile fields, full address, policy text, and customer notes are excluded.
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/AppointmentViewCommon'
+        - type: object
+          required: [location, source, consumer]
+          properties:
+            location: { $ref: '#/components/schemas/AppointmentLocationSummary' }
+            source: { type: string, enum: [MERCHANT_LINK, MARKETPLACE, ADMIN, STAFF, IMPORT] }
+            consumer:
+              type: object
+              additionalProperties: false
+              required: [displayName]
+              properties:
+                displayName: { type: string }
+    MerchantAppointmentDetail:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/MerchantAppointmentSummary'
+        - type: object
+          required: [history, lifecycle]
+          properties:
+            history:
+              type: array
+              items: { $ref: '#/components/schemas/AppointmentHistoryItem' }
+            lifecycle: { $ref: '#/components/schemas/MerchantAppointmentLifecycle' }
+    AppointmentReasonCode:
+      type: string
+      enum:
+        [
+          CONSUMER_CHANGE_OF_PLANS,
+          CONSUMER_SCHEDULE_CONFLICT,
+          CONSUMER_BOOKED_ELSEWHERE,
+          CONSUMER_OTHER,
+          MERCHANT_CUSTOMER_REQUEST,
+          MERCHANT_STAFF_UNAVAILABLE,
+          MERCHANT_BUSINESS_CLOSURE,
+          MERCHANT_DUPLICATE,
+          MERCHANT_OTHER,
+          RESCHEDULE_SCHEDULE_CONFLICT,
+          RESCHEDULE_PREFERENCE_CHANGE,
+          RESCHEDULE_OTHER,
+        ]
+    ConsumerCancelAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode:
+          type: string
+          enum:
+            [
+              CONSUMER_CHANGE_OF_PLANS,
+              CONSUMER_SCHEDULE_CONFLICT,
+              CONSUMER_BOOKED_ELSEWHERE,
+              CONSUMER_OTHER,
+            ]
+    MerchantCancelAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [reasonCode]
+      properties:
+        reasonCode:
+          type: string
+          enum:
+            [
+              MERCHANT_CUSTOMER_REQUEST,
+              MERCHANT_STAFF_UNAVAILABLE,
+              MERCHANT_BUSINESS_CLOSURE,
+              MERCHANT_DUPLICATE,
+              MERCHANT_OTHER,
+            ]
+    RescheduleAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [holdId, policyVersion, policiesAccepted, reasonCode]
+      properties:
+        holdId: { type: string, minLength: 1, maxLength: 100 }
+        policyVersion: { type: string, pattern: '^v2:[0-9a-f]{64}$' }
+        policiesAccepted: { type: boolean, const: true }
+        reasonCode:
+          type: string
+          enum: [RESCHEDULE_SCHEDULE_CONFLICT, RESCHEDULE_PREFERENCE_CHANGE, RESCHEDULE_OTHER]
+    EmptyAppointmentTransitionRequest:
+      type: object
+      additionalProperties: false
+      maxProperties: 0
+    AppointmentTransitionResponse:
+      type: object
+      additionalProperties: false
+      required: [appointmentId, status, occurredAt, replacementAppointmentId]
+      properties:
+        appointmentId: { type: string, format: uuid }
+        status: { type: string, enum: [CANCELLED, CHECKED_IN, COMPLETED, NO_SHOW, RESCHEDULED] }
+        occurredAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        replacementAppointmentId: { type: [string, 'null'], format: uuid }
+    ConsumerAppointmentLifecycle:
+      type: object
+      additionalProperties: false
+      required: [evaluatedAt, allowedActions]
+      properties:
+        evaluatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        allowedActions:
+          type: array
+          uniqueItems: true
+          items: { type: string, enum: [CANCEL, RESCHEDULE] }
+    MerchantAppointmentLifecycle:
+      type: object
+      additionalProperties: false
+      required:
+        [evaluatedAt, allowedActions, checkInAvailableAt, completeAvailableAt, noShowAvailableAt]
+      properties:
+        evaluatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        allowedActions:
+          type: array
+          uniqueItems: true
+          items: { type: string, enum: [CANCEL, CHECK_IN, COMPLETE, NO_SHOW] }
+        checkInAvailableAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        completeAvailableAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        noShowAvailableAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+    ConsumerRescheduleContext:
+      type: object
+      additionalProperties: false
+      required: [merchantSlug, serviceId, locationId]
+      properties:
+        merchantSlug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+        serviceId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+    BookingPolicyResponse:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          revision,
+          slotIntervalMinutes,
+          minimumLeadMinutes,
+          maximumAdvanceDays,
+          consumerCancelLeadMinutes,
+          consumerRescheduleLeadMinutes,
+          updatedAt,
+        ]
+      properties:
+        revision: { type: integer, minimum: 1 }
+        slotIntervalMinutes: { type: integer, enum: [5, 10, 15, 20, 30, 60] }
+        minimumLeadMinutes: { type: integer, minimum: 0, maximum: 10080 }
+        maximumAdvanceDays: { type: integer, minimum: 1, maximum: 365 }
+        consumerCancelLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+        consumerRescheduleLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+        updatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+    BookingPolicyUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          expectedRevision,
+          slotIntervalMinutes,
+          minimumLeadMinutes,
+          maximumAdvanceDays,
+          consumerCancelLeadMinutes,
+          consumerRescheduleLeadMinutes,
+        ]
+      properties:
+        expectedRevision: { type: integer, minimum: 1 }
+        slotIntervalMinutes: { type: integer, enum: [5, 10, 15, 20, 30, 60] }
+        minimumLeadMinutes: { type: integer, minimum: 0, maximum: 10080 }
+        maximumAdvanceDays: { type: integer, minimum: 1, maximum: 365 }
+        consumerCancelLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+        consumerRescheduleLeadMinutes: { type: integer, minimum: 0, maximum: 43200 }
+    ConsumerAppointmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [asOf, items, nextCursor]
+      properties:
+        asOf: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ConsumerAppointmentSummary' }
+        nextCursor: { type: [string, 'null'], maxLength: 512 }
+    MerchantAppointmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [asOf, from, to, calendarTimezone, items, nextCursor]
+      properties:
+        asOf: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        from: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        to: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        calendarTimezone: { type: string, description: Tenant IANA usage timezone }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MerchantAppointmentSummary' }
+        nextCursor: { type: [string, 'null'], maxLength: 512 }
     ProblemDetails:
       type: object
       required: [type, title, status, detail, instance, requestId, code]
