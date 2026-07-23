@@ -129,7 +129,7 @@ Cancellation只把第一行換成`預約已取消`；reschedule換成`預約已�
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm doctor
+pnpm run doctor
 ```
 
 只有doctor的workspace tools皆為PASS後，才執行完整lint/typecheck/unit/integration/build、migration replay與Terraform checks。P3-006在這些repository/local evidence通過前維持`in_progress`，P3-007維持`blocked`。

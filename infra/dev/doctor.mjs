@@ -94,7 +94,9 @@ function localToolExists(tool) {
 
 async function checkService(name, url) {
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
+    const response = await globalThis.fetch(url, {
+      signal: globalThis.AbortSignal.timeout(2_000),
+    });
     return {
       level: response.ok ? 'pass' : 'warn',
       message: `${name} health ${response.status} — ${url}`,

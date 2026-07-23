@@ -33,7 +33,7 @@ Apple Silicon 會以 Docker 的 `linux/amd64` 模擬執行官方 PostGIS image�
 ```bash
 cp .env.example .env
 pnpm install --frozen-lockfile
-pnpm doctor
+pnpm run doctor
 pnpm dev:services
 pnpm db:migrate
 pnpm dev
@@ -41,7 +41,7 @@ pnpm dev
 
 `pnpm db:migrate` 與 `pnpm dev` 會自動載入 repository 根目錄的 `.env`；shell 已明確 export 的值優先，不需要手動執行 `source .env`。`.env` 不得提交。
 
-`pnpm doctor`只回報版本、必要工具、環境變數名稱、Docker與三個health endpoint狀態，不會輸出`.env`值。若`pnpm`本身無法執行，也可先用`node infra/dev/doctor.mjs`取得診斷；`FAIL`需先修復，尚未啟動的服務則顯示`WARN`。
+`pnpm run doctor`只回報版本、必要工具、環境變數名稱、Docker與三個health endpoint狀態，不會輸出`.env`值。必須保留`run`，避免誤執行pnpm內建的同名命令；若`pnpm`本身無法執行，也可先用`node infra/dev/doctor.mjs`取得診斷。`FAIL`需先修復，尚未啟動的服務則顯示`WARN`。
 
 `pnpm dev` 會先以 workspace concurrency 1依序build九個shared packages，再同時啟動Web、API與worker；這可避免macOS／Node 24在Turbo並行dependency build時長時間只啟動Web。Shared package source變更後請重新啟動`pnpm dev`，讓dist重新產生。
 

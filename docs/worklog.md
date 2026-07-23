@@ -1503,7 +1503,7 @@
 
 - 使用者回報只有Web與Web health可用後，確認預期API/worker health分別為`localhost:8080/health`與`localhost:8081/health`。Codex沙箱看不到host localhost且不能連OrbStack socket，因此不以沙箱curl/Docker結果否定使用者已確認的Web狀態。
 - Root `.env`比目前`.env.example`少新功能key，但notification/media/web auth均有安全disabled/default路徑；只憑key差異不能判定API/worker啟動失敗。可確認的本機blocker是`node_modules/.bin/tsc`、`turbo`、`vitest`全部缺失，且pnpm版本查詢在5秒內無法完成，表示依賴工具鏈仍未完整恢復。
-- 新增dependency-independent `node infra/dev/doctor.mjs`與`pnpm doctor`入口，只顯示Node/pnpm版本、`.env`與`DATABASE_URL` key存在性、必要tool binary、Docker及Web/API/worker health狀態，不輸出任何env value。尚未啟動或沙箱不可見的外部狀態只列WARN，版本、env與依賴缺失才列FAIL。
+- 新增dependency-independent `node infra/dev/doctor.mjs`與`pnpm run doctor`入口，只顯示Node/pnpm版本、`.env`與`DATABASE_URL` key存在性、必要tool binary、Docker及Web/API/worker health狀態，不輸出任何env value。明確保留`run`以避免誤執行pnpm內建同名命令；尚未啟動或沙箱不可見的外部狀態只列WARN，版本、env與依賴缺失才列FAIL。
 - Doctor/check-local-dev/run-with-env focused 11 tests全數通過；納入完整dependency-independent architecture suite後為22/22，五個repository/workflow/deployment/CI/local-dev contract scripts亦全數通過。正確路徑OpenAPI YAML parse、Terraform recursive fmt與`git diff --check`通過。Doctor本次如預期exit 1並列出pnpm/三個tool缺失；這是有效診斷，不是完整workspace驗收。P3-006仍維持`in_progress`。
 
 ### P3-006 static implementation review and integration evidence expansion
