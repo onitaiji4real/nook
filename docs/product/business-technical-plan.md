@@ -100,6 +100,8 @@
 | 自訂品牌色與網址 | 無 | 無 | 有 | 有 |
 | 客服 | 說明中心 | Email | 優先 Email | 優先處理 |
 
+> 這是目標catalog，不代表表內功能已全部可售。Production checkout前必須依[產品交付與商業化路線圖](product-delivery-roadmap.md)建立`feature → entitlement → task → acceptance evidence → availability`追蹤；優惠券、會員分群、自動回訪、custom reminder與店家自有OA在Phase 6驗收前標為`coming_soon`且不得作為已收費權益。Multi-staff基礎需先證明1/3/8人entitlement；multi-location與進階RBAC仍是後續能力。
+
 ### 加購項目
 
 | 加購項目 | 建議價格 |
@@ -111,6 +113,8 @@
 | 資料匯入服務 | NT$1,500～5,000／次 |
 | 專屬導入與教育 | NT$3,000 起 |
 | 自訂網域 | NT$99／月，網域費另計 |
+
+定金／金流模組的NT$99加購只適用個人版；專業版與工作室版已bundle，不得重複收取，免費曝光版不可用。進階LINE行銷自動化只由Phase 6的單一entitlement啟用；功能未驗收前不得提前收費。
 
 ### 平台媒合收入
 
@@ -155,11 +159,13 @@
 - 專業版 35%
 - 工作室版 10%
 
-月費加權 ARPU 約 NT$704，則：
+若全部採月繳牌價，加權 ARPU 約 NT$704，則：
 
 - SaaS MRR：約 NT$704,000
 - SaaS ARR：約 NT$8,448,000
 - 尚未包含媒合費、金流加購與導入服務收入
+
+這是月繳上行情境，不是base forecast。相同55%／35%／10%方案組合若全部採年繳月均，ARPU約NT$568、MRR約NT$568,000；創始方案占比會再降低初期ARPU。正式預測必須分monthly、annual、founder cohort與add-on attach rate，NT$600～750在真實mix證明前只是假設guardrail。
 
 因此產品不能只靠 NT$300 單一月費，否則即使有 1,000 家店家，仍很難支撐產品、客服與消費者行銷團隊。
 
@@ -772,6 +778,8 @@ Analytics Event
 
 ## 6.9 通知、LINE 與 webhook
 
+> P3-006實作契約由[ADR 0014](../adr/0014-database-notification-jobs-and-line-provider.md)與[垂直任務](../tasks/P3-006-reminders-line-notifications.md)收斂：appointment transaction只寫outbox，再由worker投影`notification_jobs`；LINE Push只能記provider `ACCEPTED`，不得宣稱`DELIVERED`。
+
 ### `notification_jobs`
 
 - `id`
@@ -1127,12 +1135,12 @@ POST /v1/webhooks/payments/:provider
 
 流程：
 
-1. 預約確認時建立 `notification_jobs`，填入 `due_at`。
+1. 預約確認／lifecycle transaction建立versioned outbox event；worker再投影`notification_jobs`並填入`due_at`。
 2. Cloud Scheduler 每分鐘呼叫 dispatcher。
 3. dispatcher 使用 `FOR UPDATE SKIP LOCKED` 取得已到期工作。
 4. 將工作推入 Cloud Tasks。
 5. worker 實際送出 LINE 或 Email。
-6. 成功則標記 delivered；失敗由 Cloud Tasks retry。
+6. LINE Push HTTP 200／retry-key replay只標記 accepted；失敗依固定retry key由 Cloud Tasks bounded retry，不推測delivered/read。
 7. 超過 retry 次數進 dead-letter 狀態並告警。
 
 這樣能處理幾個月後的預約，也方便取消或改期時更新提醒。
@@ -1452,6 +1460,8 @@ beauty-platform-prod
 
 # 18. 開發里程碑
 
+> 跨Phase的可執行順序、收入邊界、店家平台OA入口與店家自有OA分流，以[產品交付與商業化路線圖](product-delivery-roadmap.md)為持續更新的交接索引；本文件仍是產品範圍與原始商業假設來源。
+
 ## Phase 0：產品驗證與設計基線
 
 交付：
@@ -1518,13 +1528,15 @@ beauty-platform-prod
 
 交付：
 
+- Production payment foundation、Cloud Armor、HA／PITR restore drill與incident owner
+- Versioned Terms／Privacy／退款政策、資料匯出／刪除與DSAR
 - SaaS subscription
-- invoice／receipt reference
+- billing portal、dunning、proration、refund／chargeback、daily reconciliation
+- invoice／receipt／電子發票流程
 - 定金 provider adapter
 - webhook idempotency
-- 媒合 attribution
-- Cloud Armor
-- HA／PITR
+- 媒合 attribution shadow ledger
+- 媒合費settlement／dispute完成後才可真實收費
 - SLO dashboard
 - 20～50 家真實 beta 店家
 
@@ -1532,8 +1544,7 @@ beauty-platform-prod
 
 - 店家 OA 串接
 - 優惠券、會員分群、回訪提醒
-- 媒合費結算
-- 多員工與多據點
+- 進階員工權限與多據點
 - BigQuery analytics
 - 推薦排序
 
@@ -1763,4 +1774,3 @@ Run all checks and report changed files and remaining decisions.
 - 架構：模組化單體，三個部署單位 Web／API／Worker。
 - 開發順序：身分與租戶 → 店家設定 → 班表 → 預約防撞 → 通知 → CRM → 評論 → 搜尋 → 付款。
 - 成功判斷：至少 20 家真實店家、10 家付費、連續兩個月使用，且每家每月透過系統產生 10 筆以上真實預約。
-
