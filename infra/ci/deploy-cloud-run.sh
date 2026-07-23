@@ -41,8 +41,8 @@ for service in "${services[@]}"; do
 done
 
 for service in web api; do
-  path="/health"
-  [[ "$service" == "web" ]] && path="/api/health"
+  path="/ready"
+  [[ "$service" == "web" ]] && path="/api/readiness"
   candidate_url="$(gcloud run services describe "nook-${ENVIRONMENT}-${service}" \
     --project "$PROJECT_ID" --region "$REGION" \
     --format="value(status.traffic[?tag=='$tag'].url)")"
@@ -51,10 +51,10 @@ for service in web api; do
     --max-time 10 "${candidate_url}${path}" >/dev/null
 done
 
-worker_ready="$(gcloud run services describe "nook-${ENVIRONMENT}-worker" \
+worker_application_ready="$(gcloud run services describe "nook-${ENVIRONMENT}-worker" \
   --project "$PROJECT_ID" --region "$REGION" \
   --format="value(status.conditions[?type=='Ready'].status)")"
-test "$worker_ready" = "True"
+test "$worker_application_ready" = "True"
 
 for service in "${services[@]}"; do
   gcloud run services update-traffic "nook-${ENVIRONMENT}-${service}" \
