@@ -1,7 +1,22 @@
 project_id     = "beauty-platform-prod-unique"
 region         = "asia-east1"
 deploy_runtime = false
+enable_notification_dispatcher = false
+enable_line_notifications = false
+notification_worker_url = ""
+public_web_base_url = ""
+line_messaging_monthly_cap = 0
+enable_media_pipeline = false
+media_worker_url = ""
+media_cors_origins = []
 line_channel_id = ""
+api_cors_allowed_origins = []
+line_auth_rate_limit = {
+  global_limit       = 120
+  token_limit        = 5
+  window_seconds     = 60
+  bucket_ttl_seconds = 600
+}
 github_repository = "onitaiji4real/nook"
 
 container_images = {}
@@ -9,9 +24,20 @@ container_images = {}
 # Existing Monitoring channel resource names. Do not put email addresses or tokens here.
 monitoring_notification_channels = []
 
+# Opt in only after the billing owner approves the account, currency, and monthly amount.
+project_budget = null
+# project_budget = {
+#   billing_account_id    = "XXXXXX-XXXXXX-XXXXXX"
+#   currency_code         = "TWD"
+#   monthly_amount_units  = 10000
+#   threshold_percentages = [0.5, 0.8, 1.0]
+# }
+
 # After P1-001 publishes immutable images, set deploy_runtime = true and use digests:
 # container_images = {
 #   web    = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/web@sha256:..."
 #   api    = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/api@sha256:..."
 #   worker = "asia-east1-docker.pkg.dev/PROJECT/nook-applications/worker@sha256:..."
 # }
+# Keep enable_notification_dispatcher=false until the authenticated, idempotent worker endpoint exists.
+# After the Web URL is known, add its exact HTTPS origin, for example: ["https://web.example.com"].
