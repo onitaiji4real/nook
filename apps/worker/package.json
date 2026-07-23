@@ -11,16 +11,20 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@prisma/client": "6.19.0",
+    "@google-cloud/storage": "7.21.0",
+    "@google-cloud/tasks": "6.2.3",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/platform-express": "11.1.28",
     "@nook/config": "workspace:*",
     "@nook/contracts": "workspace:*",
     "@nook/database": "workspace:*",
+    "@nook/line": "workspace:*",
     "@nook/observability": "workspace:*",
+    "@prisma/client": "6.19.0",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

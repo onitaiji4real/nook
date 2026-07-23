@@ -19,6 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@nook/domain": "workspace:*",
     "@prisma/client": "6.19.0"
   },
   "devDependencies": {
