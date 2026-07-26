@@ -9,7 +9,7 @@
 
 ## Browser and API behavior
 
-- LIFF `init()`每次開啟login route執行；external browser只在使用者按下登入後呼叫`liff.login()`，redirect URI必須與已設定HTTPS endpoint同origin。
+- Merchant登入統一在canonical `/line/studio`執行`liff.init()`；一般`/studio/login`先導向該入口。External browser由入口呼叫`liff.login()`，redirect URI必須是同origin固定path與bounded route。Consumer與merchant使用不同LIFF app ID，避免Endpoint URL prefix衝突。
 - `openid`是必要scope；不要求email。Server只信任LINE verify endpoint回應。
 - API exact CORS allowlist必須包含Web origin；不能使用wildcard。
 - 401表示Firebase token無效／撤銷，UI清除本機session並要求重新登入；403保留session但禁止操作；429顯示Retry-After；503/network failure保留session並允許重試。
@@ -17,7 +17,7 @@
 
 ## Runtime public config
 
-允許公開：`apiBaseUrl`、LIFF ID、Firebase Web API key/authDomain/projectId/appId/messagingSenderId及auth mode。
+允許公開：`apiBaseUrl`、consumer／merchant LIFF ID、Firebase Web API key/authDomain/projectId/appId/messagingSenderId及auth mode。
 
 禁止公開：LINE channel secret、service account email/private key、ADC、database URL、media bucket signer credential、custom token或任何使用者資料。
 

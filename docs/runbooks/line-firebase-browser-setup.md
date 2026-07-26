@@ -5,9 +5,9 @@
 ## LINE Developers
 
 1. 建立或選擇LINE Login channel，記錄channel ID供API驗證。
-2. 建立LIFF app；endpoint URL設為各環境的`https://<web-origin>/studio/login`。
+2. 每個環境分別建立consumer與merchant LIFF app。Consumer endpoint prefix為`https://<web-origin>/m/`，merchant endpoint固定為`https://<web-origin>/line/studio`；兩者不得共用同一LIFF ID，staging／production也不得共用channel或LIFF app。
 3. 啟用`openid`與`profile` scope；目前產品不要求email。
-4. 將LIFF ID注入Web runtime的`LINE_LIFF_ID`。Channel secret只屬server/provider設定，禁止放入Web環境。
+4. Consumer LIFF ID注入`LINE_LIFF_ID`，merchant平台OA LIFF ID注入`LINE_MERCHANT_LIFF_ID`。Channel secret只屬server/provider設定，禁止放入Web環境。
 5. 分別用LINE app內LIFF browser與Safari／Chrome external browser驗證redirect、返回URL與登出。
 
 ## Firebase / Identity Platform
@@ -24,6 +24,7 @@
 WEB_AUTH_MODE=firebase-line
 WEB_API_PUBLIC_BASE_URL=https://api.example.com
 LINE_LIFF_ID=1234567890-AbCdEfGh
+LINE_MERCHANT_LIFF_ID=1234567890-Merchant
 FIREBASE_WEB_API_KEY=public-web-api-key
 FIREBASE_WEB_AUTH_DOMAIN=example.firebaseapp.com
 FIREBASE_WEB_PROJECT_ID=example
@@ -45,5 +46,6 @@ FIREBASE_WEB_MESSAGING_SENDER_ID=1234567890
 - runtime config response只有公開欄位，沒有channel secret、service account或token。
 - external browser與LIFF browser都完成登入、重新整理、tab關閉、opt-in長期登入與登出。
 - 每個API request使用Firebase當下取得的ID token；browser storage中沒有custom token或ID token。
-- 401會回登入；403不會清除session；503／網路中斷可重試且不清除表單。
+- 401會回登入；merchant tenant 403會以`private, no-store`重讀`/v1/me`，只有selected tenant已不在ACTIVE memberships時才清除；503／網路中斷可重試且不清除表單。
 - 多tenant切換後不殘留上一家店的資料。
+- Merchant rich menu逐項依[設定手冊](merchant-line-rich-menu.md)完成staging真機矩陣。

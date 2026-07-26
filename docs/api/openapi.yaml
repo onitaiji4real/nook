@@ -474,15 +474,40 @@ paths:
   /v1/me:
     get:
       operationId: getMe
-      summary: Return the authenticated local user and memberships
+      summary: Return the ACTIVE local user and ACTIVE tenant memberships in stable creation order
       security:
         - bearerAuth: []
       responses:
         '200':
-          {
-            description: Current user summary,
-            content: { application/json: { schema: { $ref: '#/components/schemas/Me' } } },
-          }
+          description: Current user summary; never shared-cache this authorization snapshot
+          headers:
+            Cache-Control:
+              schema: { type: string, const: 'private, no-store' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/line/studio-entry-events:
+    post:
+      operationId: recordLineStudioEntry
+      summary: Record an authorized bounded LINE-to-Studio navigation outcome
+      description: The server revalidates ACTIVE user, tenant and membership, then derives success or role fallback from the server-side role. It never accepts a return URL, role, membership or LINE subject.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LineStudioEntryEventRequest' }
+      responses:
+        '200':
+          description: Authorized navigation derived from the current server-side membership role
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StudioNavigationDecision' }
+        '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
@@ -1447,6 +1472,35 @@ components:
       properties:
         customToken: { type: string }
         expiresIn: { type: integer, const: 3600 }
+    LineStudioEntryEventRequest:
+      type: object
+      additionalProperties: false
+      required: [tenantId, routeKey]
+      properties:
+        tenantId: { type: string, format: uuid }
+        routeKey:
+          type: string
+          enum: [home, appointments, services, availability, portfolio, policies]
+    StudioNavigationDecision:
+      type: object
+      additionalProperties: false
+      required: [routeKey, href, access]
+      properties:
+        routeKey:
+          type: string
+          enum: [home, appointments, services, availability, portfolio, policies]
+        href:
+          type: string
+          enum:
+            [
+              /studio,
+              /studio/appointments,
+              /studio/services,
+              /studio/staff,
+              /studio/portfolio,
+              /studio/policies,
+            ]
+        access: { type: string, enum: [manage, read, scoped, fallback] }
     CreateTenantRequest:
       type: object
       additionalProperties: false
@@ -1480,13 +1534,16 @@ components:
             allOf:
               - $ref: '#/components/schemas/Membership'
               - type: object
-                required: [tenantId, tenantName, tenantSlug, tenantStatus, tenantTimezone]
+                required:
+                  [membershipId, tenantId, tenantName, tenantSlug, tenantStatus, tenantTimezone]
                 properties:
+                  membershipId: { type: string, format: uuid }
                   tenantId: { type: string, format: uuid }
                   tenantName: { type: string }
                   tenantSlug: { type: string }
-                  tenantStatus: { type: string, enum: [ACTIVE, SUSPENDED, CLOSED] }
+                  tenantStatus: { type: string, const: ACTIVE }
                   tenantTimezone: { type: string, description: Tenant IANA usage timezone }
+                  status: { type: string, const: ACTIVE }
     MerchantOnboardingRequest:
       type: object
       additionalProperties: false
