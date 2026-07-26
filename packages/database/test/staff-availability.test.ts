@@ -35,7 +35,7 @@ describe('staff availability schema contract', () => {
 
   it('keeps inactive booking and weekly-overlap rules enforced below HTTP', () => {
     const repository = readFileSync(
-      resolve(packageRoot, 'src/staff-scheduling-repository.ts'),
+      resolve(packageRoot, 'src/scheduling/staff-scheduling-repository.ts'),
       'utf8',
     );
 

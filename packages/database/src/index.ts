@@ -28,7 +28,7 @@ export {
   PrismaIdentityRepository,
   type IdentityRepository,
   type LinkLineIdentityInput,
-} from './identity-repository';
+} from './line-auth/identity-repository';
 export {
   classifyTenantConflict,
   PrismaTenantRepository,
@@ -37,20 +37,20 @@ export {
   type TenantMembershipRecord,
   type TenantRepository,
   type UserMembershipRecord,
-} from './tenant-repository';
+} from './tenancy/tenant-repository';
 export {
   isMerchantOnboardingResourceConflict,
   PrismaMerchantOnboardingRepository,
   type MerchantOnboardingRecord,
   type MerchantOnboardingRepository,
   type SaveMerchantOnboardingInput,
-} from './merchant-onboarding-repository';
+} from './merchant-onboarding/merchant-onboarding-repository';
 export {
   PrismaRateLimitRepository,
   type ConsumeRateLimitInput,
   type RateLimitDecision,
   type RateLimitRepository,
-} from './rate-limit-repository';
+} from './line-auth/rate-limit-repository';
 export {
   PrismaServiceCatalogRepository,
   ServiceCatalogRepositoryError,
@@ -62,7 +62,7 @@ export {
   type ServiceCatalogRecordItem,
   type ServiceCatalogRepository,
   type UpdateCatalogServiceInput,
-} from './service-catalog-repository';
+} from './service-catalog/service-catalog-repository';
 export {
   PrismaStaffSchedulingRepository,
   StaffSchedulingRepositoryError,
@@ -80,7 +80,7 @@ export {
   type UpdateAvailabilityExceptionInput,
   type UpdateStaffInput,
   type WeeklyAvailabilityRecord,
-} from './staff-scheduling-repository';
+} from './scheduling/staff-scheduling-repository';
 export {
   PortfolioMediaRepositoryError,
   PrismaPortfolioMediaRepository,
@@ -94,7 +94,7 @@ export {
   type PortfolioMediaRepository,
   type ReorderPortfolioMediaInput,
   type UpdatePortfolioMediaInput,
-} from './portfolio-media-repository';
+} from './portfolio/portfolio-media-repository';
 export {
   MerchantPublicationRepositoryError,
   PrismaMerchantPublicationRepository,
@@ -102,12 +102,12 @@ export {
   type MerchantPublicationRecord,
   type MerchantPublicationRepository,
   type PublicMerchantRecord,
-} from './merchant-publication-repository';
+} from './publication/merchant-publication-repository';
 export {
   PrismaAvailabilityRepository,
   type AvailabilityProjection,
   type AvailabilityRepository,
-} from './availability-repository';
+} from './booking/availability-repository';
 export {
   BookingHoldRepositoryError,
   createBookingPolicyVersion,
@@ -118,7 +118,7 @@ export {
   type BookingHoldRateDecision,
   type BookingHoldRecord,
   type BookingHoldRepository,
-} from './booking-hold-repository';
+} from './booking/booking-hold-repository';
 export {
   appointmentUsageMonth,
   AppointmentConfirmationRepositoryError,
@@ -128,14 +128,14 @@ export {
   type AppointmentConfirmationRecord,
   type AppointmentConfirmationRepository,
   type ConfirmAppointmentInput,
-} from './appointment-confirmation-repository';
+} from './appointments/appointment-confirmation-repository';
 export {
   BookingPolicyRepositoryError,
   PrismaBookingPolicyRepository,
   type BookingPolicyRecord,
   type BookingPolicyRepository,
   type BookingPolicyRepositoryErrorCode,
-} from './booking-policy-repository';
+} from './booking/booking-policy-repository';
 export {
   AppointmentLifecycleRepositoryError,
   PrismaAppointmentLifecycleRepository,
@@ -143,7 +143,7 @@ export {
   type AppointmentLifecycleRepositoryErrorCode,
   type AppointmentTransitionRecord,
   type MerchantSimpleAction,
-} from './appointment-lifecycle-repository';
+} from './appointments/appointment-lifecycle-repository';
 export {
   AppointmentViewRepositoryError,
   PrismaAppointmentViewRepository,
@@ -155,24 +155,24 @@ export {
   type AppointmentViewRepository,
   type AppointmentViewRepositoryErrorCode,
   type MerchantAppointmentViewPage,
-} from './appointment-view-repository';
+} from './appointments/appointment-view-repository';
 export {
   PrismaLineWebhookRepository,
   type LineWebhookRepository,
   type RecordLineWebhookEventInput,
-} from './line-webhook-repository';
+} from './line-webhook/line-webhook-repository';
 export {
   PrismaNotificationProjectionRepository,
   type NotificationProjectionOutcome,
   type NotificationProjectionRepository,
-} from './notification-projection-repository';
+} from './notifications/notification-projection-repository';
 export {
   PrismaNotificationDispatchRepository,
   type NotificationDispatchClaim,
   type NotificationDispatchRepository,
   type NotificationExpirySweepOutcome,
   type NotificationOperationalSnapshot,
-} from './notification-dispatch-repository';
+} from './notifications/notification-dispatch-repository';
 export {
   PrismaNotificationDeliveryRepository,
   type NotificationDeliveryClaimOutcome,
@@ -180,4 +180,4 @@ export {
   type NotificationDeliveryRepository,
   type NotificationProviderResult,
   type NotificationTemplateData,
-} from './notification-delivery-repository';
+} from './notifications/notification-delivery-repository';

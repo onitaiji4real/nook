@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('notification projection repository contract', () => {
   const source = readFileSync(
-    resolve(process.cwd(), 'src/notification-projection-repository.ts'),
+    resolve(process.cwd(), 'src/notifications/notification-projection-repository.ts'),
     'utf8',
   );
 
