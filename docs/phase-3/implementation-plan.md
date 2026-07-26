@@ -16,6 +16,7 @@
 4. `P3-004` 店家行事曆與顧客預約列表。
 5. `P3-005` 取消、no-show與改期狀態機。
 6. `P3-006` reminder jobs與LINE通知邊界。
+7. `P3-007` 平台OA merchant LIFF入口、ACTIVE membership選擇與mobile-first Studio導航。
 
 付款預約必須等免定金確認與provider-neutral payment contract穩定後另立task；不得在P3-003直接綁死特定方案名稱或金流provider。
 
@@ -45,5 +46,6 @@
 - P3-003 repository-local acceptance已完成：免定金confirmation在單一transaction建立appointment/item/history/audit/outbox並原子轉移occupancy owner；Web可完成policy acknowledgement與confirmed presentation。真實LINE/Firebase與P3-006 provider delivery仍是external gates。
 - P3-004 repository-local acceptance已完成：顧客可查自己的upcoming/past列表與隱私安全明細，店家可用tenant timezone、日期、人員與狀態查看有界行事曆；OWNER/MANAGER/VIEWER與STAFF scope、strict DTO、private no-store、RWD與browser evidence均完成。真實LINE/Firebase、真實STAFF綁定及owner隱私文字核准仍是external gates。
 - P3-005 repository-local acceptance已完成：顧客可依成立時policy snapshot取消或以target hold原子改期；店家可取消、報到、完成與標記未到店；state machine、authorization、idempotency、history/audit/outbox、occupancy、reschedule chain、BookingPolicy設定、RWD操作與HTTP E2E均完成。真實LINE/Firebase帳號、staging角色矩陣與production mixed-version activation仍是external gates。
-- P3-006 repository-local acceptance已完成：database-backed projection、deterministic Cloud Tasks、current-truth delivery、verified recipient、fixed retry key、platform monthly cap、LINE webhook與PII-free operations snapshot均具unit／integration／Terraform證據。真實LINE OA、secret、Cloud Tasks與staging裝置驗收仍是external activation gates；下一個slice是P3-007 Merchant LINE entry與RWD營運入口。
+- P3-006 repository-local acceptance已完成：database-backed projection、deterministic Cloud Tasks、current-truth delivery、verified recipient、fixed retry key、platform monthly cap、LINE webhook與PII-free operations snapshot均具unit／integration／Terraform證據。真實LINE OA、secret、Cloud Tasks與staging裝置驗收仍是external activation gates。
+- P3-007 repository/local acceptance已完成：shared六route contract、consumer／merchant LIFF ID分離、canonical `/line/studio` init/login sequence、ACTIVE-only membership、role fallback與安全entry analytics均有自動化及本機browser evidence。LINE OA rich menu、真實LIFF/Firebase及staging裝置矩陣仍是external activation gates。
 - LINE Messaging API、正式LIFF/Firebase、GCP deployment及付款provider仍需外部設定與staging證據；repository tests不等於production通知或金流證據。

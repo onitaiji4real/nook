@@ -1551,3 +1551,26 @@
 - Terraform provider本次可啟動；初次6 pass／1 fail是plan assertion混用apply-time service-account email unknown，拆成plan-time queue/role assertions並保留release static contract驗證exact member後，recursive fmt、release ownership 5/5與platform mock-provider 12/12通過。未執行Terraform apply。
 - P3-006全部repository/local acceptance criteria已核對並標為`done`；P3-007依賴解除改為`ready`。真實LINE OA/provider、兩個secret、Cloud Tasks、staging follow/retry/quota/device與owner monthly cap仍是external activation gates，沒有在本輪推定通過。
 - 本輪沒有push、PR、deploy、Terraform apply、外部LINE/GCP provider呼叫或更新`main`，也沒有輸出、寫入或持久化credential/token。
+
+## 2026-07-26 — P3-007 merchant LINE entry implementation checkpoint
+
+- P3-007由`ready`改為`in_progress`。依LINE官方LIFF文件確認：每次開頁必須init、primary／secondary redirect各自init、URL改寫與analytics必須等init resolve，且不可修改`liff.*`。Shared contract新增六個bounded route、same-origin canonical redirect builder及OWNER／MANAGER／VIEWER／STAFF navigation matrix；invalid／absolute／nested route一律fallback home。
+- 新增mobile-first `/line/studio`入口。LIFF browser只init、不呼叫login；LINE in-app／external未登入走官方`liff.login`，redirect回canonical path後second init。完成init才讀route並只移除一般`route`，保留LIFF reserved query。Parallel tabs、取消授權、callback manipulation與external second-init有unit evidence。
+- 發現既有單一LIFF ID無法同時符合consumer與merchant不同Endpoint prefix；browser runtime改為`LINE_LIFF_ID`及`LINE_MERCHANT_LIFF_ID`兩個公開identifier，auth enabled缺任一皆fail closed。一般Studio登入統一導向merchant canonical entry；consumer flow保留獨立LIFF app。
+- `/v1/me`明確要求ACTIVE user，只回ACTIVE membership＋ACTIVE tenant，新增membership ID並依`createdAt,id`穩定排序。Browser使用Zod解析response；多membership明確選擇、單一自動選取、無membership顯示不洩漏tenant存在性的安全說明。Tenant API 403會以no-store重讀current memberships，只有selected tenant已被撤銷才清除。
+- 新增authenticated `POST /v1/line/studio-entry-events`。Request只接受tenant UUID與route enum；server重新驗ACTIVE membership並依current role推導success／fallback。Denied log不含未授權tenant ID；成功exact log不含role、membership、LINE subject、raw URL、token、contact或顧客資料。
+- 為避免integration suite清空現有開發資料，新增只允許localhost的ephemeral database runner：產生隨機database、fresh deploy全部19 migrations、執行命令並在finally drop。第一次因root沒有Prisma binary在migration前失敗且測試database已刪除；改走`@nook/database prisma:migrate:deploy`並先build database package後，P3-007 tenant／role-route focused integration 17/17通過。
+- Focused shared contract 13 files／53 tests、Web 15 files／55 tests及Web/API/contracts/config/database strict typecheck／lint逐步通過；完整workspace、full integration、build、architecture、OpenAPI parse與format仍待final gate，不能提前標done。
+- Browser實際驗收本機fail-closed入口：390×844的document/body寬度均不超過390、主要link min-height 48px、無console error；1280×800亦無水平溢位。入口可導向mobile Studio總覽。因未提供真實merchant LIFF ID／Firebase／OA，本證據不冒充LIFF device activation。
+- 新增merchant entry設計、安全contract與rich menu runbook；consumer／merchant LIFF、平台OA入口與Phase 6店家自有OA仍維持不同成本／權限邊界。本checkpoint沒有push、PR、deploy、Terraform apply、provider呼叫或secret操作。
+
+### P3-007 repository/local acceptance
+
+- Runtime contract再補consumer／merchant雙LIFF ID正向與缺merchant ID fail-closed tests；entry structured log收斂為task明定的exact allowlist，不再附加environment/version。Consumer Endpoint URL prefix明確固定`/m/`，merchant固定`/line/studio`。
+- 為ephemeral database runner新增local-only URL unit tests並納入architecture gate。Runner只接受`localhost`、`127.0.0.1`或`::1` PostgreSQL，測試資料庫使用隨機名稱、套用19個migrations並在`finally`刪除；未清空或改寫既有開發資料庫。
+- 完整workspace lint、strict typecheck、unit tests、production build、architecture 26/26、Prettier、OpenAPI YAML parse、Terraform recursive fmt及`git diff --check`通過。Unit總計包含API 65、Web 57、contracts 55、config 29及其他workspace suites。
+- 完整API integration在乾淨ephemeral database通過7 files／57 tests；P3-007 tenant／role route focused evidence包含其中17 tests。完整database integration另有45/63通過、18個既有booking hold／confirmation tests因固定fixture日期在2026-07-26已超出maximum advance window而失敗；沒有把它誤列為P3-007回歸或全綠，後續應另開time-stable fixture maintenance task。
+- 本機browser evidence為390×844與1280×800皆無水平溢位或console error，mobile主要操作高度至少48px，入口可導向Studio。LIFF browser、LINE in-app/external及second init由deterministic browser unit tests驗證；未提供真實LINE/Firebase帳號，所以staging真機、rich menu與owner核准仍保持external activation gates。
+- P3-007 repository/local acceptance標為`done`；本批工作依contracts/config、API/database、Web、ephemeral test tooling及文件分開提交，沒有把全部變更放進單一commit。沒有push、PR、deploy、Terraform apply、provider呼叫、secret或credential操作。
+- Fresh reader第一輪找到VIEWER矩陣矛盾、repository與真機gate混寫、staging／production拓樸不足、403撤銷辨識、204 role競態及`/v1/me`快取六項blocker。修正後VIEWER只有home／appointments，entry API回server current role的bounded decision，403以no-store memberships判斷是否真撤銷，並明定staging／production各自OA、channel、LIFF app、smoke與rollback。
+- 修正後focused contracts 55、Web 57、API unit 65及P3-007 API integration 17 tests全綠；fresh reader第二輪逐項回歸1–6後結論PASS，沒有剩餘文件矛盾或安全阻塞。

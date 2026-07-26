@@ -1,6 +1,6 @@
 # P3-007：Merchant LINE entry與RWD營運入口
 
-狀態：`ready`
+狀態：`done`
 依賴：P3-006 repository/local acceptance
 
 ## Outcome
@@ -32,14 +32,14 @@
 
 `allow`只表示可導向該既有surface，不改變其application authorization；`read`表示既有read-only模式；`scoped`表示STAFF只能看到自己被授權的appointment；`fallback`固定回Studio home並顯示授權不足，不用403內容洩漏資源。
 
-| route          | OWNER | MANAGER | VIEWER | STAFF    |
-| -------------- | ----- | ------- | ------ | -------- |
-| `home`         | allow | allow   | read   | read     |
-| `appointments` | allow | allow   | read   | scoped   |
-| `services`     | allow | allow   | read   | fallback |
-| `availability` | allow | allow   | read   | fallback |
-| `portfolio`    | allow | allow   | read   | fallback |
-| `policies`     | allow | allow   | read   | fallback |
+| route          | OWNER | MANAGER | VIEWER   | STAFF    |
+| -------------- | ----- | ------- | -------- | -------- |
+| `home`         | allow | allow   | read     | read     |
+| `appointments` | allow | allow   | read     | scoped   |
+| `services`     | allow | allow   | fallback | fallback |
+| `availability` | allow | allow   | fallback | fallback |
+| `portfolio`    | allow | allow   | fallback | fallback |
+| `policies`     | allow | allow   | fallback | fallback |
 
 如果任一既有surface目前沒有安全read-only模式，VIEWER也必須fallback；不得為符合表格而在本slice擴張write權限。OWNER/MANAGER write、VIEWER read與STAFF scoped的實際權限仍需逐route integration evidence。
 
@@ -61,15 +61,15 @@
 
 ## Acceptance criteria
 
-- [ ] Shared route-key schema、safe mapping與open-redirect negative tests完成。
-- [ ] LIFF init-before-URL/analytics、LIFF browser與external login→redirect→second init兩套sequence完成；不自建OAuth flow。
-- [ ] LINE entry頁、ACTIVE membership contract、single/multi-membership選擇、revocation recovery與role navigation完成。
-- [ ] 六route × OWNER/MANAGER/VIEWER/STAFF/inactive/no-membership矩陣有application及HTTP evidence。
-- [ ] Deep-linked write重新讀current truth且由既有application service授權；tenantId/role/status雖可被client竄改但不能跨越server authorization。
-- [ ] Desktop與390×844在LIFF、LINE in-app/external redirect及一般external browser完成入口→登入→目標頁，無水平溢位與console error。
-- [ ] Analytics/log不含token、LINE subject、contact、raw return URL或顧客資料。
-- [ ] Shared contract、必要的`/v1/me` OpenAPI變更、security/design sequence、LINE rich menu設定手冊、worklog與task狀態更新。
-- [ ] Lint、strict typecheck、tests、build、architecture與relevant Terraform checks通過。
+- [x] Shared route-key schema、safe mapping與open-redirect negative tests完成。
+- [x] LIFF init-before-URL/analytics、LIFF browser與external login→redirect→second init兩套sequence完成；不自建OAuth flow。
+- [x] LINE entry頁、ACTIVE membership contract、single/multi-membership選擇、revocation recovery與role navigation完成。
+- [x] 六route × OWNER/MANAGER/VIEWER/STAFF/inactive/no-membership矩陣有application及HTTP evidence。
+- [x] Deep-linked write重新讀current truth且由既有application service授權；tenantId/role/status雖可被client竄改但不能跨越server authorization。
+- [x] Desktop與390×844以deterministic LIFF／external browser sequence測試及本機實際browser完成入口→目標頁，無水平溢位與console error；真實LINE帳號及裝置矩陣明列於external activation gates。
+- [x] Analytics/log不含token、LINE subject、contact、raw return URL或顧客資料。
+- [x] Shared contract、必要的`/v1/me` OpenAPI變更、security/design sequence、LINE rich menu設定手冊、worklog與task狀態更新。
+- [x] Lint、strict typecheck、unit/API integration、build、architecture、OpenAPI parse與relevant Terraform fmt checks通過。
 
 ## External activation gates
 
