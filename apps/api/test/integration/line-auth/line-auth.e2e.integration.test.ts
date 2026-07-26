@@ -7,9 +7,9 @@ import { LineVerificationError, type LineIdentityVerifier } from '@nook/line';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
-import { LINE_IDENTITY_VERIFIER } from '../src/platform/identity/identity.tokens';
+import { AppModule } from '../../../src/app.module';
+import { requestContextMiddleware } from '../../../src/platform/http/request-context.middleware';
+import { LINE_IDENTITY_VERIFIER } from '../../../src/platform/identity/identity.tokens';
 
 class SyntheticLineVerifier implements LineIdentityVerifier {
   readonly verify = vi.fn(

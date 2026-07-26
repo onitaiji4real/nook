@@ -6,7 +6,7 @@ import type {
 import type { RuntimeConfig } from '@nook/config';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AppointmentViewApplicationService } from '../src/modules/appointments/appointment-view-application.service';
+import { AppointmentViewApplicationService } from '../../../src/modules/appointments/appointment-view-application.service';
 
 const tenantId = '10000000-0000-4000-8000-000000000001';
 const userId = '20000000-0000-4000-8000-000000000001';

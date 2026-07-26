@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { ApplicationError } from '../src/platform/http/application-error';
+import { ApplicationError } from '../../../src/platform/http/application-error';
 import {
   decodeConsumerCursor,
   decodeMerchantCursor,
   encodeCursor,
-} from '../src/modules/appointments/appointment-view-application.service';
+} from '../../../src/modules/appointments/appointment-view-application.service';
 
 const id = '10000000-0000-4000-8000-000000000001';
 const timestamp = '2026-07-24T03:00:00.000Z';

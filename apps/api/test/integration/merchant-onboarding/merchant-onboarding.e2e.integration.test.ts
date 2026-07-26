@@ -15,8 +15,8 @@ import { disconnectPrismaClient, getPrismaClient } from '@nook/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AppModule } from '../src/app.module';
-import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
+import { AppModule } from '../../../src/app.module';
+import { requestContextMiddleware } from '../../../src/platform/http/request-context.middleware';
 
 class SyntheticIdentityTokenVerifier implements IdentityTokenVerifier {
   readonly identities = new Map<string, string>();

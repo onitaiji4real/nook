@@ -17,18 +17,18 @@ import { disconnectPrismaClient, getPrismaClient } from '@nook/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { AppModule } from '../src/app.module';
+import { AppModule } from '../../../src/app.module';
 import type {
   MediaUploadSigner,
   MediaVerificationQueue,
   SignedUploadPolicy,
-} from '../src/modules/portfolio/media-gateways';
+} from '../../../src/modules/portfolio/media-gateways';
 import {
   MEDIA_UPLOAD_SIGNER,
   MEDIA_VERIFICATION_QUEUE,
-} from '../src/modules/portfolio/portfolio.tokens';
-import { RUNTIME_CONFIG } from '../src/platform/config/runtime-config.token';
-import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
+} from '../../../src/modules/portfolio/portfolio.tokens';
+import { RUNTIME_CONFIG } from '../../../src/platform/config/runtime-config.token';
+import { requestContextMiddleware } from '../../../src/platform/http/request-context.middleware';
 
 class TestIdentityVerifier implements IdentityTokenVerifier {
   readonly identities = new Map<string, string>();

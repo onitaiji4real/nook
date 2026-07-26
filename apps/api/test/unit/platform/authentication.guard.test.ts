@@ -2,9 +2,9 @@ import type { ExecutionContext } from '@nestjs/common';
 import { IdentityTokenVerificationError, type IdentityTokenVerifier } from '@nook/auth';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { RequestWithContext } from '../src/platform/http/request-context';
-import { AuthenticationGuard } from '../src/platform/identity/authentication.guard';
-import type { UserAccessService } from '../src/platform/identity/user-access.service';
+import type { RequestWithContext } from '../../../src/platform/http/request-context';
+import { AuthenticationGuard } from '../../../src/platform/identity/authentication.guard';
+import type { UserAccessService } from '../../../src/platform/identity/user-access.service';
 
 function createContext(authorization = 'Bearer synthetic-token'): {
   readonly context: ExecutionContext;

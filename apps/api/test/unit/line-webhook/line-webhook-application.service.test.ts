@@ -4,7 +4,7 @@ import { parseRuntimeConfig } from '@nook/config';
 import type { LineWebhookRepository } from '@nook/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LineWebhookApplicationService } from '../src/modules/line-webhook/line-webhook-application.service';
+import { LineWebhookApplicationService } from '../../../src/modules/line-webhook/line-webhook-application.service';
 
 const subject = `U${'a'.repeat(32)}`;
 

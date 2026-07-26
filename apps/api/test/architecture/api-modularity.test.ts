@@ -4,6 +4,44 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 describe('API modular architecture', () => {
+  it('keeps API tests separated by architecture, unit, and integration purpose', () => {
+    const testRoot = resolve(process.cwd(), 'test');
+    const rootEntries = readdirSync(testRoot, { withFileTypes: true });
+
+    expect(
+      rootEntries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.test.ts'))
+        .map((entry) => entry.name),
+    ).toEqual([]);
+    expect(
+      rootEntries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort(),
+    ).toEqual(['architecture', 'integration', 'unit']);
+  });
+
+  it('keeps the database package root as a public entrypoint, not a repository bucket', () => {
+    const databaseSourceRoot = resolve(process.cwd(), '../../packages/database/src');
+    const rootTypescriptFiles = readdirSync(databaseSourceRoot, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .map((entry) => entry.name)
+      .sort();
+
+    expect(rootTypescriptFiles).toEqual(['index.ts']);
+
+    for (const featureDirectory of readdirSync(databaseSourceRoot, {
+      withFileTypes: true,
+    }).filter((entry) => entry.isDirectory())) {
+      const repositories = readdirSync(resolve(databaseSourceRoot, featureDirectory.name), {
+        withFileTypes: true,
+      }).filter((entry) => entry.isFile() && entry.name.endsWith('-repository.ts'));
+
+      expect(repositories.length, featureDirectory.name).toBeGreaterThan(0);
+      expect(repositories.length, featureDirectory.name).toBeLessThanOrEqual(4);
+    }
+  });
+
   it('keeps the source root limited to bootstrap and composition', () => {
     const sourceRoot = resolve(process.cwd(), 'src');
     const rootTypescriptFiles = readdirSync(sourceRoot, { withFileTypes: true })
@@ -64,7 +102,10 @@ describe('API modular architecture', () => {
 
   it('keeps appointment confirmation transactional, generic, and controller-separated', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/appointment-confirmation-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/appointments/appointment-confirmation-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -81,7 +122,10 @@ describe('API modular architecture', () => {
 
   it('keeps appointment views owner-scoped, tenant-scoped, and response-allowlisted', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/appointment-view-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/appointments/appointment-view-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -105,7 +149,10 @@ describe('API modular architecture', () => {
 
   it('keeps public merchant output allowlisted and private address masking server-side', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/merchant-publication-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/publication/merchant-publication-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -129,7 +176,10 @@ describe('API modular architecture', () => {
       'utf8',
     );
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/staff-scheduling-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/scheduling/staff-scheduling-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -148,7 +198,7 @@ describe('API modular architecture', () => {
 
   it('keeps portfolio upload bounded, tenant-scoped, and outside API image proxying', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/portfolio-media-repository.ts'),
+      resolve(process.cwd(), '../../packages/database/src/portfolio/portfolio-media-repository.ts'),
       'utf8',
     );
     const application = readFileSync(
@@ -177,7 +227,10 @@ describe('API modular architecture', () => {
 
   it('keeps service catalog authorization and entitlement enforcement generic', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/service-catalog-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/service-catalog/service-catalog-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -202,7 +255,10 @@ describe('API modular architecture', () => {
 
   it('keeps merchant onboarding writes tenant-scoped and transactional', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/merchant-onboarding-repository.ts'),
+      resolve(
+        process.cwd(),
+        '../../packages/database/src/merchant-onboarding/merchant-onboarding-repository.ts',
+      ),
       'utf8',
     );
     const application = readFileSync(
@@ -240,7 +296,7 @@ describe('API modular architecture', () => {
 
   it('requires tenantId in tenant-owned repository methods', () => {
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/tenant-repository.ts'),
+      resolve(process.cwd(), '../../packages/database/src/tenancy/tenant-repository.ts'),
       'utf8',
     );
     expect(repository).toMatch(/findActiveTenantMembership\(input: \{[\s\S]*?tenantId: string/);
@@ -255,7 +311,7 @@ describe('API modular architecture', () => {
       'utf8',
     );
     const repository = readFileSync(
-      resolve(process.cwd(), '../../packages/database/src/rate-limit-repository.ts'),
+      resolve(process.cwd(), '../../packages/database/src/line-auth/rate-limit-repository.ts'),
       'utf8',
     );
 

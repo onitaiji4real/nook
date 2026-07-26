@@ -1,7 +1,7 @@
 import type { IdentityRepository } from '@nook/database';
 import { describe, expect, it, vi } from 'vitest';
 
-import { UserAccessService } from '../src/platform/identity/user-access.service';
+import { UserAccessService } from '../../../src/platform/identity/user-access.service';
 
 function createRepository(active: boolean): IdentityRepository {
   return {

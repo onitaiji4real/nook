@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { DatabaseProbeService } from '../src/modules/health/database-probe.service';
-import { HealthService } from '../src/modules/health/health.service';
+import type { DatabaseProbeService } from '../../../src/modules/health/database-probe.service';
+import { HealthService } from '../../../src/modules/health/health.service';
 
 describe('api HealthService', () => {
   it('presents the stable health response', () => {
