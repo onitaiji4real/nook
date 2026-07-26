@@ -10,7 +10,7 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "check:architecture": "eslint infra/ci/*.mjs infra/dev/*.mjs && node --test infra/ci/check-repository-structure.test.mjs infra/ci/check-deployment-readiness.test.mjs infra/ci/check-ci-quality.test.mjs infra/dev/run-with-env.test.mjs infra/dev/check-local-dev.test.mjs infra/dev/doctor.test.mjs && node infra/ci/check-repository-structure.mjs && node infra/ci/check-workflows.mjs && node infra/ci/check-deployment-readiness.mjs && node infra/ci/check-ci-quality.mjs && node infra/dev/check-local-dev.mjs",
+    "check:architecture": "eslint infra/ci/*.mjs infra/dev/*.mjs && node --test infra/ci/check-repository-structure.test.mjs infra/ci/check-deployment-readiness.test.mjs infra/ci/check-ci-quality.test.mjs infra/dev/run-with-env.test.mjs infra/dev/run-in-ephemeral-database.test.mjs infra/dev/check-local-dev.test.mjs infra/dev/doctor.test.mjs && node infra/ci/check-repository-structure.mjs && node infra/ci/check-workflows.mjs && node infra/ci/check-deployment-readiness.mjs && node infra/ci/check-ci-quality.mjs && node infra/dev/check-local-dev.mjs",
     "db:generate": "pnpm --filter @nook/database prisma:generate",
     "db:migrate": "node infra/dev/run-with-env.mjs pnpm --filter @nook/database prisma:migrate:deploy",
     "doctor": "node infra/dev/doctor.mjs",
