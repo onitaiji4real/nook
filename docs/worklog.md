@@ -1574,3 +1574,9 @@
 - P3-007 repository/local acceptance標為`done`；本批工作依contracts/config、API/database、Web、ephemeral test tooling及文件分開提交，沒有把全部變更放進單一commit。沒有push、PR、deploy、Terraform apply、provider呼叫、secret或credential操作。
 - Fresh reader第一輪找到VIEWER矩陣矛盾、repository與真機gate混寫、staging／production拓樸不足、403撤銷辨識、204 role競態及`/v1/me`快取六項blocker。修正後VIEWER只有home／appointments，entry API回server current role的bounded decision，403以no-store memberships判斷是否真撤銷，並明定staging／production各自OA、channel、LIFF app、smoke與rollback。
 - 修正後focused contracts 55、Web 57、API unit 65及P3-007 API integration 17 tests全綠；fresh reader第二輪逐項回歸1–6後結論PASS，沒有剩餘文件矛盾或安全阻塞。
+
+## 2026-07-26 — Phase 4 planning handoff
+
+- Phase 3 repository/local tasks全數完成後，新增Phase 4 implementation plan並按資料依賴拆為P4-001 CRM consent、P4-002 completed-only reviews、P4-003 public search／server attribution、P4-004 favorites與P4-005 moderation。Fresh-reader發現P4-001的consent狀態機、停止利用、contact來源／加密、projection replay/backfill、customer建立時點與export contract仍不足，因此Phase 4維持`planning`、P4-001改為`blocked`，不得先建立migration。
+- P4-001先固定「預約履約關係不等於行銷同意」、tenant＋consumer唯一customer、appointment current truth projection、unknown spend不推算、OWNER／MANAGER專用CRM、VIEWER／STAFF無PII權限、consumer self-withdrawal與safe export audit。
+- Notes不得先用明文落庫；實作前需ADR決定at-rest envelope encryption、key rotation與export artifact TTL。Legal未核准purpose／consent／retention、security未核准key/export、owner未核准non-sensitive tag規範前，production activation保持external gate。
