@@ -19,11 +19,31 @@ export {
 } from './auth';
 export {
   createTenantRequestSchema,
+  meMembershipSchema,
+  meResponseSchema,
+  membershipRoleSchema,
+  membershipStatusSchema,
   tenantIdSchema,
+  tenantStatusSchema,
   type CreateTenantRequest,
   type MeResponse,
   type TenantResponse,
 } from './tenant';
+export {
+  buildMerchantLineRedirectUrl,
+  merchantStudioEntryEventRequestSchema,
+  merchantStudioEntryOutcomeSchema,
+  parseStudioRouteKey,
+  resolveStudioNavigation,
+  studioMembershipRoleSchema,
+  studioRouteKeySchema,
+  type MerchantStudioEntryEventRequest,
+  type MerchantStudioEntryOutcome,
+  type StudioMembershipRole,
+  type StudioNavigationDecision,
+  type StudioRouteAccess,
+  type StudioRouteKey,
+} from './studio-entry';
 export {
   merchantOnboardingRequestSchema,
   servicePriceSchema,

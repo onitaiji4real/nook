@@ -18,6 +18,7 @@ export function buildBrowserRuntimeConfig(
     apiBaseUrl: config.apiBaseUrl,
     capabilities: config.capabilities,
     liffId: config.auth.liffId,
+    merchantLiffId: config.auth.merchantLiffId,
     firebase: config.auth.firebase,
   };
 }

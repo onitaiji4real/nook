@@ -31,6 +31,7 @@ export const browserRuntimeConfigResponseSchema = z.discriminatedUnion('mode', [
       apiBaseUrl: z.string().url(),
       capabilities: browserCapabilitiesSchema,
       liffId: z.string().min(1),
+      merchantLiffId: z.string().min(1),
       firebase: firebaseBrowserConfigSchema,
     })
     .strict(),

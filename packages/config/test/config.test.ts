@@ -347,6 +347,7 @@ describe('parseWebRuntimeConfig', () => {
         WEB_AUTH_MODE: 'firebase-line',
         WEB_API_PUBLIC_BASE_URL: 'https://api.nook.example',
         LINE_LIFF_ID: '1234567890-AbCdEfGh',
+        LINE_MERCHANT_LIFF_ID: '1234567890-Merchant',
         FIREBASE_WEB_API_KEY: 'public-key',
         FIREBASE_WEB_AUTH_DOMAIN: 'nook.firebaseapp.com',
         FIREBASE_WEB_PROJECT_ID: 'nook-production',
@@ -360,6 +361,7 @@ describe('parseWebRuntimeConfig', () => {
       auth: {
         mode: 'firebase-line',
         liffId: '1234567890-AbCdEfGh',
+        merchantLiffId: '1234567890-Merchant',
         firebase: {
           apiKey: 'public-key',
           authDomain: 'nook.firebaseapp.com',
@@ -373,6 +375,15 @@ describe('parseWebRuntimeConfig', () => {
 
   it('fails closed when enabled auth is incomplete', () => {
     expect(() => parseWebRuntimeConfig({ WEB_AUTH_MODE: 'firebase-line' })).toThrow('LINE_LIFF_ID');
+  });
+
+  it('fails closed when the dedicated merchant LIFF app is missing', () => {
+    expect(() =>
+      parseWebRuntimeConfig({
+        WEB_AUTH_MODE: 'firebase-line',
+        LINE_LIFF_ID: '1234567890-Consumer',
+      }),
+    ).toThrow('LINE_MERCHANT_LIFF_ID');
   });
 
   it.each([

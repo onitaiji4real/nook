@@ -12,6 +12,29 @@ export const createTenantRequestSchema = z
   .strict();
 
 export const tenantIdSchema = z.string().uuid();
+export const membershipRoleSchema = z.enum(['OWNER', 'MANAGER', 'STAFF', 'VIEWER']);
+export const membershipStatusSchema = z.enum(['ACTIVE', 'INVITED', 'SUSPENDED', 'REMOVED']);
+export const tenantStatusSchema = z.enum(['ACTIVE', 'SUSPENDED', 'CLOSED']);
+
+export const meMembershipSchema = z
+  .object({
+    membershipId: z.string().uuid(),
+    tenantId: tenantIdSchema,
+    tenantName: z.string().min(1),
+    tenantSlug: z.string().min(1),
+    tenantStatus: z.literal('ACTIVE'),
+    tenantTimezone: z.string().min(1),
+    role: membershipRoleSchema,
+    status: z.literal('ACTIVE'),
+  })
+  .strict();
+
+export const meResponseSchema = z
+  .object({
+    id: z.string().uuid(),
+    memberships: z.array(meMembershipSchema).readonly(),
+  })
+  .strict();
 
 export type CreateTenantRequest = z.infer<typeof createTenantRequestSchema>;
 
@@ -26,15 +49,4 @@ export interface TenantResponse {
   };
 }
 
-export interface MeResponse {
-  readonly id: string;
-  readonly memberships: ReadonlyArray<{
-    readonly tenantId: string;
-    readonly tenantName: string;
-    readonly tenantSlug: string;
-    readonly tenantStatus: 'ACTIVE' | 'SUSPENDED' | 'CLOSED';
-    readonly tenantTimezone: string;
-    readonly role: 'OWNER' | 'MANAGER' | 'STAFF' | 'VIEWER';
-    readonly status: 'ACTIVE' | 'INVITED' | 'SUSPENDED' | 'REMOVED';
-  }>;
-}
+export type MeResponse = z.infer<typeof meResponseSchema>;

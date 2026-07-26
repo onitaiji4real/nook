@@ -25,4 +25,26 @@ describe('buildBrowserRuntimeConfig', () => {
     expect(JSON.stringify(config)).not.toContain('never-public');
     expect(JSON.stringify(config)).not.toContain('/private/key.json');
   });
+
+  it('returns separate public LIFF identifiers when browser identity is enabled', () => {
+    const config = buildBrowserRuntimeConfig({
+      NODE_ENV: 'production',
+      WEB_AUTH_MODE: 'firebase-line',
+      WEB_API_PUBLIC_BASE_URL: 'https://api.example.com',
+      LINE_LIFF_ID: 'consumer-liff-id',
+      LINE_MERCHANT_LIFF_ID: 'merchant-liff-id',
+      FIREBASE_WEB_API_KEY: 'public-api-key',
+      FIREBASE_WEB_AUTH_DOMAIN: 'example.firebaseapp.com',
+      FIREBASE_WEB_PROJECT_ID: 'example',
+      FIREBASE_WEB_APP_ID: 'firebase-app-id',
+      FIREBASE_WEB_MESSAGING_SENDER_ID: '1234567890',
+    });
+
+    expect(config).toMatchObject({
+      mode: 'firebase-line',
+      liffId: 'consumer-liff-id',
+      merchantLiffId: 'merchant-liff-id',
+    });
+    expect(JSON.stringify(config)).not.toContain('secret');
+  });
 });

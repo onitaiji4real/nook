@@ -83,6 +83,7 @@ export interface WebRuntimeConfig {
     | {
         readonly mode: 'firebase-line';
         readonly liffId: string;
+        readonly merchantLiffId: string;
         readonly firebase: {
           readonly apiKey: string;
           readonly authDomain: string;
@@ -101,6 +102,7 @@ export function parseWebRuntimeConfig(environment: NodeJS.ProcessEnv): WebRuntim
     WEB_BOOKING_POLICY_V2_WRITES_ENABLED: z.enum(['true', 'false']).optional(),
     WEB_APPOINTMENT_LIFECYCLE_ENABLED: z.enum(['true', 'false']).optional(),
     LINE_LIFF_ID: optionalNonEmptyString,
+    LINE_MERCHANT_LIFF_ID: optionalNonEmptyString,
     FIREBASE_WEB_API_KEY: optionalNonEmptyString,
     FIREBASE_WEB_AUTH_DOMAIN: optionalNonEmptyString,
     FIREBASE_WEB_PROJECT_ID: optionalNonEmptyString,
@@ -123,6 +125,10 @@ export function parseWebRuntimeConfig(environment: NodeJS.ProcessEnv): WebRuntim
       : ({
           mode: 'firebase-line',
           liffId: requireWebIdentityValue(parsed.LINE_LIFF_ID, 'LINE_LIFF_ID'),
+          merchantLiffId: requireWebIdentityValue(
+            parsed.LINE_MERCHANT_LIFF_ID,
+            'LINE_MERCHANT_LIFF_ID',
+          ),
           firebase: {
             apiKey: requireWebIdentityValue(parsed.FIREBASE_WEB_API_KEY, 'FIREBASE_WEB_API_KEY'),
             authDomain: requireWebIdentityValue(
