@@ -2,8 +2,8 @@ import type { RuntimeConfig } from '@nook/config';
 import type { ConsumeRateLimitInput, RateLimitDecision, RateLimitRepository } from '@nook/database';
 import { describe, expect, it } from 'vitest';
 
-import { ApplicationError } from '../src/application-error';
-import { LineAuthRateLimitService } from '../src/line-auth-rate-limit.service';
+import { ApplicationError } from '../src/platform/http/application-error';
+import { LineAuthRateLimitService } from '../src/modules/line-auth/line-auth-rate-limit.service';
 
 class InMemoryRateLimitRepository implements RateLimitRepository {
   readonly inputs: ConsumeRateLimitInput[] = [];

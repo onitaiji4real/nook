@@ -19,9 +19,9 @@ import {
 } from '@nook/database';
 import { createSecurityEventLog, redactValue } from '@nook/observability';
 
-import { ApplicationError } from '../../application-error';
-import { RUNTIME_CONFIG } from '../../runtime-config.token';
-import { TENANT_REPOSITORY } from '../../tenant-repository.token';
+import { RUNTIME_CONFIG } from '../../platform/config/runtime-config.token';
+import { ApplicationError } from '../../platform/http/application-error';
+import { TENANT_REPOSITORY } from '../../platform/identity/tenant-repository.token';
 import {
   MediaGatewayUnavailableError,
   type MediaUploadSigner,

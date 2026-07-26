@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { getPrismaClient, PrismaPortfolioMediaRepository } from '@nook/database';
 import type { RuntimeConfig } from '@nook/config';
 
-import { RUNTIME_CONFIG } from '../../runtime-config.token';
-import { PlatformCoreModule } from '../core/platform-core.module';
+import { RUNTIME_CONFIG } from '../../platform/config/runtime-config.token';
+import { PlatformCoreModule } from '../../platform/platform-core.module';
 import {
   GcpMediaVerificationQueue,
   GcsMediaUploadSigner,

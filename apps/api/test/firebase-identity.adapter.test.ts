@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { FirebaseIdentityAdapter } from '../src/firebase-identity.adapter';
+import { FirebaseIdentityAdapter } from '../src/platform/identity/firebase-identity.adapter';
 
 describe('FirebaseIdentityAdapter', () => {
   it('issues a one-hour custom token contract and verifies ID token uid', async () => {

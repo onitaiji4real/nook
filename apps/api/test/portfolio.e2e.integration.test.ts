@@ -27,8 +27,8 @@ import {
   MEDIA_UPLOAD_SIGNER,
   MEDIA_VERIFICATION_QUEUE,
 } from '../src/modules/portfolio/portfolio.tokens';
-import { requestContextMiddleware } from '../src/request-context.middleware';
-import { RUNTIME_CONFIG } from '../src/runtime-config.token';
+import { RUNTIME_CONFIG } from '../src/platform/config/runtime-config.token';
+import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
 
 class TestIdentityVerifier implements IdentityTokenVerifier {
   readonly identities = new Map<string, string>();

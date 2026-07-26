@@ -32,10 +32,14 @@ import {
   type UpdateAvailabilityExceptionRequest,
   type UpdateStaffRequest,
 } from '@nook/contracts';
-import { ApplicationError } from '../../application-error';
-import { AuthenticationGuard } from '../../authentication.guard';
-import { ProblemDetailsFilter } from '../../problem-details.filter';
-import { requirePrincipal, requireRequestId, type RequestWithContext } from '../../request-context';
+import { ApplicationError } from '../../platform/http/application-error';
+import { ProblemDetailsFilter } from '../../platform/http/problem-details.filter';
+import {
+  requirePrincipal,
+  requireRequestId,
+  type RequestWithContext,
+} from '../../platform/http/request-context';
+import { AuthenticationGuard } from '../../platform/identity/authentication.guard';
 import { StaffSchedulingApplicationService } from './staff-scheduling-application.service';
 
 interface SafeParser<T> {

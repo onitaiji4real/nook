@@ -2,7 +2,7 @@ import type { RuntimeConfig } from '@nook/config';
 import type { AppointmentLifecycleRepository } from '@nook/database';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AppointmentLifecycleApplicationService } from '../src/modules/marketplace/appointment-lifecycle-application.service';
+import { AppointmentLifecycleApplicationService } from '../src/modules/appointments/appointment-lifecycle-application.service';
 
 const actorUserId = '10000000-0000-4000-8000-000000000001';
 const tenantId = '20000000-0000-4000-8000-000000000001';

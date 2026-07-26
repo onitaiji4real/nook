@@ -8,8 +8,8 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppModule } from '../src/app.module';
-import { LINE_IDENTITY_VERIFIER } from '../src/identity.tokens';
-import { requestContextMiddleware } from '../src/request-context.middleware';
+import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
+import { LINE_IDENTITY_VERIFIER } from '../src/platform/identity/identity.tokens';
 
 class SyntheticLineVerifier implements LineIdentityVerifier {
   readonly verify = vi.fn(

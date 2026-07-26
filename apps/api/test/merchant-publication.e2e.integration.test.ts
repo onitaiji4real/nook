@@ -25,13 +25,13 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { AppModule } from '../src/app.module';
-import type { MarketplaceMediaSigner } from '../src/modules/marketplace/marketplace-media-signer';
+import type { MarketplaceMediaSigner } from '../src/modules/publication/marketplace-media-signer';
 import {
   AVAILABILITY_CLOCK,
   MARKETPLACE_MEDIA_SIGNER,
-} from '../src/modules/marketplace/marketplace.tokens';
-import { requestContextMiddleware } from '../src/request-context.middleware';
-import { RUNTIME_CONFIG } from '../src/runtime-config.token';
+} from '../src/modules/publication/publication.tokens';
+import { RUNTIME_CONFIG } from '../src/platform/config/runtime-config.token';
+import { requestContextMiddleware } from '../src/platform/http/request-context.middleware';
 
 class TestIdentityVerifier implements IdentityTokenVerifier {
   readonly identities = new Map<string, string>();

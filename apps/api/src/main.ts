@@ -4,9 +4,9 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 
 import { AppModule } from './app.module';
-import { configureApiCors } from './cors';
-import { requestContextMiddleware } from './request-context.middleware';
-import { runtimeConfig } from './runtime-config';
+import { runtimeConfig } from './platform/config/runtime-config';
+import { configureApiCors } from './platform/http/cors';
+import { requestContextMiddleware } from './platform/http/request-context.middleware';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

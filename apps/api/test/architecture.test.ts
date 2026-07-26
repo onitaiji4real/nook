@@ -1,21 +1,60 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-describe('tenant slice architecture', () => {
+describe('API modular architecture', () => {
+  it('keeps the source root limited to bootstrap and composition', () => {
+    const sourceRoot = resolve(process.cwd(), 'src');
+    const rootTypescriptFiles = readdirSync(sourceRoot, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .map((entry) => entry.name)
+      .sort();
+
+    expect(rootTypescriptFiles).toEqual(['app.module.ts', 'main.ts']);
+
+    const appModule = readFileSync(resolve(sourceRoot, 'app.module.ts'), 'utf8');
+    expect(appModule).not.toMatch(/\bcontrollers\s*:/);
+    expect(appModule).not.toMatch(/\bproviders\s*:/);
+  });
+
+  it('keeps each non-empty business feature behind one Nest module', () => {
+    const modulesRoot = resolve(process.cwd(), 'src/modules');
+    const featureDirectories = readdirSync(modulesRoot, { withFileTypes: true }).filter((entry) =>
+      entry.isDirectory(),
+    );
+
+    for (const featureDirectory of featureDirectories) {
+      const typescriptFiles = readdirSync(resolve(modulesRoot, featureDirectory.name), {
+        withFileTypes: true,
+      }).filter((entry) => entry.isFile() && entry.name.endsWith('.ts'));
+
+      if (typescriptFiles.length === 0) {
+        continue;
+      }
+
+      const moduleFiles = typescriptFiles.filter((entry) => entry.name.endsWith('.module.ts'));
+      expect(moduleFiles, featureDirectory.name).toHaveLength(1);
+      expect(typescriptFiles.length, featureDirectory.name).toBeLessThanOrEqual(12);
+    }
+  });
+
   it('keeps Prisma out of HTTP controllers', () => {
     for (const filename of [
-      'tenant.controller.ts',
-      'line-auth.controller.ts',
-      'merchant-onboarding.controller.ts',
-      'service-catalog.controller.ts',
+      'modules/tenancy/tenant.controller.ts',
+      'modules/line-auth/line-auth.controller.ts',
+      'modules/line-studio-entry/line-studio-entry.controller.ts',
+      'modules/line-webhook/line-webhook.controller.ts',
+      'modules/merchant-onboarding/merchant-onboarding.controller.ts',
+      'modules/service-catalog/service-catalog.controller.ts',
       'modules/scheduling/staff-scheduling.controller.ts',
       'modules/portfolio/portfolio.controller.ts',
-      'modules/marketplace/merchant-publication.controller.ts',
-      'modules/marketplace/booking-hold.controller.ts',
-      'modules/marketplace/appointment.controller.ts',
-      'modules/marketplace/appointment-view.controller.ts',
+      'modules/publication/merchant-publication.controller.ts',
+      'modules/booking/booking-hold.controller.ts',
+      'modules/booking/booking-policy.controller.ts',
+      'modules/appointments/appointment.controller.ts',
+      'modules/appointments/appointment-view.controller.ts',
+      'modules/appointments/appointment-lifecycle.controller.ts',
     ]) {
       const controller = readFileSync(resolve(process.cwd(), `src/${filename}`), 'utf8');
       expect(controller).not.toContain('@prisma/client');
@@ -29,7 +68,7 @@ describe('tenant slice architecture', () => {
       'utf8',
     );
     const application = readFileSync(
-      resolve(process.cwd(), 'src/modules/marketplace/appointment-application.service.ts'),
+      resolve(process.cwd(), 'src/modules/appointments/appointment-application.service.ts'),
       'utf8',
     );
     expect(repository).toContain('Prisma.TransactionIsolationLevel.Serializable');
@@ -46,11 +85,11 @@ describe('tenant slice architecture', () => {
       'utf8',
     );
     const application = readFileSync(
-      resolve(process.cwd(), 'src/modules/marketplace/appointment-view-application.service.ts'),
+      resolve(process.cwd(), 'src/modules/appointments/appointment-view-application.service.ts'),
       'utf8',
     );
     const controller = readFileSync(
-      resolve(process.cwd(), 'src/modules/marketplace/appointment-view.controller.ts'),
+      resolve(process.cwd(), 'src/modules/appointments/appointment-view.controller.ts'),
       'utf8',
     );
 
@@ -70,7 +109,7 @@ describe('tenant slice architecture', () => {
       'utf8',
     );
     const application = readFileSync(
-      resolve(process.cwd(), 'src/modules/marketplace/merchant-publication-application.service.ts'),
+      resolve(process.cwd(), 'src/modules/publication/merchant-publication-application.service.ts'),
       'utf8',
     );
     expect(repository).toContain("visibilityStatus: 'PUBLISHED'");
@@ -142,7 +181,7 @@ describe('tenant slice architecture', () => {
       'utf8',
     );
     const application = readFileSync(
-      resolve(process.cwd(), 'src/service-catalog-application.service.ts'),
+      resolve(process.cwd(), 'src/modules/service-catalog/service-catalog-application.service.ts'),
       'utf8',
     );
 
@@ -167,7 +206,10 @@ describe('tenant slice architecture', () => {
       'utf8',
     );
     const application = readFileSync(
-      resolve(process.cwd(), 'src/merchant-onboarding-application.service.ts'),
+      resolve(
+        process.cwd(),
+        'src/modules/merchant-onboarding/merchant-onboarding-application.service.ts',
+      ),
       'utf8',
     );
 
@@ -187,8 +229,9 @@ describe('tenant slice architecture', () => {
   it('uses explicit injection for health dependencies in tsx development', () => {
     for (const app of ['api', 'worker']) {
       const sourceRoot = resolve(process.cwd(), `../../apps/${app}/src`);
-      const controller = readFileSync(resolve(sourceRoot, 'health.controller.ts'), 'utf8');
-      const service = readFileSync(resolve(sourceRoot, 'health.service.ts'), 'utf8');
+      const healthRoot = app === 'api' ? resolve(sourceRoot, 'modules/health') : sourceRoot;
+      const controller = readFileSync(resolve(healthRoot, 'health.controller.ts'), 'utf8');
+      const service = readFileSync(resolve(healthRoot, 'health.service.ts'), 'utf8');
 
       expect(controller).toContain('@Inject(HealthService)');
       expect(service).toContain('@Inject(DatabaseProbeService)');
@@ -208,7 +251,7 @@ describe('tenant slice architecture', () => {
 
   it('keeps LINE rate limiting cross-instance and free of trusted client-header assumptions', () => {
     const limiter = readFileSync(
-      resolve(process.cwd(), 'src/line-auth-rate-limit.service.ts'),
+      resolve(process.cwd(), 'src/modules/line-auth/line-auth-rate-limit.service.ts'),
       'utf8',
     );
     const repository = readFileSync(

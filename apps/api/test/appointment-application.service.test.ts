@@ -6,8 +6,8 @@ import {
 } from '@nook/database';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApplicationError } from '../src/application-error';
-import { AppointmentApplicationService } from '../src/modules/marketplace/appointment-application.service';
+import { ApplicationError } from '../src/platform/http/application-error';
+import { AppointmentApplicationService } from '../src/modules/appointments/appointment-application.service';
 
 describe('AppointmentApplicationService', () => {
   const body = {
