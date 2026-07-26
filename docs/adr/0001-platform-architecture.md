@@ -21,6 +21,8 @@ MVP 需要交易一致性、租戶隔離、地理查詢與小團隊快速迭代�
 - 跨領域技術能力放在 `apps/api/src/platform/{config,http,identity}`，商業能力則依 bounded feature 放在 `apps/api/src/modules/<feature>`。
 - 每個非空 feature 目錄必須有且只有一個 Nest module；controller、application service、token 與 feature-specific adapter 應由該 module 擁有。
 - 架構測試限制 feature 目錄的 TypeScript 檔案數，若超過上限必須先拆出更小且有明確責任的 feature，而不是繼續堆疊同層檔案。
+- `packages/database/src/index.ts`是資料層唯一public entrypoint；repository implementations依相同feature語彙分目錄，應用不得使用未宣告的deep import。
+- API tests分為`architecture`、`unit/<feature>`與`integration/<feature>`，讓測試責任與production feature可雙向定位。
 
 ## Consequences
 
@@ -31,3 +33,4 @@ MVP 需要交易一致性、租戶隔離、地理查詢與小團隊快速迭代�
 - 應用在設定缺失時 fail closed，且不得在 startup 自動執行 migration。
 - 新增功能可以由單一 feature 目錄追蹤其 HTTP 與 application 邊界；跨 feature 相依需透過 module export/import，而非把檔案搬回 API 根目錄。
 - `platform` 只接受跨多個商業 feature 使用的技術能力，不作為無法分類程式碼的共用雜物區。
+- Database package的feature目錄是內部實作邊界，不代表拆成獨立service或transaction boundary；跨repository transaction仍依application use case與資料一致性需求決定。

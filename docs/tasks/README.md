@@ -36,6 +36,7 @@
 | P3-006   | Reminders & LINE notifications       | done    | P3-005                          |
 | P3-007   | Merchant LINE entry & RWD operations | done    | P3-006                          |
 | ARCH-001 | API feature module layout            | done    | P3-007                          |
+| ARCH-002 | Database and API test feature layout | done    | ARCH-001                        |
 | P4-001   | Consumer CRM consent boundary        | blocked | 規格與安全契約待完成            |
 | P4-002   | Verified completed reviews           | blocked | P4-001                          |
 | P4-003   | Public search & attribution          | blocked | P4-002                          |

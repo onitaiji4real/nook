@@ -1588,3 +1588,11 @@
 - 新增架構防退化測試：API source root只允許兩個bootstrap/composition檔、`AppModule`不得直接宣告controller/provider、每個非空feature恰有一個`.module.ts`，且單層TypeScript檔案上限為12。ADR 0001同步記錄feature/platform責任。
 - 驗證通過：API strict typecheck、ESLint、build；unit 13 files／67 tests；乾淨ephemeral PostgreSQL套19 migrations後API integration 7 files／57 tests；repository architecture 26 tests與static gates；Prettier與`git diff --check`。第一次unit在sandbox內因CORS測試無法listen `0.0.0.0`而出現`EPERM`，取得本機loopback權限後原測試全綠，未把sandbox失敗誤列為產品回歸。
 - 本次API程式碼以93檔的單一coherent refactor commit提交，其中多數為Git辨識的rename，沒有把300多個檔案一次提交。`apps/api/test`與`packages/database/src`仍需在成長前另開結構任務；Phase 4在規格blocker解決前保持planning/blocked。
+
+## 2026-07-27 — ARCH-002 database and API test feature layout
+
+- `packages/database/src`原有18個repository平放；現在依API相同feature語彙拆成appointments、booking、line-auth、line-webhook、merchant-onboarding、notifications、portfolio、publication、scheduling、service-catalog與tenancy。根目錄只保留public `index.ts`，既有`@nook/database` symbol與consumer imports不變。
+- `apps/api/test`從20個平面檔案改為`architecture`、`unit/<feature>`與`integration/<feature>`。新增架構gate要求test root不得放`.test.ts`、database root只能有`index.ts`，每個database feature必須有1至4個repository，避免兩個目錄再次退化。
+- 第一次完整database integration如先前P3-007 worklog預期得到45/63：18個booking hold／confirmation案例因硬編碼`2026-07-24`超出maximum advance window而失敗。兩組fixture改為執行時推導至少七天後的星期五，並同步推導availability `validFrom`；第二次以乾淨database重跑11 files／63 tests全綠。
+- 最終驗證：database unit 15 files／39 tests、API unit／architecture 13 files／69 tests、database integration 11 files／63 tests、API integration 7 files／57 tests；兩次integration各自從零套用19 migrations並刪除ephemeral database。Database/API strict typecheck、ESLint、build、repository architecture 26 tests、Prettier與`git diff --check`通過。
+- 本任務沒有schema、migration、HTTP或商業邏輯變更。下一個database test應直接建立在feature目錄，不再增加根層檔案；若public index持續成長，可加內部barrel但仍不開放deep imports。
