@@ -20,6 +20,21 @@ export const merchantStudioEntryEventRequestSchema = z
   })
   .strict();
 
+export const studioNavigationDecisionSchema = z
+  .object({
+    routeKey: studioRouteKeySchema,
+    href: z.enum([
+      '/studio',
+      '/studio/appointments',
+      '/studio/services',
+      '/studio/staff',
+      '/studio/portfolio',
+      '/studio/policies',
+    ]),
+    access: z.enum(['manage', 'read', 'scoped', 'fallback']),
+  })
+  .strict();
+
 export type StudioRouteKey = z.infer<typeof studioRouteKeySchema>;
 export type StudioMembershipRole = z.infer<typeof studioMembershipRoleSchema>;
 export type MerchantStudioEntryOutcome = z.infer<typeof merchantStudioEntryOutcomeSchema>;
@@ -27,13 +42,11 @@ export type MerchantStudioEntryEventRequest = z.infer<typeof merchantStudioEntry
 
 export type StudioRouteAccess = 'manage' | 'read' | 'scoped' | 'fallback';
 
-export interface StudioNavigationDecision {
-  readonly routeKey: StudioRouteKey;
-  readonly href: string;
-  readonly access: StudioRouteAccess;
-}
+export type StudioNavigationDecision = z.infer<typeof studioNavigationDecisionSchema>;
 
-const studioRouteHref: Readonly<Record<StudioRouteKey, string>> = {
+const studioRouteHref: Readonly<
+  Record<StudioRouteKey, StudioNavigationDecision['href']>
+> = {
   home: '/studio',
   appointments: '/studio/appointments',
   services: '/studio/services',

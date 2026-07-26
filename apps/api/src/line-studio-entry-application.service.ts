@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { resolveStudioNavigation, type MerchantStudioEntryEventRequest } from '@nook/contracts';
+import {
+  resolveStudioNavigation,
+  type MerchantStudioEntryEventRequest,
+  type StudioNavigationDecision,
+} from '@nook/contracts';
 import type { TenantRepository } from '@nook/database';
 import { redactValue } from '@nook/observability';
 
@@ -18,7 +22,7 @@ export class LineStudioEntryApplicationService {
     readonly userId: string;
     readonly requestId: string;
     readonly event: MerchantStudioEntryEventRequest;
-  }): Promise<void> {
+  }): Promise<StudioNavigationDecision> {
     await this.users.requireActive(input.userId);
     const membership = await this.tenants.findActiveTenantMembership({
       tenantId: input.event.tenantId,
@@ -41,20 +45,19 @@ export class LineStudioEntryApplicationService {
       );
     }
 
+    const decision = resolveStudioNavigation({
+      routeKey: input.event.routeKey,
+      role: membership.membership.role,
+    });
     this.writeEvent({
       requestId: input.requestId,
       operation: 'line.merchant_entry',
-      outcome:
-        resolveStudioNavigation({
-          routeKey: input.event.routeKey,
-          role: membership.membership.role,
-        }).access === 'fallback'
-          ? 'fallback'
-          : 'success',
+      outcome: decision.access === 'fallback' ? 'fallback' : 'success',
       routeKey: input.event.routeKey,
-      httpStatus: 204,
+      httpStatus: 200,
       tenantId: input.event.tenantId,
     });
+    return decision;
   }
 
   private writeEvent(

@@ -36,6 +36,7 @@ export {
   parseStudioRouteKey,
   resolveStudioNavigation,
   studioMembershipRoleSchema,
+  studioNavigationDecisionSchema,
   studioRouteKeySchema,
   type MerchantStudioEntryEventRequest,
   type MerchantStudioEntryOutcome,

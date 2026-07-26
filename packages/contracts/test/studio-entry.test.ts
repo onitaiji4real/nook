@@ -5,6 +5,7 @@ import {
   merchantStudioEntryEventRequestSchema,
   parseStudioRouteKey,
   resolveStudioNavigation,
+  studioNavigationDecisionSchema,
   studioRouteKeySchema,
   type StudioMembershipRole,
   type StudioRouteKey,
@@ -35,6 +36,7 @@ describe('merchant Studio entry contract', () => {
       expect(decision.href).toMatch(/^\/studio(?:\/[a-z-]+)?$/);
       expect(decision.href).not.toContain('?');
       expect(decision.href).not.toContain('://');
+      expect(studioNavigationDecisionSchema.parse(decision)).toEqual(decision);
     }
   });
 

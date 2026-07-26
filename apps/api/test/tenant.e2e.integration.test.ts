@@ -6,7 +6,12 @@ import {
   type AuthenticatedPrincipal,
   type IdentityTokenVerifier,
 } from '@nook/auth';
-import { studioRouteKeySchema, type ProblemDetails, type TenantResponse } from '@nook/contracts';
+import {
+  resolveStudioNavigation,
+  studioRouteKeySchema,
+  type ProblemDetails,
+  type TenantResponse,
+} from '@nook/contracts';
 import { disconnectPrismaClient, getPrismaClient, PrismaTenantRepository } from '@nook/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -221,6 +226,7 @@ describe('tenant onboarding and RBAC', () => {
       .get('/v1/me')
       .set('authorization', 'Bearer token-a')
       .expect(200);
+    expect(response.headers['cache-control']).toBe('private, no-store');
 
     expect(response.body as unknown).toEqual({
       id: userAId,
@@ -275,12 +281,13 @@ describe('tenant onboarding and RBAC', () => {
       const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
 
       for (const routeKey of studioRouteKeySchema.options) {
-        await request(httpServer)
+        const response = await request(httpServer)
           .post('/v1/line/studio-entry-events')
           .set('authorization', 'Bearer token-a')
           .set('x-request-id', `line-entry-${role.toLowerCase()}-${routeKey}`)
           .send({ tenantId: tenant.id, routeKey })
-          .expect(204);
+          .expect(200);
+        expect(response.body).toEqual(resolveStudioNavigation({ routeKey, role }));
       }
 
       const logs = writeSpy.mock.calls.flat().join('');

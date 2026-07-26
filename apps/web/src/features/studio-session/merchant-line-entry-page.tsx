@@ -1,6 +1,6 @@
 'use client';
 
-import { resolveStudioNavigation, type StudioRouteKey } from '@nook/contracts';
+import type { StudioRouteKey } from '@nook/contracts';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { readRememberLogin, writeStudioEntryNotice } from './browser-session-storage';
@@ -82,15 +82,11 @@ export function MerchantLineEntryPage() {
 
     navigating.current = true;
     setPhase('navigating');
-    const decision = resolveStudioNavigation({
-      routeKey,
-      role: selectedMembership.role,
-    });
     void recordMerchantEntry({
       tenantId: selectedMembership.tenantId,
       routeKey,
-    }).then((authorized) => {
-      if (!authorized) {
+    }).then((decision) => {
+      if (decision === null) {
         navigating.current = false;
         setPhase('selecting');
         return;

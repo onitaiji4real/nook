@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
   Param,
@@ -69,6 +70,7 @@ export class TenantController {
   }
 
   @Get('me')
+  @Header('Cache-Control', 'private, no-store')
   async getMe(@Req() request: RequestWithContext): Promise<MeResponse> {
     return this.service.getMe(requirePrincipal(request).userId);
   }

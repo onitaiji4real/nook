@@ -3,10 +3,13 @@
 import {
   browserRuntimeConfigResponseSchema,
   meResponseSchema,
+  resolveStudioNavigation,
+  studioNavigationDecisionSchema,
   type BrowserRuntimeConfigResponse,
   type CreateTenantRequest,
   type MerchantStudioEntryEventRequest,
   type MeResponse,
+  type StudioNavigationDecision,
   type TenantResponse,
 } from '@nook/contracts';
 import React, {
@@ -62,7 +65,9 @@ interface StudioSessionContextValue {
     },
     rememberDevice: boolean,
   ) => Promise<void>;
-  readonly recordMerchantEntry: (event: MerchantStudioEntryEventRequest) => Promise<boolean>;
+  readonly recordMerchantEntry: (
+    event: MerchantStudioEntryEventRequest,
+  ) => Promise<StudioNavigationDecision | null>;
   readonly signOut: () => Promise<void>;
   readonly selectTenant: (tenantId: string) => void;
   readonly createTenant: (input: CreateTenantRequest) => Promise<TenantResponse>;
@@ -81,7 +86,8 @@ const previewSessionValue: StudioSessionContextValue = {
   message: null,
   startLineLogin: () => Promise.resolve(),
   completeLineIdentity: () => Promise.resolve(),
-  recordMerchantEntry: () => Promise.resolve(true),
+  recordMerchantEntry: () =>
+    Promise.resolve({ routeKey: 'home', href: '/studio', access: 'manage' }),
   signOut: () => Promise.resolve(),
   selectTenant: () => undefined,
   createTenant: () => Promise.reject(new StudioApiError(503, 'local_preview_only', true)),
@@ -269,10 +275,8 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
         } else if (error instanceof StudioApiError && error.status === 503) {
           setStatus('degraded');
         } else if (error instanceof StudioApiError && error.status === 403) {
-          clearSelectedTenantId();
-          setSelectedMembership(null);
           await loadAccount(firebaseSession.current, runtimeConfig);
-          setMessage('店家權限已更新，請重新選擇可使用的店家。');
+          setMessage('店家權限已重新確認；若權限已撤銷，請重新選擇可使用的店家。');
           throw error;
         }
         setMessage(toSafeClientMessage(error));
@@ -283,41 +287,45 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
   );
 
   const recordMerchantEntry = useCallback(
-    async (event: MerchantStudioEntryEventRequest): Promise<boolean> => {
+    async (event: MerchantStudioEntryEventRequest): Promise<StudioNavigationDecision | null> => {
       if (runtimeConfig?.mode !== 'firebase-line' || firebaseSession.current === null) {
-        return false;
+        return null;
       }
       try {
-        await authorizedRequest<void>(
-          firebaseSession.current,
-          runtimeConfig,
-          '/v1/line/studio-entry-events',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(event),
-          },
+        return studioNavigationDecisionSchema.parse(
+          await authorizedRequest<unknown>(
+            firebaseSession.current,
+            runtimeConfig,
+            '/v1/line/studio-entry-events',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(event),
+            },
+          ),
         );
-        return true;
       } catch (error) {
         if (error instanceof StudioApiError && error.status === 401) {
           await firebaseSession.current.signOut();
           setStatus('signed-out');
           setMessage(error.message);
-          return false;
+          return null;
         }
         if (error instanceof StudioApiError && error.status === 403) {
-          clearSelectedTenantId();
-          setSelectedMembership(null);
           await loadAccount(firebaseSession.current, runtimeConfig);
-          setMessage('店家權限已更新，請重新選擇可使用的店家。');
-          return false;
+          setMessage('店家權限已重新確認；若權限已撤銷，請重新選擇可使用的店家。');
+          return null;
         }
         // Entry analytics is best-effort and must never block an authorized operation.
-        return true;
+        return resolveStudioNavigation({
+          routeKey: event.routeKey,
+          role:
+            memberships.find((membership) => membership.tenantId === event.tenantId)?.role ??
+            'VIEWER',
+        });
       }
     },
-    [loadAccount, runtimeConfig],
+    [loadAccount, memberships, runtimeConfig],
   );
 
   const createTenant = useCallback(

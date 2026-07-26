@@ -11,6 +11,7 @@ import {
 import {
   merchantStudioEntryEventRequestSchema,
   type MerchantStudioEntryEventRequest,
+  type StudioNavigationDecision,
 } from '@nook/contracts';
 
 import { ApplicationError } from './application-error';
@@ -29,10 +30,13 @@ export class LineStudioEntryController {
   ) {}
 
   @Post('studio-entry-events')
-  @HttpCode(204)
-  async record(@Req() request: RequestWithContext, @Body() rawBody: unknown): Promise<void> {
+  @HttpCode(200)
+  async record(
+    @Req() request: RequestWithContext,
+    @Body() rawBody: unknown,
+  ): Promise<StudioNavigationDecision> {
     const event = this.parseEvent(rawBody);
-    await this.service.record({
+    return this.service.record({
       userId: requirePrincipal(request).userId,
       requestId: requireRequestId(request),
       event,
