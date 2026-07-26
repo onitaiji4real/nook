@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 
+import { consumeStudioEntryNotice } from './browser-session-storage';
 import { useStudioSession } from './studio-session-provider';
 
 const workspaces = [
@@ -32,6 +33,13 @@ export function StudioHomePage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [entryNotice, setEntryNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (consumeStudioEntryNotice() === 'role_fallback') {
+      setEntryNotice('你的角色目前不能開啟原先指定的頁面，已安全返回店務總覽。');
+    }
+  }, []);
 
   async function submitTenant(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -88,6 +96,12 @@ export function StudioHomePage() {
             : '目前店家會套用到所有服務、班表、作品與發布操作，時間會以台北顯示、UTC儲存。'}
         </p>
       </section>
+
+      {entryNotice === null ? null : (
+        <p className="studio-entry-notice" role="status">
+          {entryNotice}
+        </p>
+      )}
 
       {status === 'tenant-required' ? (
         <section className="studio-tenant-panel">

@@ -32,6 +32,7 @@ describe('browser credential storage boundary', () => {
       'nook.auth.persistence',
       'nook.login.remember',
       'nook.selectedTenantId',
+      'nook.studio.entryNotice',
     ]);
     expect(contents).not.toMatch(
       /idToken|customToken|accessToken|refreshToken|profile|email|phone/i,

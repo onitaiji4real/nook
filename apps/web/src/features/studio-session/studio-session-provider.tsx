@@ -2,8 +2,10 @@
 
 import {
   browserRuntimeConfigResponseSchema,
+  meResponseSchema,
   type BrowserRuntimeConfigResponse,
   type CreateTenantRequest,
+  type MerchantStudioEntryEventRequest,
   type MeResponse,
   type TenantResponse,
 } from '@nook/contracts';
@@ -22,12 +24,11 @@ import { createFirebaseSession, type FirebaseSession } from './firebase-session'
 import {
   clearRememberLogin,
   clearSelectedTenantId,
-  readRememberLogin,
   readSelectedTenantId,
   writeRememberLogin,
   writeSelectedTenantId,
 } from './browser-session-storage';
-import { obtainLineIdentity, signOutLine } from './line-login';
+import { signOutLine } from './line-login';
 import { classifyStudioApiError, StudioApiError } from './studio-api-error';
 
 export type StudioSessionStatus =
@@ -48,9 +49,20 @@ interface StudioSessionContextValue {
   readonly capabilities: BrowserRuntimeConfigResponse['capabilities'];
   readonly memberships: MeResponse['memberships'];
   readonly selectedMembership: StudioMembership | null;
+  readonly lineEntryConfig:
+    | { readonly status: 'loading' }
+    | { readonly status: 'disabled' }
+    | { readonly status: 'ready'; readonly liffId: string };
   readonly message: string | null;
   readonly startLineLogin: (rememberDevice: boolean) => Promise<void>;
-  readonly resumeLineLogin: () => Promise<void>;
+  readonly completeLineIdentity: (
+    identity: {
+      readonly idToken: string;
+      readonly nonce: string;
+    },
+    rememberDevice: boolean,
+  ) => Promise<void>;
+  readonly recordMerchantEntry: (event: MerchantStudioEntryEventRequest) => Promise<boolean>;
   readonly signOut: () => Promise<void>;
   readonly selectTenant: (tenantId: string) => void;
   readonly createTenant: (input: CreateTenantRequest) => Promise<TenantResponse>;
@@ -65,9 +77,11 @@ const previewSessionValue: StudioSessionContextValue = {
   capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
   memberships: [],
   selectedMembership: null,
+  lineEntryConfig: { status: 'disabled' },
   message: null,
   startLineLogin: () => Promise.resolve(),
-  resumeLineLogin: () => Promise.resolve(),
+  completeLineIdentity: () => Promise.resolve(),
+  recordMerchantEntry: () => Promise.resolve(true),
   signOut: () => Promise.resolve(),
   selectTenant: () => undefined,
   createTenant: () => Promise.reject(new StudioApiError(503, 'local_preview_only', true)),
@@ -156,13 +170,23 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
       if (config.mode !== 'firebase-line') return;
       setStatus('account-loading');
       try {
-        const me = await authorizedRequest<MeResponse>(session, config, '/v1/me');
+        const me = meResponseSchema.parse(
+          await authorizedRequest<unknown>(session, config, '/v1/me'),
+        );
         applyMe(me);
       } catch (error) {
         if (error instanceof StudioApiError && error.status === 401) {
           await session.signOut();
           setStatus('signed-out');
           setMessage(error.message);
+          return;
+        }
+        if (error instanceof StudioApiError && error.status === 403) {
+          clearSelectedTenantId();
+          setMemberships([]);
+          setSelectedMembership(null);
+          setStatus('tenant-required');
+          setMessage('目前沒有可使用的店家權限。若剛調整權限，請聯絡店主後重新整理。');
           return;
         }
         setStatus('degraded');
@@ -172,19 +196,15 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
     [applyMe],
   );
 
-  const exchangeLineIdentity = useCallback(
-    async (startLogin: boolean, rememberDevice: boolean) => {
+  const completeLineIdentity = useCallback(
+    async (
+      identity: { readonly idToken: string; readonly nonce: string },
+      rememberDevice = false,
+    ) => {
       if (runtimeConfig?.mode !== 'firebase-line' || firebaseSession.current === null) return;
       setStatus('signing-in');
       setMessage(null);
       try {
-        const identity = await obtainLineIdentity({ liffId: runtimeConfig.liffId, startLogin });
-        if (identity.status === 'signed-out') {
-          setStatus('signed-out');
-          return;
-        }
-        if (identity.status === 'redirecting') return;
-
         const response = await fetch(`${runtimeConfig.apiBaseUrl}/v1/auth/line/exchange`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -207,19 +227,11 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
     [runtimeConfig],
   );
 
-  const startLineLogin = useCallback(
-    async (rememberDevice: boolean) => {
-      writeRememberLogin(rememberDevice);
-      await exchangeLineIdentity(true, rememberDevice);
-    },
-    [exchangeLineIdentity],
-  );
-
-  const resumeLineLogin = useCallback(async () => {
-    if (status !== 'signed-out') return;
-    const rememberDevice = readRememberLogin();
-    await exchangeLineIdentity(false, rememberDevice);
-  }, [exchangeLineIdentity, status]);
+  const startLineLogin = useCallback((rememberDevice: boolean): Promise<void> => {
+    writeRememberLogin(rememberDevice);
+    window.location.assign('/line/studio?route=home');
+    return Promise.resolve();
+  }, []);
 
   const signOut = useCallback(async () => {
     clearSelectedTenantId();
@@ -227,7 +239,7 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
     setMemberships([]);
     setSelectedMembership(null);
     if (firebaseSession.current !== null) await firebaseSession.current.signOut();
-    await signOutLine();
+    await signOutLine().catch(() => undefined);
     setStatus(runtimeConfig?.mode === 'disabled' ? 'local-preview' : 'signed-out');
   }, [runtimeConfig]);
 
@@ -256,12 +268,56 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
           setStatus('signed-out');
         } else if (error instanceof StudioApiError && error.status === 503) {
           setStatus('degraded');
+        } else if (error instanceof StudioApiError && error.status === 403) {
+          clearSelectedTenantId();
+          setSelectedMembership(null);
+          await loadAccount(firebaseSession.current, runtimeConfig);
+          setMessage('店家權限已更新，請重新選擇可使用的店家。');
+          throw error;
         }
         setMessage(toSafeClientMessage(error));
         throw error;
       }
     },
-    [runtimeConfig],
+    [loadAccount, runtimeConfig],
+  );
+
+  const recordMerchantEntry = useCallback(
+    async (event: MerchantStudioEntryEventRequest): Promise<boolean> => {
+      if (runtimeConfig?.mode !== 'firebase-line' || firebaseSession.current === null) {
+        return false;
+      }
+      try {
+        await authorizedRequest<void>(
+          firebaseSession.current,
+          runtimeConfig,
+          '/v1/line/studio-entry-events',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(event),
+          },
+        );
+        return true;
+      } catch (error) {
+        if (error instanceof StudioApiError && error.status === 401) {
+          await firebaseSession.current.signOut();
+          setStatus('signed-out');
+          setMessage(error.message);
+          return false;
+        }
+        if (error instanceof StudioApiError && error.status === 403) {
+          clearSelectedTenantId();
+          setSelectedMembership(null);
+          await loadAccount(firebaseSession.current, runtimeConfig);
+          setMessage('店家權限已更新，請重新選擇可使用的店家。');
+          return false;
+        }
+        // Entry analytics is best-effort and must never block an authorized operation.
+        return true;
+      }
+    },
+    [loadAccount, runtimeConfig],
   );
 
   const createTenant = useCallback(
@@ -295,9 +351,16 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
       },
       memberships,
       selectedMembership,
+      lineEntryConfig:
+        runtimeConfig === null
+          ? { status: 'loading' }
+          : runtimeConfig.mode === 'disabled'
+            ? { status: 'disabled' }
+            : { status: 'ready', liffId: runtimeConfig.merchantLiffId },
       message,
       startLineLogin,
-      resumeLineLogin,
+      completeLineIdentity,
+      recordMerchantEntry,
       signOut,
       selectTenant,
       createTenant,
@@ -306,11 +369,12 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
     }),
     [
       createTenant,
+      completeLineIdentity,
       memberships,
       message,
+      recordMerchantEntry,
       request,
-      runtimeConfig?.capabilities,
-      resumeLineLogin,
+      runtimeConfig,
       retryAccount,
       selectTenant,
       selectedMembership,

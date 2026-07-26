@@ -1,6 +1,7 @@
 const selectedTenantKey = 'nook.selectedTenantId';
 const rememberLoginKey = 'nook.login.remember';
 const persistencePreferenceKey = 'nook.auth.persistence';
+const studioEntryNoticeKey = 'nook.studio.entryNotice';
 
 export function readSelectedTenantId(): string | null {
   return window.sessionStorage.getItem(selectedTenantKey);
@@ -24,6 +25,16 @@ export function writeRememberLogin(rememberDevice: boolean): void {
 
 export function clearRememberLogin(): void {
   window.sessionStorage.removeItem(rememberLoginKey);
+}
+
+export function writeStudioEntryNotice(code: 'role_fallback'): void {
+  window.sessionStorage.setItem(studioEntryNoticeKey, code);
+}
+
+export function consumeStudioEntryNotice(): 'role_fallback' | null {
+  const value = window.sessionStorage.getItem(studioEntryNoticeKey);
+  window.sessionStorage.removeItem(studioEntryNoticeKey);
+  return value === 'role_fallback' ? value : null;
 }
 
 export function readPersistentAuthPreference(): boolean {

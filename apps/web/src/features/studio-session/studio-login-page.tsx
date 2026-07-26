@@ -1,21 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useStudioSession } from './studio-session-provider';
 
 export function StudioLoginPage() {
-  const { status, message, startLineLogin, resumeLineLogin } = useStudioSession();
+  const { status, message, startLineLogin } = useStudioSession();
   const [rememberDevice, setRememberDevice] = useState(false);
-  const resumed = useRef(false);
-
-  useEffect(() => {
-    if (status === 'signed-out' && !resumed.current) {
-      resumed.current = true;
-      void resumeLineLogin();
-    }
-  }, [resumeLineLogin, status]);
 
   if (status === 'local-preview') {
     return (
