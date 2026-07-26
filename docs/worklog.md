@@ -1580,3 +1580,11 @@
 - Phase 3 repository/local tasks全數完成後，新增Phase 4 implementation plan並按資料依賴拆為P4-001 CRM consent、P4-002 completed-only reviews、P4-003 public search／server attribution、P4-004 favorites與P4-005 moderation。Fresh-reader發現P4-001的consent狀態機、停止利用、contact來源／加密、projection replay/backfill、customer建立時點與export contract仍不足，因此Phase 4維持`planning`、P4-001改為`blocked`，不得先建立migration。
 - P4-001先固定「預約履約關係不等於行銷同意」、tenant＋consumer唯一customer、appointment current truth projection、unknown spend不推算、OWNER／MANAGER專用CRM、VIEWER／STAFF無PII權限、consumer self-withdrawal與safe export audit。
 - Notes不得先用明文落庫；實作前需ADR決定at-rest envelope encryption、key rotation與export artifact TTL。Legal未核准purpose／consent／retention、security未核准key/export、owner未核准non-sensitive tag規範前，production activation保持external gate。
+
+## 2026-07-27 — ARCH-001 API feature module layout
+
+- 回應API `src`平面檔案過多的維護風險，將根目錄收斂為`main.ts`與composition-only `app.module.ts`。跨功能config／HTTP／identity移入`platform`；health、LINE auth、LINE webhook、LINE studio entry、tenancy、merchant onboarding與service catalog各自建立Nest feature module。
+- 原本同時承載公開店家、可預約時段、hold、policy與appointment的`marketplace` module拆為`publication`、`booking`與`appointments`。既有`scheduling`與`portfolio`保留獨立邊界；本次只搬移與重接module/import，沒有修改HTTP contract、schema或domain行為。
+- 新增架構防退化測試：API source root只允許兩個bootstrap/composition檔、`AppModule`不得直接宣告controller/provider、每個非空feature恰有一個`.module.ts`，且單層TypeScript檔案上限為12。ADR 0001同步記錄feature/platform責任。
+- 驗證通過：API strict typecheck、ESLint、build；unit 13 files／67 tests；乾淨ephemeral PostgreSQL套19 migrations後API integration 7 files／57 tests；repository architecture 26 tests與static gates；Prettier與`git diff --check`。第一次unit在sandbox內因CORS測試無法listen `0.0.0.0`而出現`EPERM`，取得本機loopback權限後原測試全綠，未把sandbox失敗誤列為產品回歸。
+- 本次API程式碼以93檔的單一coherent refactor commit提交，其中多數為Git辨識的rename，沒有把300多個檔案一次提交。`apps/api/test`與`packages/database/src`仍需在成長前另開結構任務；Phase 4在規格blocker解決前保持planning/blocked。
