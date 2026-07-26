@@ -7,6 +7,9 @@ import { BookingHoldRepositoryError, PrismaBookingHoldRepository } from '../src'
 
 const prisma = new PrismaClient();
 const repository = new PrismaBookingHoldRepository(prisma);
+const primaryStartAt = futureFridayAtUtcHour(3);
+const middleStartAt = futureFridayAtUtcHour(4);
+const alternateStartAt = futureFridayAtUtcHour(5);
 
 describe('booking hold repository', () => {
   beforeEach(async () => {
@@ -69,7 +72,7 @@ describe('booking hold repository', () => {
 
   it('creates an exact candidate, replays idempotently, and rejects key reuse', async () => {
     const fixture = await createFixture('idempotency');
-    const input = acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'same-key');
+    const input = acquireInput(fixture, primaryStartAt, 'same-key');
     const created = await repository.acquire(input);
     const replayed = await repository.acquire(input);
 
@@ -87,7 +90,7 @@ describe('booking hold repository', () => {
     await expect(
       repository.acquire({
         ...input,
-        startAt: new Date('2026-07-24T04:00:00.000Z'),
+        startAt: middleStartAt,
         requestFingerprint: hash('different'),
       }),
     ).rejects.toEqual(new BookingHoldRepositoryError('idempotency_conflict'));
@@ -202,16 +205,14 @@ describe('booking hold repository', () => {
         });
       }
 
-      const created = await repository.acquire(
-        acquireInput(fixture, '2026-07-24T03:00:00.000Z', item.suffix),
-      );
+      const created = await repository.acquire(acquireInput(fixture, primaryStartAt, item.suffix));
       expect(created.service).toMatchObject(item.expected);
       await prisma.service.update({
         where: { id: fixture.serviceId },
         data: { name: '修改後名稱' },
       });
       expect(
-        await repository.acquire(acquireInput(fixture, '2026-07-24T03:00:00.000Z', item.suffix)),
+        await repository.acquire(acquireInput(fixture, primaryStartAt, item.suffix)),
       ).toMatchObject({ service: { name: '凝膠服務', ...item.expected } });
     }
   });
@@ -237,18 +238,18 @@ describe('booking hold repository', () => {
         weekday: 5,
         startTime: new Date('1970-01-01T10:00:00.000Z'),
         endTime: new Date('1970-01-01T18:00:00.000Z'),
-        validFrom: new Date('2026-07-01T00:00:00.000Z'),
+        validFrom: fixtureValidFrom(),
       },
     });
 
     const anyStaff = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'staff-selection-any'),
+      acquireInput(fixture, primaryStartAt, 'staff-selection-any'),
     );
     expect(anyStaff.staff).toMatchObject({ id: preferred.id, displayName: 'Ari' });
     await repository.release({ consumerUserId: fixture.consumerUserId, holdId: anyStaff.id });
 
     const requested = await repository.acquire({
-      ...acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'staff-selection-requested'),
+      ...acquireInput(fixture, primaryStartAt, 'staff-selection-requested'),
       staffId: fixture.staffId,
     });
     expect(requested.staff).toMatchObject({ id: fixture.staffId, displayName: 'Yun' });
@@ -259,7 +260,7 @@ describe('booking hold repository', () => {
     });
     await expect(
       repository.acquire({
-        ...acquireInput(fixture, '2026-07-24T05:00:00.000Z', 'staff-selection-unavailable'),
+        ...acquireInput(fixture, alternateStartAt, 'staff-selection-unavailable'),
         staffId: fixture.staffId,
       }),
     ).rejects.toEqual(new BookingHoldRepositoryError('hold_not_found'));
@@ -273,16 +274,14 @@ describe('booking hold repository', () => {
     const other = await prisma.user.create({
       data: { displayName: 'Hold repository other consumer rollback' },
     });
-    const original = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'original'),
-    );
+    const original = await repository.acquire(acquireInput(fixture, primaryStartAt, 'original'));
     await repository.acquire({
-      ...acquireInput(fixture, '2026-07-24T05:00:00.000Z', 'other'),
+      ...acquireInput(fixture, alternateStartAt, 'other'),
       consumerUserId: other.id,
     });
 
     await expect(
-      repository.acquire(acquireInput(fixture, '2026-07-24T05:00:00.000Z', 'conflict')),
+      repository.acquire(acquireInput(fixture, alternateStartAt, 'conflict')),
     ).rejects.toEqual(new BookingHoldRepositoryError('slot_no_longer_available'));
     await expect(
       prisma.bookingHold.findUniqueOrThrow({ where: { id: original.id } }),
@@ -295,10 +294,10 @@ describe('booking hold repository', () => {
   it('atomically releases the previous hold after a successful replacement', async () => {
     const fixture = await createFixture('replace');
     const original = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'replace-original'),
+      acquireInput(fixture, primaryStartAt, 'replace-original'),
     );
     const replacement = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T05:00:00.000Z', 'replace-new'),
+      acquireInput(fixture, alternateStartAt, 'replace-new'),
     );
 
     await expect(
@@ -325,7 +324,7 @@ describe('booking hold repository', () => {
   it('expires a stale candidate in the create transaction before replacing its range', async () => {
     const fixture = await createFixture('lazy-expiry');
     const stale = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'lazy-expiry-stale'),
+      acquireInput(fixture, primaryStartAt, 'lazy-expiry-stale'),
     );
     const expiredAt = new Date(Date.now() - 60_000);
     await prisma.bookingHold.update({
@@ -334,7 +333,7 @@ describe('booking hold repository', () => {
     });
 
     const replacement = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'lazy-expiry-replacement'),
+      acquireInput(fixture, primaryStartAt, 'lazy-expiry-replacement'),
     );
 
     await expect(
@@ -357,10 +356,10 @@ describe('booking hold repository', () => {
     try {
       const results = await Promise.all([
         new PrismaBookingHoldRepository(firstClient).acquire(
-          acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'concurrent-first'),
+          acquireInput(fixture, primaryStartAt, 'concurrent-first'),
         ),
         new PrismaBookingHoldRepository(secondClient).acquire(
-          acquireInput(fixture, '2026-07-24T05:00:00.000Z', 'concurrent-second'),
+          acquireInput(fixture, alternateStartAt, 'concurrent-second'),
         ),
       ]);
 
@@ -398,10 +397,10 @@ describe('booking hold repository', () => {
     try {
       const results = await Promise.allSettled([
         new PrismaBookingHoldRepository(firstClient).acquire(
-          acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'slot-concurrent-first'),
+          acquireInput(fixture, primaryStartAt, 'slot-concurrent-first'),
         ),
         new PrismaBookingHoldRepository(secondClient).acquire({
-          ...acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'slot-concurrent-second'),
+          ...acquireInput(fixture, primaryStartAt, 'slot-concurrent-second'),
           consumerUserId: other.id,
         }),
       ]);
@@ -425,7 +424,7 @@ describe('booking hold repository', () => {
   it('releases idempotently and expires active holds in retry-safe batches', async () => {
     const fixture = await createFixture('release');
     const active = await repository.acquire(
-      acquireInput(fixture, '2026-07-24T03:00:00.000Z', 'release-active'),
+      acquireInput(fixture, primaryStartAt, 'release-active'),
     );
     await repository.release({ consumerUserId: fixture.consumerUserId, holdId: active.id });
     await repository.release({ consumerUserId: fixture.consumerUserId, holdId: active.id });
@@ -437,7 +436,7 @@ describe('booking hold repository', () => {
 
     const expiryFixture = await createFixture('expiry');
     const expiring = await repository.acquire(
-      acquireInput(expiryFixture, '2026-07-24T03:00:00.000Z', 'expiry-active'),
+      acquireInput(expiryFixture, primaryStartAt, 'expiry-active'),
     );
     const past = new Date(Date.now() - 60_000);
     await prisma.bookingHold.update({
@@ -535,7 +534,7 @@ async function createFixture(suffix: string): Promise<Fixture> {
       weekday: 5,
       startTime: new Date('1970-01-01T10:00:00.000Z'),
       endTime: new Date('1970-01-01T18:00:00.000Z'),
-      validFrom: new Date('2026-07-01T00:00:00.000Z'),
+      validFrom: fixtureValidFrom(),
     },
   });
   return {
@@ -547,15 +546,29 @@ async function createFixture(suffix: string): Promise<Fixture> {
   };
 }
 
-function acquireInput(fixture: Fixture, startAt: string, key: string) {
+function acquireInput(fixture: Fixture, startAt: Date, key: string) {
   return {
     consumerUserId: fixture.consumerUserId,
     slug: fixture.slug,
     serviceId: fixture.serviceId,
-    startAt: new Date(startAt),
+    startAt,
     idempotencyKeyHash: hash(key),
-    requestFingerprint: hash(`${key}:${startAt}`),
+    requestFingerprint: hash(`${key}:${startAt.toISOString()}`),
   };
+}
+
+function futureFridayAtUtcHour(hour: number): Date {
+  const candidate = new Date();
+  candidate.setUTCDate(candidate.getUTCDate() + 7);
+  candidate.setUTCHours(hour, 0, 0, 0);
+  while (candidate.getUTCDay() !== 5) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  }
+  return candidate;
+}
+
+function fixtureValidFrom(): Date {
+  return new Date(primaryStartAt.getTime() - 30 * 24 * 60 * 60 * 1_000);
 }
 
 function hash(value: string): string {

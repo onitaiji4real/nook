@@ -11,6 +11,8 @@ import {
 
 const prisma = new PrismaClient();
 const repository = new PrismaAppointmentConfirmationRepository(prisma);
+const primaryStartAt = futureFridayAtUtcHour(3);
+const alternateStartAt = futureFridayAtUtcHour(5);
 
 describe('appointment confirmation repository', () => {
   beforeEach(async () => {
@@ -177,7 +179,7 @@ describe('appointment confirmation repository', () => {
       consumerUserId: other.id,
       slug: first.slug,
       serviceId: first.serviceId,
-      startAt: new Date('2026-07-24T05:00:00.000Z'),
+      startAt: alternateStartAt,
       idempotencyKeyHash: hash('monthly-limit-second-hold'),
       requestFingerprint: hash('monthly-limit-second-request'),
     });
@@ -260,7 +262,7 @@ describe('appointment confirmation repository', () => {
       consumerUserId: other.id,
       slug: first.slug,
       serviceId: first.serviceId,
-      startAt: new Date('2026-07-24T05:00:00.000Z'),
+      startAt: alternateStartAt,
       idempotencyKeyHash: hash('monthly-unlimited-second-hold'),
       requestFingerprint: hash('monthly-unlimited-second-request'),
     });
@@ -372,14 +374,14 @@ async function createFixture(suffix: string, paidLimit?: number): Promise<Fixtur
       weekday: 5,
       startTime: new Date('1970-01-01T10:00:00.000Z'),
       endTime: new Date('1970-01-01T18:00:00.000Z'),
-      validFrom: new Date('2026-07-01T00:00:00.000Z'),
+      validFrom: fixtureValidFrom(),
     },
   });
   const hold = await new PrismaBookingHoldRepository(prisma).acquire({
     consumerUserId: consumer.id,
     slug: tenant.slug,
     serviceId: service.id,
-    startAt: new Date('2026-07-24T03:00:00.000Z'),
+    startAt: primaryStartAt,
     idempotencyKeyHash: hash(`${suffix}:hold-key`),
     requestFingerprint: hash(`${suffix}:hold-request`),
   });
@@ -422,4 +424,18 @@ async function clearAppointments(): Promise<void> {
 
 function hash(value: string): string {
   return createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function futureFridayAtUtcHour(hour: number): Date {
+  const candidate = new Date();
+  candidate.setUTCDate(candidate.getUTCDate() + 7);
+  candidate.setUTCHours(hour, 0, 0, 0);
+  while (candidate.getUTCDay() !== 5) {
+    candidate.setUTCDate(candidate.getUTCDate() + 1);
+  }
+  return candidate;
+}
+
+function fixtureValidFrom(): Date {
+  return new Date(primaryStartAt.getTime() - 30 * 24 * 60 * 60 * 1_000);
 }
