@@ -6,7 +6,7 @@ import {
   type AuthenticatedPrincipal,
   type IdentityTokenVerifier,
 } from '@nook/auth';
-import type { ProblemDetails, TenantResponse } from '@nook/contracts';
+import { studioRouteKeySchema, type ProblemDetails, type TenantResponse } from '@nook/contracts';
 import { disconnectPrismaClient, getPrismaClient, PrismaTenantRepository } from '@nook/database';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -212,6 +212,10 @@ describe('tenant onboarding and RBAC', () => {
 
   it('returns the authenticated user memberships without tenant headers', async () => {
     const tenant = await createTenant('token-a', 'Me Studio', 'me-studio');
+    const membership = await prisma.membership.findUniqueOrThrow({
+      where: { tenantId_userId: { tenantId: tenant.id, userId: userAId } },
+      select: { id: true },
+    });
 
     const response = await request(httpServer)
       .get('/v1/me')
@@ -222,6 +226,7 @@ describe('tenant onboarding and RBAC', () => {
       id: userAId,
       memberships: [
         {
+          membershipId: membership.id,
           tenantId: tenant.id,
           tenantName: 'Me Studio',
           tenantSlug: 'me-studio',
@@ -231,6 +236,99 @@ describe('tenant onboarding and RBAC', () => {
           status: 'ACTIVE',
         },
       ],
+    });
+  });
+
+  it('returns only ACTIVE memberships for ACTIVE tenants in stable creation order', async () => {
+    const first = await createTenant('token-a', 'First Active', 'first-active');
+    const revoked = await createTenant('token-a', 'Revoked Membership', 'revoked-membership');
+    const suspended = await createTenant('token-a', 'Suspended Tenant', 'suspended-tenant');
+    const second = await createTenant('token-a', 'Second Active', 'second-active');
+    await prisma.membership.update({
+      where: { tenantId_userId: { tenantId: revoked.id, userId: userAId } },
+      data: { status: 'SUSPENDED' },
+    });
+    await prisma.tenant.update({
+      where: { id: suspended.id },
+      data: { status: 'SUSPENDED' },
+    });
+
+    const response = await request(httpServer)
+      .get('/v1/me')
+      .set('authorization', 'Bearer token-a')
+      .expect(200);
+    const body = response.body as unknown as {
+      readonly memberships: ReadonlyArray<{ readonly tenantId: string }>;
+    };
+
+    expect(body.memberships.map(({ tenantId }) => tenantId)).toEqual([first.id, second.id]);
+  });
+
+  it.each(['OWNER', 'MANAGER', 'VIEWER', 'STAFF'] as const)(
+    'accepts all bounded LINE Studio routes for an authorized %s and derives safe outcomes',
+    async (role) => {
+      const tenant = await createTenant('token-a', `${role} Studio`, `${role.toLowerCase()}-entry`);
+      await prisma.membership.update({
+        where: { tenantId_userId: { tenantId: tenant.id, userId: userAId } },
+        data: { role },
+      });
+      const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+      for (const routeKey of studioRouteKeySchema.options) {
+        await request(httpServer)
+          .post('/v1/line/studio-entry-events')
+          .set('authorization', 'Bearer token-a')
+          .set('x-request-id', `line-entry-${role.toLowerCase()}-${routeKey}`)
+          .send({ tenantId: tenant.id, routeKey })
+          .expect(204);
+      }
+
+      const logs = writeSpy.mock.calls.flat().join('');
+      writeSpy.mockRestore();
+      expect(logs).toContain('"operation":"line.merchant_entry"');
+      expect(logs).toContain(`"tenantId":"${tenant.id}"`);
+      expect(logs).not.toContain('Synthetic User A');
+      expect(logs).not.toMatch(/idToken|accessToken|returnUrl|email|phone|lineSubject/);
+      if (role === 'VIEWER' || role === 'STAFF') {
+        expect(logs).toContain('"outcome":"fallback"');
+      } else {
+        expect(logs).not.toContain('"outcome":"fallback"');
+      }
+    },
+  );
+
+  it('denies foreign or revoked LINE Studio tenant selection without logging tenant authority', async () => {
+    const tenant = await createTenant('token-b', 'Private Studio', 'private-line-entry');
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    await request(httpServer)
+      .post('/v1/line/studio-entry-events')
+      .set('authorization', 'Bearer token-a')
+      .set('x-request-id', 'foreign-line-entry')
+      .send({ tenantId: tenant.id, routeKey: 'appointments' })
+      .expect(403);
+
+    const logs = writeSpy.mock.calls.flat().join('');
+    writeSpy.mockRestore();
+    expect(logs).toContain('"outcome":"denied"');
+    expect(logs).not.toContain(tenant.id);
+    expect(logs).not.toContain('Private Studio');
+  });
+
+  it('rejects route and return URL manipulation before recording analytics', async () => {
+    const tenant = await createTenant('token-a', 'Safe Studio', 'safe-line-entry');
+    const response = await request(httpServer)
+      .post('/v1/line/studio-entry-events')
+      .set('authorization', 'Bearer token-a')
+      .send({
+        tenantId: tenant.id,
+        routeKey: 'https://evil.example',
+        returnUrl: 'https://evil.example',
+      })
+      .expect(400);
+
+    expect(response.body as unknown as ProblemDetails).toMatchObject({
+      code: 'invalid_line_studio_entry_event',
     });
   });
 

@@ -15,6 +15,8 @@ import { LINE_IDENTITY_VERIFIER } from './identity.tokens';
 import { LineAuthApplicationService } from './line-auth-application.service';
 import { LineAuthController } from './line-auth.controller';
 import { LineAuthRateLimitService } from './line-auth-rate-limit.service';
+import { LineStudioEntryApplicationService } from './line-studio-entry-application.service';
+import { LineStudioEntryController } from './line-studio-entry.controller';
 import { LineWebhookApplicationService } from './line-webhook-application.service';
 import { LineWebhookController } from './line-webhook.controller';
 import { LINE_WEBHOOK_REPOSITORY } from './line-webhook.tokens';
@@ -43,6 +45,7 @@ const lineVerifier =
   controllers: [
     HealthController,
     LineAuthController,
+    LineStudioEntryController,
     TenantController,
     MerchantOnboardingController,
     ServiceCatalogController,
@@ -53,6 +56,7 @@ const lineVerifier =
     HealthService,
     LineAuthApplicationService,
     LineAuthRateLimitService,
+    LineStudioEntryApplicationService,
     MerchantOnboardingApplicationService,
     ServiceCatalogApplicationService,
     TenantApplicationService,

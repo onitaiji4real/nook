@@ -28,13 +28,14 @@ export interface TenantMembershipRecord {
 }
 
 export interface UserMembershipRecord {
+  readonly membershipId: string;
   readonly tenantId: string;
   readonly tenantName: string;
   readonly tenantSlug: string;
-  readonly tenantStatus: TenantStatus;
+  readonly tenantStatus: 'ACTIVE';
   readonly tenantTimezone: string;
   readonly role: MembershipRole;
-  readonly status: MembershipStatus;
+  readonly status: 'ACTIVE';
 }
 
 export interface TenantRepository {
@@ -154,9 +155,15 @@ export class PrismaTenantRepository implements TenantRepository {
 
   async listMembershipsForUser(userId: string): Promise<readonly UserMembershipRecord[]> {
     const memberships = await this.prisma.membership.findMany({
-      where: { userId, user: { status: UserStatus.ACTIVE } },
-      orderBy: { createdAt: 'asc' },
+      where: {
+        userId,
+        status: MembershipStatus.ACTIVE,
+        tenant: { status: 'ACTIVE' },
+        user: { status: UserStatus.ACTIVE },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: {
+        id: true,
         tenantId: true,
         role: true,
         status: true,
@@ -164,11 +171,14 @@ export class PrismaTenantRepository implements TenantRepository {
       },
     });
 
-    return memberships.map(({ tenant, ...membership }) => ({
-      ...membership,
+    return memberships.map(({ id, tenant, tenantId, role }) => ({
+      membershipId: id,
+      tenantId,
+      role,
+      status: 'ACTIVE',
       tenantName: tenant.name,
       tenantSlug: tenant.slug,
-      tenantStatus: tenant.status,
+      tenantStatus: 'ACTIVE',
       tenantTimezone: tenant.usageTimezone,
     }));
   }

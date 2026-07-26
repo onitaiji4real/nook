@@ -96,6 +96,7 @@ export class TenantApplicationService {
   }
 
   async getMe(userId: string): Promise<MeResponse> {
+    await this.users.requireActive(userId);
     const memberships = await this.repository.listMembershipsForUser(userId);
     return { id: userId, memberships };
   }
