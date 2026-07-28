@@ -10,7 +10,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "lint": "eslint src test --no-error-on-unmatched-pattern",
+    "crm:projection:repair": "tsx scripts/customer-projection-repair.ts",
+    "lint": "eslint src test scripts --no-error-on-unmatched-pattern",
     "prisma:format": "prisma format --schema prisma/schema.prisma",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",

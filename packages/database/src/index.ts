@@ -186,3 +186,10 @@ export {
   type CustomerProjectionOutcome,
   type CustomerProjectionRepository,
 } from './consumer-crm/customer-projection-repository';
+export {
+  type CustomerProjectionBackfillOutcome,
+  type CustomerProjectionOperationalSnapshot,
+  type RepairCustomerProjectionInput,
+  type RepairCustomerProjectionOutcome,
+  type RetryExhaustedCustomerProjectionInput,
+} from './consumer-crm/customer-projection-operations';

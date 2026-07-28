@@ -118,6 +118,149 @@ describe('customer projection repository', () => {
       }),
     ).resolves.toBe(1);
   });
+
+  it('backfills with a stable appointment cursor and reports completion idempotently', async () => {
+    const fixture = await createFixture('backfill');
+
+    await expect(repository.readOperationalSnapshot()).resolves.toMatchObject({
+      backfillStatus: 'NOT_STARTED',
+      backfillRemainingAppointmentCount: 1,
+    });
+    await expect(repository.backfillNext()).resolves.toMatchObject({
+      kind: 'projected',
+      appointmentId: fixture.appointmentId,
+    });
+    await expect(repository.readOperationalSnapshot()).resolves.toMatchObject({
+      backfillStatus: 'PROCESSING',
+      backfillRemainingAppointmentCount: 0,
+    });
+    await expect(repository.backfillNext()).resolves.toEqual({ kind: 'completed' });
+    await expect(repository.backfillNext()).resolves.toEqual({ kind: 'completed' });
+    await expect(
+      prisma.customer.count({
+        where: { tenantId: fixture.tenantId, consumerUserId: fixture.consumerUserId },
+      }),
+    ).resolves.toBe(1);
+  });
+
+  it('dead-letters retry exhaustion without misclassifying invariant corruption', async () => {
+    const fixture = await createFixture('retry-exhaustion');
+    const event = await createOutboxEvent(fixture, 'appointment.confirmed.v1', 'PENDING');
+    await expect(repository.seedDeliveries()).resolves.toBe(1);
+    const delivery = await prisma.crmProjectionDelivery.findFirstOrThrow({
+      where: { outboxEventId: event.id, projector: 'consumer_crm_v1' },
+    });
+    await prisma.crmProjectionDelivery.update({
+      where: { id: delivery.id },
+      data: {
+        status: 'PROCESSING',
+        claimToken: randomUUID(),
+        leaseExpiresAt: new Date(Date.now() - 1_000),
+        attemptCount: 10,
+      },
+    });
+
+    await expect(repository.sweepRetryExhausted()).resolves.toBe(1);
+    await expect(
+      prisma.crmProjectionDelivery.findUniqueOrThrow({ where: { id: delivery.id } }),
+    ).resolves.toMatchObject({
+      status: 'PENDING',
+      attemptCount: 10,
+      safeCode: 'retry_exhausted',
+      outcome: null,
+      projectedAt: null,
+    });
+    await expect(repository.projectNext()).resolves.toEqual({ kind: 'empty', seededCount: 0 });
+    await expect(repository.readOperationalSnapshot()).resolves.toMatchObject({
+      retryExhaustedCount: 1,
+      blockedStreamCount: 0,
+    });
+    await expect(
+      repository.retryExhaustedDelivery({
+        tenantId: fixture.tenantId,
+        consumerUserId: fixture.consumerUserId,
+        deliveryId: randomUUID(),
+      }),
+    ).resolves.toBe(false);
+    await expect(
+      repository.retryExhaustedDelivery({
+        tenantId: fixture.tenantId,
+        consumerUserId: fixture.consumerUserId,
+        deliveryId: delivery.id,
+      }),
+    ).resolves.toBe(true);
+    await expect(repository.projectNext()).resolves.toMatchObject({ kind: 'projected' });
+    await expect(repository.readOperationalSnapshot()).resolves.toMatchObject({
+      retryExhaustedCount: 0,
+    });
+  });
+
+  it('repairs only the exact blocked delivery after current truth is valid', async () => {
+    const fixture = await createFixture('repair');
+    const event = await createOutboxEvent(fixture, 'appointment.confirmed.v1', 'PENDING');
+    await repository.seedDeliveries();
+    const delivery = await prisma.crmProjectionDelivery.findFirstOrThrow({
+      where: { outboxEventId: event.id, projector: 'consumer_crm_v1' },
+    });
+    const terminalAt = new Date();
+    await prisma.crmProjectionDelivery.update({
+      where: { id: delivery.id },
+      data: {
+        status: 'TERMINAL',
+        outcome: 'INVARIANT_CORRUPTION',
+        projectedAt: terminalAt,
+        safeCode: 'synthetic_repaired_invariant',
+      },
+    });
+    await prisma.crmProjectionStream.create({
+      data: {
+        projector: 'consumer_crm_v1',
+        tenantId: fixture.tenantId,
+        consumerUserId: fixture.consumerUserId,
+        status: 'BLOCKED',
+        blockedDeliveryId: delivery.id,
+        safeCode: 'synthetic_repaired_invariant',
+        updatedAt: terminalAt,
+      },
+    });
+
+    await expect(repository.backfillNext()).resolves.toEqual({
+      kind: 'failed',
+      code: 'blocked_stream',
+    });
+    await expect(
+      repository.repairBlockedStream({
+        tenantId: fixture.tenantId,
+        consumerUserId: fixture.consumerUserId,
+        blockedDeliveryId: randomUUID(),
+      }),
+    ).resolves.toEqual({ kind: 'not_blocked' });
+    await expect(
+      repository.repairBlockedStream({
+        tenantId: fixture.tenantId,
+        consumerUserId: fixture.consumerUserId,
+        blockedDeliveryId: delivery.id,
+      }),
+    ).resolves.toEqual({ kind: 'repaired', deliveryId: delivery.id });
+    await expect(repository.resumeBackfill(randomUUID())).resolves.toBe(false);
+    await expect(repository.resumeBackfill(null)).resolves.toBe(true);
+    await expect(repository.projectNext()).resolves.toMatchObject({ kind: 'projected' });
+    await expect(
+      prisma.crmProjectionStream.findUniqueOrThrow({
+        where: {
+          projector_tenantId_consumerUserId: {
+            projector: 'consumer_crm_v1',
+            tenantId: fixture.tenantId,
+            consumerUserId: fixture.consumerUserId,
+          },
+        },
+      }),
+    ).resolves.toMatchObject({
+      status: 'ACTIVE',
+      blockedDeliveryId: null,
+      safeCode: null,
+    });
+  });
 });
 
 interface Fixture {
@@ -301,6 +444,9 @@ async function clearFixtures(): Promise<void> {
     select: { id: true },
   });
   const tenantIds = tenants.map(({ id }) => id);
+  await prisma.crmBackfillCheckpoint.deleteMany({
+    where: { projector: 'consumer_crm_v1' },
+  });
   if (tenantIds.length > 0) {
     await prisma.crmProjectionStream.deleteMany({ where: { tenantId: { in: tenantIds } } });
     await prisma.crmProjectionDelivery.deleteMany({ where: { tenantId: { in: tenantIds } } });

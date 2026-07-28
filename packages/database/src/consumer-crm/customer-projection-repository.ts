@@ -3,9 +3,23 @@ import { randomUUID } from 'node:crypto';
 import { CustomerProjectionCorruption, deriveCustomerProjection } from '@nook/domain';
 import { Prisma, type PrismaClient } from '@prisma/client';
 
-const PROJECTOR = 'consumer_crm_v1';
+import {
+  CUSTOMER_PROJECTION_MAX_ATTEMPTS,
+  CUSTOMER_PROJECTOR,
+  readCustomerProjectionOperationalSnapshot,
+  repairCustomerProjectionStream,
+  retryCustomerProjectionExhaustedDelivery,
+  resumeCustomerProjectionBackfill,
+  runCustomerProjectionBackfillNext,
+  sweepCustomerProjectionRetryExhausted,
+  type CustomerProjectionBackfillOutcome,
+  type CustomerProjectionOperationalSnapshot,
+  type RepairCustomerProjectionInput,
+  type RepairCustomerProjectionOutcome,
+  type RetryExhaustedCustomerProjectionInput,
+} from './customer-projection-operations';
+
 const LEASE_MILLISECONDS = 60_000;
-const MAX_ATTEMPTS = 10;
 const supportedEventTypes = [
   'appointment.confirmed.v1',
   'appointment.cancelled.v1',
@@ -49,6 +63,14 @@ export type CustomerProjectionOutcome =
 export interface CustomerProjectionRepository {
   projectNext(): Promise<CustomerProjectionOutcome>;
   seedDeliveries(limit?: number): Promise<number>;
+  backfillNext(): Promise<CustomerProjectionBackfillOutcome>;
+  sweepRetryExhausted(): Promise<number>;
+  repairBlockedStream(
+    input: RepairCustomerProjectionInput,
+  ): Promise<RepairCustomerProjectionOutcome>;
+  retryExhaustedDelivery(input: RetryExhaustedCustomerProjectionInput): Promise<boolean>;
+  resumeBackfill(expectedCursorId: string | null): Promise<boolean>;
+  readOperationalSnapshot(): Promise<CustomerProjectionOperationalSnapshot>;
 }
 
 export class PrismaCustomerProjectionRepository implements CustomerProjectionRepository {
@@ -66,6 +88,32 @@ export class PrismaCustomerProjectionRepository implements CustomerProjectionRep
       await releaseForRetry(this.prisma, claim);
       throw error;
     }
+  }
+
+  backfillNext(): Promise<CustomerProjectionBackfillOutcome> {
+    return runCustomerProjectionBackfillNext(this.prisma);
+  }
+
+  sweepRetryExhausted(): Promise<number> {
+    return sweepCustomerProjectionRetryExhausted(this.prisma);
+  }
+
+  repairBlockedStream(
+    input: RepairCustomerProjectionInput,
+  ): Promise<RepairCustomerProjectionOutcome> {
+    return repairCustomerProjectionStream(this.prisma, input);
+  }
+
+  retryExhaustedDelivery(input: RetryExhaustedCustomerProjectionInput): Promise<boolean> {
+    return retryCustomerProjectionExhaustedDelivery(this.prisma, input);
+  }
+
+  resumeBackfill(expectedCursorId: string | null): Promise<boolean> {
+    return resumeCustomerProjectionBackfill(this.prisma, expectedCursorId);
+  }
+
+  readOperationalSnapshot(): Promise<CustomerProjectionOperationalSnapshot> {
+    return readCustomerProjectionOperationalSnapshot(this.prisma);
   }
 
   async seedDeliveries(limit = 100): Promise<number> {
@@ -88,7 +136,7 @@ export class PrismaCustomerProjectionRepository implements CustomerProjectionRep
         AND NOT EXISTS (
           SELECT 1
           FROM "crm_projection_deliveries" AS delivery
-          WHERE delivery."projector" = ${PROJECTOR}
+          WHERE delivery."projector" = ${CUSTOMER_PROJECTOR}
             AND delivery."outbox_event_id" = event."id"
         )
       ORDER BY event."created_at", event."id"
@@ -99,7 +147,7 @@ export class PrismaCustomerProjectionRepository implements CustomerProjectionRep
     const result = await this.prisma.crmProjectionDelivery.createMany({
       data: candidates.map((candidate) => ({
         id: randomUUID(),
-        projector: PROJECTOR,
+        projector: CUSTOMER_PROJECTOR,
         outboxEventId: candidate.outboxEventId,
         tenantId: candidate.tenantId,
         consumerUserId: candidate.consumerUserId,
@@ -127,8 +175,8 @@ async function claimNext(prisma: PrismaClient): Promise<ProjectionClaim | null> 
         ON stream."projector" = delivery."projector"
        AND stream."tenant_id" = delivery."tenant_id"
        AND stream."consumer_user_id" = delivery."consumer_user_id"
-      WHERE delivery."projector" = ${PROJECTOR}
-        AND delivery."attempt_count" < ${MAX_ATTEMPTS}
+      WHERE delivery."projector" = ${CUSTOMER_PROJECTOR}
+        AND delivery."attempt_count" < ${CUSTOMER_PROJECTION_MAX_ATTEMPTS}
         AND (
           (
             delivery."status" = 'PENDING'::"CrmProjectionDeliveryStatus"
@@ -180,13 +228,13 @@ async function projectClaim(
     await tx.crmProjectionStream.upsert({
       where: {
         projector_tenantId_consumerUserId: {
-          projector: PROJECTOR,
+          projector: CUSTOMER_PROJECTOR,
           tenantId: claim.tenantId,
           consumerUserId: claim.consumerUserId,
         },
       },
       create: {
-        projector: PROJECTOR,
+        projector: CUSTOMER_PROJECTOR,
         tenantId: claim.tenantId,
         consumerUserId: claim.consumerUserId,
         updatedAt: new Date(),
@@ -266,7 +314,7 @@ async function projectClaim(
       await tx.crmProjectionStream.update({
         where: {
           projector_tenantId_consumerUserId: {
-            projector: PROJECTOR,
+            projector: CUSTOMER_PROJECTOR,
             tenantId: claim.tenantId,
             consumerUserId: claim.consumerUserId,
           },
@@ -306,7 +354,7 @@ async function lockStream(
   const rows = await tx.$queryRaw<Array<{ readonly status: string }>>(Prisma.sql`
     SELECT "status"::text AS "status"
     FROM "crm_projection_streams"
-    WHERE "projector" = ${PROJECTOR}
+    WHERE "projector" = ${CUSTOMER_PROJECTOR}
       AND "tenant_id" = ${claim.tenantId}::uuid
       AND "consumer_user_id" = ${claim.consumerUserId}::uuid
     FOR UPDATE

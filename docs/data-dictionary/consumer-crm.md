@@ -24,7 +24,7 @@ P4-001以tenant-scoped read model保存營運顧客關係，以immutable evidenc
 - `tenant_id`、`consumer_user_id`、`appointment_id`、`customer_id`：安全trace IDs；前三者必填，customer在NO_RELATIONSHIP可null。
 - `status`：`PENDING | PROCESSING | PROJECTED | TERMINAL`。
 - `claim_token`、`lease_expires_at`：PROCESSING必填；worker只可用exact token CAS完成或退回。
-- `attempt_count`、`next_attempt_at`：最多10次retryable infrastructure attempts，exponential backoff上限1小時。
+- `attempt_count`、`next_attempt_at`：最多10次retryable infrastructure attempts，exponential backoff上限1小時。第10次仍失敗或lease過期後保持`PENDING`、`safe_code=retry_exhausted`且不再自動claim；它不是資料invariant corruption、不得block stream，也不是可清理checkpoint。監控告警並完成root-cause修復後，只能用exact tenant+consumer+delivery confirmation將attempt歸零重試。
 - `outcome`：terminal result為`PROJECTED | NO_RELATIONSHIP | INVARIANT_CORRUPTION`。
 - `projected_at`、`safe_code`、timestamps。
 
@@ -33,6 +33,8 @@ Dispatcher掃描所有outbox status的六種exact event type：`appointment.conf
 每筆delivery transaction依delivery的tenant+consumer upsert並鎖`crm_projection_streams`；BLOCKED時不claim後續delivery。ACTIVE才驗證root chain並從appointments current truth重算該customer全部aggregates。Database/timeout等retryable failure退回PENDING；chain cycle、cross-tenant link或multiple effective leaves會在同transaction將delivery標TERMINAL/INVARIANT_CORRUPTION並把stream標BLOCKED。只有修復資料及具名runbook操作可重置。PROJECTED/TERMINAL都是replay checkpoint。
 
 Backfill以`appointments.created_at,id`固定cursor找曾CONFIRMED的tenant+consumer，寫入獨立`crm_backfill_checkpoints(projector,cursor_created_at,cursor_id,status,updated_at)`並呼叫相同recompute；不得直接寫counter。Outbox資料清理前必須確認所有registered projector皆為PROJECTED/TERMINAL；P4 migration要先為既有六種event補delivery再允許cleanup。
+
+Backfill遇到blocked stream或chain invariant時把checkpoint標`FAILED`並停止，不越過失敗relationship。修復資料／stream後，operator必須帶checkpoint目前的exact cursor（尚未前進時為`none`）及明確confirmation才能resume；`COMPLETED` checkpoint不因之後的新appointment重開，之後的即時變更由outbox delivery負責。
 
 ## `crm_projection_streams`
 
