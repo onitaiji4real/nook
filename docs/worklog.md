@@ -1668,3 +1668,13 @@
 - Current-safe replay順序修正為先鎖stream及查command ledger，再檢查新grant需要的ACTIVE tenant/document；因此原始grant在tenant suspended、document retired或後續withdraw後重播，只回傳最新WITHDRAWN truth，不重跑已不再合法的新command。Authentication與server-owned relationship仍在replay前驗證，沒有放寬跨tenant邊界。
 - Fresh ephemeral PostgreSQL從零套用20/20 migrations；完整database integration 14 files／79 tests、API integration 8 files／61 tests全數通過。截圖中的舊GitHub Actions failure屬較早的`b51736c` run；目前遠端HEAD `54e9fa0`的push run `30368299935`與PR run `30368302435`均為success。
 - 依小型scope分為current-safe replay `381f087`、consumer HTTP/E2E `8f4a0f2`與task/runbook/worklog `1b5d4ba`三筆commit後推送`phase1`，沒有更新`main`。同一HEAD `1b5d4bab5175e7609937e5de94ceff5ac558a5be`的push run `30369377061`與draft PR run `30369377872`最終皆success；verify、Terraform及API/Web/worker container image jobs全綠。
+
+### P4-001 tenant customer register read checkpoint
+
+- 新增bounded customer list/detail contract、tenant-scoped Prisma read repository與Nest feature module。List依`relationshipStartedAt DESC,id DESC`固定排序，使用database `asOf`及opaque cursor排除分頁期間才建立的customer；所有query要求tenantId，不由controller直接存取Prisma。
+- Merchant HTTP只允許ACTIVE OWNER／MANAGER；VIEWER／STAFF固定403、猜測cross-tenant customer ID固定404，成功與problem response均為`private, no-store`。Detail成功與拒絕皆寫safe audit；若資料庫已有encrypted note但KMS read尚未啟用，固定503 fail closed，不以空陣列冒充解密成功。
+- API response不回LINE subject/avatar、phone/email或note內容，不以service catalog推算消費金額；taxonomy未核准前tags固定空集合。Local preview只使用三筆明示的合成資料，並把「營運關係不等於行銷同意」直接呈現在介面。
+- 新增`/studio/customers` RWD名冊與顧客明細抽屜，沿用既有Nook紙張／墨色／signal視覺語言。Web lint、strict typecheck、16 files／59 tests與production build通過；browser於1280×720驗證導覽、三筆合成資料、明細互動、無console error及無水平溢位。Browser viewport override在本環境未實際改變1280×720，因此390×844不冒充已截圖通過；程式已有760px與420px breakpoints，仍需在可調viewport環境補實際mobile evidence。
+- 第一輪完整API integration因執行時讀到尚未重建的`@nook/database` dist而在bootstrap失敗，沒有進入行為測試；重建contracts/database/observability後，fresh PostgreSQL套用20/20 migrations，API integration 9 files／65 tests全綠，包含4項真實HTTP/database CRM read案例。
+- 最終完整驗證通過：Prettier、12-package lint與strict typecheck、19個unit test tasks（contracts 60、database 48、API 73、Web 59等）、12-package production build、architecture/static 26 tests及`git diff --check`。Fresh ephemeral PostgreSQL再次從零套用20/20 migrations後，database integration 14 files／79 tests與API integration 9 files／65 tests全綠。
+- 截圖中的CI失敗屬較早run；目前遠端`phase1` HEAD `8a4221b`的push run `30369759047`與draft PR run `30369758349`皆為success。本checkpoint已分為contracts `1bac1d8`、database `55b9f83`、API `c1949f3`與Web `34241f5`四筆小型commit，尚未push；notes、tags、export與其external activation gates維持未完成。
