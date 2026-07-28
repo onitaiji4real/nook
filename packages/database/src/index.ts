@@ -204,3 +204,13 @@ export {
   type RepairCustomerProjectionOutcome,
   type RetryExhaustedCustomerProjectionInput,
 } from './consumer-crm/customer-projection-operations';
+export {
+  CustomerReadRepositoryError,
+  PrismaCustomerReadRepository,
+  type CustomerDetailReadResult,
+  type CustomerReadCursor,
+  type CustomerReadPage,
+  type CustomerReadRecord,
+  type CustomerReadRepository,
+  type CustomerReadRepositoryErrorCode,
+} from './consumer-crm/customer-read-repository';
