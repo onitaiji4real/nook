@@ -3,6 +3,7 @@
 ## Safe defaults
 
 - `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API的grant flag固定為`false`，核准前不得用console漂移覆寫。
+- Consumer self-service固定為`GET|POST|DELETE /v1/me/marketing-consents/{tenantId}`；三種方法及authentication/problem response都必須回`Cache-Control: private, no-store`。POST是唯一受grant flag控制的方法，GET與DELETE不得因tenant/document停用或flag為false而被關閉。
 - Expand migration及fake KMS/storage tests可先部署；disabled不代表可以保存明文、建立ACTIVE consent document或產生artifact。
 - Repository、Terraform state/output、`.env.example`、log及worklog不得含KMS key URI、plaintext、wrapped key、object key或signed URL。
 
@@ -12,7 +13,7 @@
 2. 以A→B→C改期、cancel、complete、no-show及duplicate/out-of-order events驗projection current-truth recompute、per-projector delivery/checkpoint replay，並證明不修改notification使用的shared outbox status。
 3. 以兩tenant相同consumer及猜測customer/note/job IDs驗404 non-disclosure。
 4. 用fake KMS驗random DEK/nonce、AAD tamper、key unavailable、rewrap與plaintext DB/log scan。
-5. 驗relationship/no-stream、grant/withdraw/supersede/regrant、inactive tenant仍可withdraw、same idempotency key及concurrent withdraw-wins。
+5. 以真實HTTP與database驗missing authentication、relationship/no-stream、cross-tenant 404、grant/withdraw/supersede/regrant、inactive tenant仍可withdraw、same idempotency key、current-safe replay、concurrent withdraw-wins及所有response的private no-store。
 6. 用private fake storage驗customers/notes/tags/uncompressed/compressed/temp/time全部bounds、claim token/old-worker CAS、watermark invalidation、15分鐘expiry、60秒residual download、revoke與generation-match cleanup。
 7. 390×844及desktop驗list/detail、role loss、tenant switch、no-store及無水平溢位。
 

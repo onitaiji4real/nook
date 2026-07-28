@@ -1660,3 +1660,10 @@
 - 第一次focused integration因新domain尚未build而讀到舊dist，加上fixture的`confirmedAt`與`policiesAcceptedAt`各自取時造成既有policy constraint拒絕；先build dependency並共用同一database timestamp後，fresh PostgreSQL套用20/20 migrations且consent integration 6/6通過，沒有放寬production constraint。
 - 完整format、12-package lint/typecheck、19-task unit（domain 22、contracts 57、database 48、API 73、worker 23、web 57）、12-package build、architecture 26/static gates及Terraform validate/12 module runs通過。Fresh database完整integration為database 14 files／79 tests與API 7 files／57 tests，全數通過並刪除暫時database。
 - 遠端push/PR CI的79項database integration僅concurrent exact grant失敗；PostgreSQL log明確為raw `INSERT ... ON CONFLICT`回`could not serialize access`，Prisma包成`PrismaClientUnknownRequestError`而非既有判斷的known `P2034`，所以未進bounded retry。Retry classifier補齊SQLSTATE `40001`／`40P01`及serialization訊息，仍限制最多3次，不把一般database error誤重試；修正後在同一個fresh database連跑10輪、共60項consent integration全綠。
+
+### P4-001 consumer consent HTTP self-service checkpoint
+
+- API註冊`GET|POST|DELETE /v1/me/marketing-consents/{tenantId}`，controller只做authentication、strict contract parsing與application service delegation，不直接使用Prisma。POST明確回200並受grant feature flag控制；GET與DELETE維持可用。
+- Feature-scoped middleware在authentication guard前寫入`Cache-Control: private, no-store`，因此成功、401、404及409都不會被browser/shared cache保存。真實HTTP/database integration覆蓋missing bearer、consumer relationship、cross-tenant 404、沒有customer projection仍可讀NOT_GRANTED、grant exact replay、fingerprint conflict、withdraw no-op與safe audit。
+- Current-safe replay順序修正為先鎖stream及查command ledger，再檢查新grant需要的ACTIVE tenant/document；因此原始grant在tenant suspended、document retired或後續withdraw後重播，只回傳最新WITHDRAWN truth，不重跑已不再合法的新command。Authentication與server-owned relationship仍在replay前驗證，沒有放寬跨tenant邊界。
+- Fresh ephemeral PostgreSQL從零套用20/20 migrations；完整database integration 14 files／79 tests、API integration 8 files／61 tests全數通過。截圖中的舊GitHub Actions failure屬較早的`b51736c` run；目前遠端HEAD `54e9fa0`的push run `30368299935`與PR run `30368302435`均為success。
