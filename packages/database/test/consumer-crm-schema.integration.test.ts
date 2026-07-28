@@ -52,6 +52,36 @@ describe('consumer CRM expand constraints', () => {
   });
 
   afterAll(async () => {
+    await prisma.customerExportJob.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.consumerConsentEvent.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.consumerConsentCommand.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.consumerConsentStream.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.consentDocument.deleteMany({
+      where: { version: { startsWith: `crm-${suffix}-` } },
+    });
+    await prisma.customerNote.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.customer.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.membership.deleteMany({
+      where: { tenantId: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.tenant.deleteMany({
+      where: { id: { in: [tenantId, otherTenantId] } },
+    });
+    await prisma.user.deleteMany({
+      where: { id: { in: [consumerUserId, ownerUserId] } },
+    });
     await prisma.$disconnect();
   });
 

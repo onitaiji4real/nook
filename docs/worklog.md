@@ -1638,3 +1638,8 @@
 - Customer upsert只以tenant+consumer為identity，首次`relationshipStartedAt`保存既有最早confirmedAt，後續只覆寫COMPLETED／NO_SHOW current truth與projection trace；不建立或推算spend欄位。Concurrent replay以delivery unique及row claim維持單一customer／delivery。
 - Focused integration第一次在sandbox內因未帶`DATABASE_URL`、第二次因localhost連線權限而未進入行為測試；允許本機PostgreSQL後，首次真正執行發現seed row的database default與下一個transaction存在毫秒級due邊界，明確把新delivery `nextAttemptAt`設為epoch後3/3通過。分層重構後先build domain再回歸，仍為3/3。
 - Domain typecheck/lint/build與19 tests、database strict typecheck/lint/build及43 unit tests、architecture 26 tests/static gates通過。Fresh ephemeral PostgreSQL從零套用20/20 migrations後，完整database integration 13 files／70 tests全綠並自動刪除測試database。尚未實作backfill checkpoint、10次retry exhaustion／repair command、worker wiring及consent application；本段只作為下一個小commit，不提前勾選完整acceptance。
+
+### P4-001 remote CI fixture isolation follow-up
+
+- `c2c92c5`遠端Integration tests失敗原因為CRM schema constraint suite建立customer／consent fixture後只disconnect，沒有清除資料；當GitHub runner把該檔排在portfolio等既有suite之前，舊suite的global tenant cleanup正確被`customers_tenant_id_fkey`拒絕。本機先前剛好把CRM schema檔排最後，因而沒有暴露順序依賴。
+- 補上只依本suite tenant/user/version清除的afterAll teardown，不使用全域truncate或放寬foreign key。Fresh ephemeral database刻意先跑CRM schema 4/4，再跑原先會受污染的database／publication／portfolio 19/19，順序回歸全綠並自動刪除測試database。這是test isolation修正，不修改production schema或runtime行為。
