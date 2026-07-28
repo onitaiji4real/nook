@@ -44,9 +44,7 @@ export type StudioRouteAccess = 'manage' | 'read' | 'scoped' | 'fallback';
 
 export type StudioNavigationDecision = z.infer<typeof studioNavigationDecisionSchema>;
 
-const studioRouteHref: Readonly<
-  Record<StudioRouteKey, StudioNavigationDecision['href']>
-> = {
+const studioRouteHref: Readonly<Record<StudioRouteKey, StudioNavigationDecision['href']>> = {
   home: '/studio',
   appointments: '/studio/appointments',
   services: '/studio/services',

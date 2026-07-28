@@ -19,4 +19,8 @@ allowBuilds:
 
 overrides:
   '@types/superagent': 8.1.10
+  brace-expansion@2.1.2: 5.0.8
   effect: 3.20.0
+  fast-xml-parser@5.10.0: 5.10.1
+  postcss@8.4.31: 8.5.18
+  sharp@0.34.5: 0.35.3

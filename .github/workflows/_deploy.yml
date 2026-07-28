@@ -34,7 +34,7 @@ jobs:
           test -n "${{ vars.WIF_PROVIDER }}"
           test -n "${{ vars.DEPLOYER_SERVICE_ACCOUNT }}"
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Authenticate with WIF
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:

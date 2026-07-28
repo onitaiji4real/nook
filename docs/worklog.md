@@ -1596,3 +1596,13 @@
 - 第一次完整database integration如先前P3-007 worklog預期得到45/63：18個booking hold／confirmation案例因硬編碼`2026-07-24`超出maximum advance window而失敗。兩組fixture改為執行時推導至少七天後的星期五，並同步推導availability `validFrom`；第二次以乾淨database重跑11 files／63 tests全綠。
 - 最終驗證：database unit 15 files／39 tests、API unit／architecture 13 files／69 tests、database integration 11 files／63 tests、API integration 7 files／57 tests；兩次integration各自從零套用19 migrations並刪除ephemeral database。Database/API strict typecheck、ESLint、build、repository architecture 26 tests、Prettier與`git diff --check`通過。
 - 本任務沒有schema、migration、HTTP或商業邏輯變更。下一個database test應直接建立在feature目錄，不再增加根層檔案；若public index持續成長，可加內部barrel但仍不開放deep imports。
+
+## 2026-07-28 — CI format, dependency security and time-stable lifecycle recovery
+
+- 依GitHub Actions run `30211241615`的公開job與credential-protected logs定位失敗：`verify`停在Prettier，三個container image均已build成功但被Trivy HIGH gate阻擋。Terraform成功；token只由既有Git credential helper在記憶體提供給單次log request，未輸出或寫入檔案。
+- 修正`packages/contracts/src/studio-entry.ts`的既有格式差異；Web由Next 16.2.10升到16.2.12。pnpm workspace以精確來源版本override把runtime的Sharp 0.34.5、brace-expansion 2.1.2、fast-xml-parser 5.10.0與PostCSS 8.4.31分別解析至0.35.3、5.0.8、5.10.1與8.5.18。
+- PostCSS最初解析到剛發布的8.5.24時，pnpm自動建立`minimumReleaseAgeExclude`；沒有保留這個供應鏈政策豁免，改鎖已修補且通過冷卻期的8.5.18。Frozen install在零豁免下通過；production audit只剩1個moderate，既定HIGH gate通過。
+- GitHub annotations另顯示舊Actions使用Node 20 runtime。依官方tag、action.yml與固定commit SHA，把checkout升至v5、setup-node升至v5、pnpm/action-setup升至v6.0.9；三者均宣告Node 24，CI與reusable deploy workflow仍維持full-SHA pin。
+- 完整integration在當日另外發現publication lifecycle fixture固定預約於2026-07-29，已進入24小時取消限制而正確得到409。測試改為執行日起至少八天後的下一個星期三，並只在兩個lifecycle案例對齊availability clock；沒有放寬產品取消規則。Focused publication 10/10、tenant 17/17及完整database 63/63、API 57/57均在各自fresh ephemeral database通過並自動刪除。
+- Workspace Prettier、architecture/workflow contracts、12-package lint、strict typecheck、unit tests與production build通過。三個production Docker image均build成功且runtime user為`65532:65532`；Trivy 0.70.0同CI條件掃描Web、API、worker的HIGH/CRITICAL皆為0。
+- 本checkpoint沒有push、deploy、Terraform apply、PR mutation、外部provider呼叫或更新`main`。修復維持在`phase1`；Phase 4 P4-001規格工作在CI恢復後再續。
