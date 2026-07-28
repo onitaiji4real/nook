@@ -40,3 +40,13 @@ export {
   type CustomerProjectionAggregate,
   type CustomerProjectionAppointment,
 } from './consumer-crm/customer-projection';
+
+export {
+  canonicalMarketingConsentEvidence,
+  deriveMarketingConsentCurrentState,
+  MARKETING_CONSENT_EVIDENCE_SCHEMA,
+  MARKETING_CONSENT_PURPOSE,
+  normalizeConsentTenantDisplayName,
+  type MarketingConsentCurrentState,
+  type MarketingConsentLatestEvent,
+} from './consumer-crm/marketing-consent';

@@ -185,6 +185,15 @@ export {
   type RescheduleAppointmentRequest,
   type RescheduleReason,
 } from './appointment-lifecycle';
+export {
+  grantMarketingConsentRequestSchema,
+  marketingConsentExpectedRevisionSchema,
+  marketingConsentIdempotencyKeySchema,
+  marketingConsentPurposeSchema,
+  marketingConsentTenantIdSchema,
+  type GrantMarketingConsentRequest,
+  type MarketingConsentResponse,
+} from './marketing-consent';
 
 export interface HealthResponseInput {
   readonly status: HealthStatus;

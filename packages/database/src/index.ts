@@ -181,6 +181,17 @@ export {
   type NotificationProviderResult,
   type NotificationTemplateData,
 } from './notifications/notification-delivery-repository';
+
+export {
+  MarketingConsentRepositoryError,
+  PrismaMarketingConsentRepository,
+  type GrantMarketingConsentInput,
+  type MarketingConsentDocumentRecord,
+  type MarketingConsentRepository,
+  type MarketingConsentRepositoryErrorCode,
+  type MarketingConsentStateRecord,
+  type WithdrawMarketingConsentInput,
+} from './consumer-crm/consent/marketing-consent-repository';
 export {
   PrismaCustomerProjectionRepository,
   type CustomerProjectionOutcome,
