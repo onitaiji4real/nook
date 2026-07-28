@@ -82,10 +82,22 @@ describe('marketing consent repository', () => {
     expect(withdrawn.grantedAt).toEqual(grantEvent.occurredAt);
     expect(withdrawn.withdrawnAt).not.toBeNull();
 
+    const retiredAt = new Date();
+    await prisma.$transaction([
+      prisma.tenant.update({
+        where: { id: fixture.tenantId },
+        data: { status: 'SUSPENDED' },
+      }),
+      prisma.consentDocument.update({
+        where: { id: fixture.documentId },
+        data: { status: 'RETIRED', retiredAt },
+      }),
+    ]);
     await expect(repository.grant(grant)).resolves.toMatchObject({
       state: 'WITHDRAWN',
       eligible: false,
       revision: 2,
+      activeDocument: null,
     });
     await expect(
       prisma.consumerConsentEvent.count({ where: { tenantId: fixture.tenantId } }),

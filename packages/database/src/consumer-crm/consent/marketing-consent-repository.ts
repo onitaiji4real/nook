@@ -100,19 +100,7 @@ export class PrismaMarketingConsentRepository implements MarketingConsentReposit
         select: { name: true, status: true },
       });
       if (tenant === null) fail('relationship_not_found');
-      if (tenant.status !== 'ACTIVE') fail('tenant_inactive');
       await requireRelationshipOrStream(tx, input);
-
-      const tenantDisplayName = normalizeConsentTenantDisplayName(tenant.name);
-      if (tenantDisplayName === null) fail('tenant_display_name_invalid');
-      const document = await tx.consentDocument.findFirst({
-        where: {
-          id: input.consentDocumentId,
-          purpose: MARKETING_CONSENT_PURPOSE,
-          status: 'ACTIVE',
-        },
-      });
-      if (document === null) fail('consent_not_active');
 
       await createStreamIfMissing(tx, input);
       const stream = await lockStream(tx, input);
@@ -123,6 +111,18 @@ export class PrismaMarketingConsentRepository implements MarketingConsentReposit
         }
         return readCurrentState(tx, input);
       }
+
+      if (tenant.status !== 'ACTIVE') fail('tenant_inactive');
+      const tenantDisplayName = normalizeConsentTenantDisplayName(tenant.name);
+      if (tenantDisplayName === null) fail('tenant_display_name_invalid');
+      const document = await tx.consentDocument.findFirst({
+        where: {
+          id: input.consentDocumentId,
+          purpose: MARKETING_CONSENT_PURPOSE,
+          status: 'ACTIVE',
+        },
+      });
+      if (document === null) fail('consent_not_active');
       if (stream.currentRevision !== input.expectedRevision) fail('revision_conflict');
 
       const latestEvent =
