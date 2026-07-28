@@ -13,6 +13,7 @@ describe('parseRuntimeConfig', () => {
       bookingPolicyV2WritesEnabled: true,
       appointmentLifecycleEnabled: true,
       crmProjectionMode: 'disabled',
+      marketingConsentGrantEnabled: false,
       lineAuthRateLimit: {
         globalLimit: 120,
         tokenLimit: 5,
@@ -125,6 +126,19 @@ describe('parseRuntimeConfig', () => {
         { defaultPort: 8081, service: 'worker' },
       ).crmProjectionMode,
     ).toBe('active');
+  });
+
+  it('keeps marketing consent grant disabled until the legal activation gate is approved', () => {
+    expect(
+      parseRuntimeConfig({ NODE_ENV: 'production' }, { defaultPort: 8080 })
+        .marketingConsentGrantEnabled,
+    ).toBe(false);
+    expect(
+      parseRuntimeConfig(
+        { NODE_ENV: 'staging', MARKETING_CONSENT_GRANT_ENABLED: 'true' },
+        { defaultPort: 8080 },
+      ).marketingConsentGrantEnabled,
+    ).toBe(true);
   });
 
   it('requires a complete GCP media configuration and only accepts HTTPS worker URLs', () => {

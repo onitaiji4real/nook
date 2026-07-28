@@ -27,6 +27,7 @@ const config: RuntimeConfig = {
   bookingPolicyV2WritesEnabled: true,
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'disabled',
+  marketingConsentGrantEnabled: false,
   lineAuthRateLimit: {
     globalLimit: 2,
     tokenLimit: 1,

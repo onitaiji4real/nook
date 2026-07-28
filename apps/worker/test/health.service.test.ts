@@ -16,6 +16,7 @@ describe('worker HealthService', () => {
         bookingPolicyV2WritesEnabled: true,
         appointmentLifecycleEnabled: true,
         crmProjectionMode: 'disabled',
+        marketingConsentGrantEnabled: false,
         lineAuthRateLimit: {
           globalLimit: 120,
           tokenLimit: 5,
@@ -48,6 +49,7 @@ describe('worker HealthService', () => {
         bookingPolicyV2WritesEnabled: true,
         appointmentLifecycleEnabled: true,
         crmProjectionMode: 'disabled',
+        marketingConsentGrantEnabled: false,
         lineAuthRateLimit: {
           globalLimit: 120,
           tokenLimit: 5,

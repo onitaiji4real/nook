@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { BookingModule } from './modules/booking/booking.module';
+import { MarketingConsentModule } from './modules/consumer-crm/consent/marketing-consent.module';
 import { HealthModule } from './modules/health/health.module';
 import { LineAuthModule } from './modules/line-auth/line-auth.module';
 import { LineStudioEntryModule } from './modules/line-studio-entry/line-studio-entry.module';
@@ -29,6 +30,7 @@ import { PlatformCoreModule } from './platform/platform-core.module';
     PublicationModule,
     BookingModule,
     AppointmentsModule,
+    MarketingConsentModule,
   ],
 })
 export class AppModule {}

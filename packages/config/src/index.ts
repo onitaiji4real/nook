@@ -26,6 +26,7 @@ export interface RuntimeConfig {
   readonly bookingPolicyV2WritesEnabled: boolean;
   readonly appointmentLifecycleEnabled: boolean;
   readonly crmProjectionMode: 'disabled' | 'shadow' | 'active';
+  readonly marketingConsentGrantEnabled: boolean;
   readonly lineAuthRateLimit: {
     readonly globalLimit: number;
     readonly tokenLimit: number;
@@ -183,6 +184,7 @@ export function parseRuntimeConfig(
     BOOKING_POLICY_V2_WRITES_ENABLED: z.enum(['true', 'false']).optional(),
     APPOINTMENT_LIFECYCLE_ENABLED: z.enum(['true', 'false']).optional(),
     CRM_PROJECTION_MODE: z.enum(['disabled', 'shadow', 'active']).default('disabled'),
+    MARKETING_CONSENT_GRANT_ENABLED: z.enum(['true', 'false']).default('false'),
     AUTH_LINE_EXCHANGE_GLOBAL_LIMIT: z.coerce.number().int().positive().max(10_000).default(120),
     AUTH_LINE_EXCHANGE_TOKEN_LIMIT: z.coerce.number().int().positive().max(100).default(5),
     AUTH_LINE_EXCHANGE_WINDOW_SECONDS: z.coerce.number().int().min(10).max(3_600).default(60),
@@ -273,6 +275,7 @@ export function parseRuntimeConfig(
     bookingPolicyV2WritesEnabled,
     appointmentLifecycleEnabled,
     crmProjectionMode: parsed.CRM_PROJECTION_MODE,
+    marketingConsentGrantEnabled: parsed.MARKETING_CONSENT_GRANT_ENABLED === 'true',
     lineAuthRateLimit: {
       globalLimit: parsed.AUTH_LINE_EXCHANGE_GLOBAL_LIMIT,
       tokenLimit: parsed.AUTH_LINE_EXCHANGE_TOKEN_LIMIT,
