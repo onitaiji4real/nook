@@ -501,7 +501,18 @@ function fail(code: MarketingConsentRepositoryErrorCode): never {
 }
 
 function isRetryable(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034';
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') return true;
+  if (
+    error instanceof Prisma.PrismaClientKnownRequestError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError
+  ) {
+    return (
+      error.message.includes('40001') ||
+      error.message.includes('40P01') ||
+      error.message.includes('could not serialize access')
+    );
+  }
+  return false;
 }
 
 function mapUnexpectedError(error: unknown): never {
