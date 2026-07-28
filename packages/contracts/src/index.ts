@@ -194,6 +194,15 @@ export {
   type GrantMarketingConsentRequest,
   type MarketingConsentResponse,
 } from './marketing-consent';
+export {
+  customerIdSchema,
+  customerListQuerySchema,
+  type CustomerDetail,
+  type CustomerListQuery,
+  type CustomerListResponse,
+  type CustomerSummary,
+  type CustomerTag,
+} from './customer-crm';
 
 export interface HealthResponseInput {
   readonly status: HealthStatus;
