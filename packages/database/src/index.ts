@@ -181,3 +181,8 @@ export {
   type NotificationProviderResult,
   type NotificationTemplateData,
 } from './notifications/notification-delivery-repository';
+export {
+  PrismaCustomerProjectionRepository,
+  type CustomerProjectionOutcome,
+  type CustomerProjectionRepository,
+} from './consumer-crm/customer-projection-repository';

@@ -1631,3 +1631,10 @@
 - Prisma自動diff最初包含既有schema/migration命名差異造成的舊FK rename、四筆drop及updatedAt default變更；全部從migration移除，只保留P4 expand內容。一次性shadow database只用於產生SQL，完成後已刪除。
 - Fresh ephemeral PostgreSQL從零套用20/20 migrations成功；focused CRM schema integration 4/4驗tenant note cross-link、envelope、單一ACTIVE consent document、grant evidence及export bounds。第一次3項check assertion預期Prisma `P2004`，實際6.19回`PrismaClientUnknownRequestError`但PostgreSQL code均為23514且具名constraint正確拒絕；改為比對constraint name後原測試4/4通過，沒有放寬規則。
 - Database unit/migration contract 16 files／43 tests、完整fresh database integration 12 files／67 tests、Prisma format/validate/generate、database strict typecheck、ESLint、build及`git diff --check`通過。這個checkpoint仍未實作projection/consent application service、KMS/storage adapter、HTTP或RWD，P4-001維持`in_progress`。
+
+### P4-001 customer projection repository checkpoint
+
+- 新增分層的`packages/domain/src/consumer-crm/customer-projection.ts`與`packages/database/src/consumer-crm/customer-projection-repository.ts`。Domain只負責reschedule chain invariant及effective leaf統計；database repository負責掃描所有shared outbox status的六種exact event、獨立delivery seed、lease claim、tenant+consumer stream lock、current-truth重算與exact-token completion，完全不改shared outbox delivery state。
+- Customer upsert只以tenant+consumer為identity，首次`relationshipStartedAt`保存既有最早confirmedAt，後續只覆寫COMPLETED／NO_SHOW current truth與projection trace；不建立或推算spend欄位。Concurrent replay以delivery unique及row claim維持單一customer／delivery。
+- Focused integration第一次在sandbox內因未帶`DATABASE_URL`、第二次因localhost連線權限而未進入行為測試；允許本機PostgreSQL後，首次真正執行發現seed row的database default與下一個transaction存在毫秒級due邊界，明確把新delivery `nextAttemptAt`設為epoch後3/3通過。分層重構後先build domain再回歸，仍為3/3。
+- Domain typecheck/lint/build與19 tests、database strict typecheck/lint/build及43 unit tests、architecture 26 tests/static gates通過。Fresh ephemeral PostgreSQL從零套用20/20 migrations後，完整database integration 13 files／70 tests全綠並自動刪除測試database。尚未實作backfill checkpoint、10次retry exhaustion／repair command、worker wiring及consent application；本段只作為下一個小commit，不提前勾選完整acceptance。

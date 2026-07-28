@@ -33,3 +33,10 @@ export {
   type AvailabilityWeeklyRule,
   type CalculateAvailabilityInput,
 } from './availability';
+
+export {
+  CustomerProjectionCorruption,
+  deriveCustomerProjection,
+  type CustomerProjectionAggregate,
+  type CustomerProjectionAppointment,
+} from './consumer-crm/customer-projection';
