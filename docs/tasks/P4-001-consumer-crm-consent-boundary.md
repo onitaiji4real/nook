@@ -57,7 +57,7 @@ Notes、tags、grant與export在各自external gate核准前仍feature-disabled�
 
 - [x] Expand schema/migration、tenant composite constraints與fresh migration replay。
 - [x] `consumer_crm_v1` outbox delivery seeding、lease claim、stream lock、current-truth customer recompute及concurrent replay evidence。
-- [ ] Projection backfill checkpoint、retry exhaustion、blocked-stream repair runbook command與worker wiring。
+- [x] Projection backfill checkpoint、retry exhaustion、blocked-stream repair runbook command與worker wiring；deployed mode仍由IaC固定disabled。
 - [ ] Consent repository/application、tenant CRM RBAC、safe audit、notes/tags/export及RWD/API。
 
 ## Acceptance criteria

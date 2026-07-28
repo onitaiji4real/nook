@@ -188,6 +188,16 @@ run "runtime_uses_private_worker_and_immutable_images" {
   }
 
   assert {
+    condition = alltrue([
+      for service in ["api", "worker"] : anytrue([
+        for item in google_cloud_run_v2_service.application[service].template[0].containers[0].env :
+        item.name == "CRM_PROJECTION_MODE" && try(item.value, null) == "disabled"
+      ])
+    ])
+    error_message = "CRM projection must remain disabled for every deployed service by default."
+  }
+
+  assert {
     condition     = alltrue([for image in values(var.container_images) : can(regex("@sha256:[0-9a-f]{64}$", image))])
     error_message = "All runtime images must be pinned by digest."
   }

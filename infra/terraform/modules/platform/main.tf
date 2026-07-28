@@ -510,6 +510,14 @@ resource "google_cloud_run_v2_service" "application" {
       }
 
       dynamic "env" {
+        for_each = contains(["api", "worker"], each.key) ? [1] : []
+        content {
+          name  = "CRM_PROJECTION_MODE"
+          value = "disabled"
+        }
+      }
+
+      dynamic "env" {
         for_each = each.key == "worker" ? {
           NOTIFICATION_TASK_QUEUE                   = google_cloud_tasks_queue.notifications.name
           NOTIFICATION_WORKER_URL                   = var.enable_line_notifications ? var.notification_worker_url : ""

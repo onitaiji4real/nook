@@ -1643,3 +1643,11 @@
 
 - `c2c92c5`遠端Integration tests失敗原因為CRM schema constraint suite建立customer／consent fixture後只disconnect，沒有清除資料；當GitHub runner把該檔排在portfolio等既有suite之前，舊suite的global tenant cleanup正確被`customers_tenant_id_fkey`拒絕。本機先前剛好把CRM schema檔排最後，因而沒有暴露順序依賴。
 - 補上只依本suite tenant/user/version清除的afterAll teardown，不使用全域truncate或放寬foreign key。Fresh ephemeral database刻意先跑CRM schema 4/4，再跑原先會受污染的database／publication／portfolio 19/19，順序回歸全綠並自動刪除測試database。這是test isolation修正，不修改production schema或runtime行為。
+
+### P4-001 projection operations and worker checkpoint
+
+- Projection repository新增stable `appointments.createdAt,id` backfill checkpoint、blocked-stream fail-stop、exact cursor resume、attempt 10 retry exhaustion dead-letter、exact delivery retry、blocked delivery current-truth revalidation/repair及PII-free operational snapshot。Retry exhaustion不冒充`INVARIANT_CORRUPTION`，只有chain corruption會block tenant+consumer stream。
+- 新增受控repair CLI，stream repair／exhausted retry都要求tenant+consumer+delivery及相同delivery confirmation；backfill resume要求exact cursor或`none`及明確confirmation。工具不提供wildcard/global reset，state已改變時回false／not_blocked並要求重新檢查。
+- Worker新增獨立feature module與`POST /internal/customer-projection/run`，每輪最多100 delivery及100 backfill cursor。`CRM_PROJECTION_MODE`固定`disabled | shadow | active`，config、`.env.example`及Terraform runtime預設皆為disabled；本slice不新增Scheduler或GCP service。這避免尚未抽樣驗證就產生production CRM read，也以batch而非per-customer task控制Cloud Run/DB成本。
+- 初次API/worker typecheck揭露新增required config需要同步既有synthetic RuntimeConfig fixtures，補齊後通過；Terraform init第一次因sandbox DNS無法連registry，取得network權限後使用lockfile provider完成validate及12/12 module tests。Focused projection integration在本機PostgreSQL通過；fresh ephemeral PostgreSQL從零套用20/20 migrations後完整database integration 13 files／73 tests全綠並刪除測試database。
+- External activation仍未核准：Terraform刻意無法在目前版本啟用deployed projection，需先完成shadow SQL truth抽樣、alert owner及後續reviewed IaC change。Consent、CRM read API與RWD尚未包含在本checkpoint。

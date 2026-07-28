@@ -34,6 +34,45 @@
 - Export：pending age、failed/expired/revoked counts、cleanup backlog、artifact size bucket；不得記tenant/job/object/URL作metric label。
 - Alert owner與on-call尚未核准時，production modes維持disabled。
 
+## Projection worker與受控修復
+
+- Private worker endpoint固定為`POST /internal/customer-projection/run`，需要Cloud Run IAM及`x-cloudscheduler: true` defense-in-depth。`CRM_PROJECTION_MODE=disabled`時不讀寫projection；`shadow`執行delivery/backfill但API尚不可切CRM read；`active`只可在shadow抽樣與owner核准後由後續IaC變更啟用。現有Terraform刻意把API/worker固定為`disabled`，本slice不建立新的Scheduler或繞過IaC修改環境。
+- 每輪最多處理100筆delivery及100個backfill appointment cursor。Operational output只含projected/terminal/exhausted counts、blocked stream count、oldest pending age、backfill status及remaining count，不含tenant、consumer、customer、note或contact。
+- 下列repair指令只能在已記錄incident/change ticket、資料invariant已用read-only查詢確認修復，且使用受控operator環境時執行。參數ID不得貼到一般聊天、metric或公開issue；指令不接受wildcard，也不提供全域reset。
+
+Blocked stream修復會先在transaction內重新驗current truth；仍有corruption時回`still_corrupt`且不改任何狀態：
+
+```bash
+node infra/dev/run-with-env.mjs pnpm --filter @nook/database crm:projection:repair -- \
+  repair-stream \
+  --tenant-id <tenant-uuid> \
+  --consumer-user-id <consumer-user-uuid> \
+  --blocked-delivery-id <delivery-uuid> \
+  --confirm-delivery-id <same-delivery-uuid>
+```
+
+Infrastructure retry exhaustion修復後，只重開exact delivery，不把它誤標成invariant：
+
+```bash
+node infra/dev/run-with-env.mjs pnpm --filter @nook/database crm:projection:repair -- \
+  retry-delivery \
+  --tenant-id <tenant-uuid> \
+  --consumer-user-id <consumer-user-uuid> \
+  --delivery-id <delivery-uuid> \
+  --confirm-delivery-id <same-delivery-uuid>
+```
+
+Backfill `FAILED`原因修復後，以checkpoint現有cursor做compare-and-set；從未成功前進使用`none`：
+
+```bash
+node infra/dev/run-with-env.mjs pnpm --filter @nook/database crm:projection:repair -- \
+  resume-backfill \
+  --expected-cursor-id <cursor-uuid-or-none> \
+  --confirm resume-backfill
+```
+
+任何指令回`false`／`not_blocked`代表state或expected value已改變，必須重新read-only檢查，不得盲目重送或直接改SQL。
+
 ## Incident與rollback
 
 1. 疑似跨tenant或plaintext洩漏：立即關notes/export/tags read/write，保留database evidence，撤銷所有READY artifact並停用簽址；booking保持可用。
