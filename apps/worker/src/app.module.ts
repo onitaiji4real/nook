@@ -7,10 +7,11 @@ import { runtimeConfig } from './runtime-config';
 import { RUNTIME_CONFIG } from './runtime-config.token';
 import { MediaModule } from './modules/media/media.module';
 import { BookingHoldExpiryModule } from './modules/booking-holds/booking-hold-expiry.module';
+import { CustomerProjectionModule } from './modules/customer-projection/customer-projection.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 
 @Module({
-  imports: [MediaModule, BookingHoldExpiryModule, NotificationModule],
+  imports: [MediaModule, BookingHoldExpiryModule, NotificationModule, CustomerProjectionModule],
   controllers: [HealthController],
   providers: [
     DatabaseProbeService,
