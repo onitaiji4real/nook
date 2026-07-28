@@ -224,6 +224,75 @@ enum NotificationProvider {
   LINE_MESSAGING
 }
 
+enum CrmProjectionDeliveryStatus {
+  PENDING
+  PROCESSING
+  PROJECTED
+  TERMINAL
+}
+
+enum CrmProjectionOutcome {
+  PROJECTED
+  NO_RELATIONSHIP
+  INVARIANT_CORRUPTION
+}
+
+enum CrmProjectionStreamStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum CrmBackfillStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ConsentPurpose {
+  MARKETING_MESSAGES
+}
+
+enum ConsentDocumentStatus {
+  DRAFT
+  ACTIVE
+  RETIRED
+}
+
+enum ConsentEventType {
+  GRANTED
+  WITHDRAWN
+}
+
+enum ConsentSource {
+  CONSUMER_WEB
+  SUPPORT_VERIFIED_REQUEST
+}
+
+enum ConsentCommandType {
+  GRANT
+  WITHDRAW
+}
+
+enum ConsentCommandOutcome {
+  APPLIED
+  NOOP_ALREADY_WITHDRAWN
+}
+
+enum CustomerTagStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CustomerExportStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+  EXPIRED
+  REVOKED
+}
+
 enum PortfolioItemStatus {
   DRAFT
   PUBLISHED
@@ -258,8 +327,15 @@ model User {
   appointmentStatusHistory    AppointmentStatusHistory[]   @relation("AppointmentStatusActor")
   appointmentConfirmationKeys AppointmentConfirmationKey[]
   appointmentTransitionKeys   AppointmentTransitionKey[]
-  notificationJobs            NotificationJob[]           @relation("NotificationConsumer")
+  notificationJobs            NotificationJob[]            @relation("NotificationConsumer")
   lineMessagingRecipient      LineMessagingRecipient?
+  customers                   Customer[]                   @relation("CustomerConsumer")
+  crmProjectionDeliveries     CrmProjectionDelivery[]      @relation("CrmProjectionConsumer")
+  crmProjectionStreams        CrmProjectionStream[]        @relation("CrmProjectionStreamConsumer")
+  consentStreams              ConsumerConsentStream[]      @relation("ConsentStreamConsumer")
+  consentCommands             ConsumerConsentCommand[]     @relation("ConsentCommandConsumer")
+  consentEvents               ConsumerConsentEvent[]       @relation("ConsentEventConsumer")
+  consentEventsActed          ConsumerConsentEvent[]       @relation("ConsentEventActor")
 
   @@map("users")
 }
@@ -312,6 +388,17 @@ model Tenant {
   appointmentTransitionKeys   AppointmentTransitionKey[]
   outboxEvents                OutboxEvent[]
   notificationJobs            NotificationJob[]
+  customers                   Customer[]
+  crmProjectionDeliveries     CrmProjectionDelivery[]
+  crmProjectionStreams        CrmProjectionStream[]
+  consentStreams              ConsumerConsentStream[]
+  consentCommands             ConsumerConsentCommand[]
+  consentEvents               ConsumerConsentEvent[]
+  crmPrivacyVersion           TenantCrmPrivacyVersion?
+  customerNotes               CustomerNote[]
+  customerTagDefinitions      CustomerTagDefinition[]
+  customerTagLinks            CustomerTagLink[]
+  customerExportJobs          CustomerExportJob[]
   plan                        Plan?                        @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   @@map("tenants")
@@ -620,7 +707,8 @@ model Appointment {
   rescheduleDescendants                 Appointment[]                @relation("AppointmentRescheduleRoot")
   sourceTransitionKeys                  AppointmentTransitionKey[]   @relation("AppointmentTransitionSource")
   replacementTransitionKeys             AppointmentTransitionKey[]   @relation("AppointmentTransitionReplacement")
-  notificationJobs                       NotificationJob[]
+  notificationJobs                      NotificationJob[]
+  crmProjectionDeliveries               CrmProjectionDelivery[]
 
   @@unique([tenantId, id], map: "appointments_tenant_id_id_key")
   @@unique([tenantId, staffId, id], map: "appointments_tenant_staff_id_key")
@@ -715,21 +803,22 @@ model AppointmentConfirmationKey {
 }
 
 model OutboxEvent {
-  id            String            @id @default(uuid()) @db.Uuid
-  tenantId      String            @map("tenant_id") @db.Uuid
-  aggregateType String            @map("aggregate_type") @db.VarChar(80)
-  aggregateId   String            @map("aggregate_id") @db.Uuid
-  eventType     String            @map("event_type") @db.VarChar(120)
-  payloadJson   Json              @map("payload_json")
-  dedupeKey     String            @unique @map("dedupe_key") @db.VarChar(255)
-  status        OutboxEventStatus @default(PENDING)
-  availableAt   DateTime          @map("available_at") @db.Timestamptz(6)
-  attemptCount  Int               @default(0) @map("attempt_count")
-  publishedAt   DateTime?         @map("published_at") @db.Timestamptz(6)
-  createdAt     DateTime          @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime          @map("updated_at") @db.Timestamptz(6)
-  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  notificationJobs NotificationJob[]
+  id                      String                  @id @default(uuid()) @db.Uuid
+  tenantId                String                  @map("tenant_id") @db.Uuid
+  aggregateType           String                  @map("aggregate_type") @db.VarChar(80)
+  aggregateId             String                  @map("aggregate_id") @db.Uuid
+  eventType               String                  @map("event_type") @db.VarChar(120)
+  payloadJson             Json                    @map("payload_json")
+  dedupeKey               String                  @unique @map("dedupe_key") @db.VarChar(255)
+  status                  OutboxEventStatus       @default(PENDING)
+  availableAt             DateTime                @map("available_at") @db.Timestamptz(6)
+  attemptCount            Int                     @default(0) @map("attempt_count")
+  publishedAt             DateTime?               @map("published_at") @db.Timestamptz(6)
+  createdAt               DateTime                @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                @map("updated_at") @db.Timestamptz(6)
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  notificationJobs        NotificationJob[]
+  crmProjectionDeliveries CrmProjectionDelivery[]
 
   @@unique([tenantId, id], map: "outbox_events_tenant_id_id_key")
   @@index([status, availableAt, id], map: "outbox_events_dispatch_idx")
@@ -738,32 +827,32 @@ model OutboxEvent {
 }
 
 model NotificationJob {
-  id                     String                @id @default(uuid()) @db.Uuid
-  tenantId               String                @map("tenant_id") @db.Uuid
-  consumerUserId         String                @map("consumer_user_id") @db.Uuid
-  appointmentId          String                @map("appointment_id") @db.Uuid
-  sourceOutboxEventId    String                @map("source_outbox_event_id") @db.Uuid
-  channel                NotificationChannel
-  templateKey            String                @map("template_key") @db.VarChar(80)
-  dueAt                  DateTime              @map("due_at") @db.Timestamptz(6)
-  status                 NotificationJobStatus @default(PENDING)
-  dedupeKey              String                @unique @map("dedupe_key") @db.VarChar(255)
-  providerRetryKey       String                @unique @default(uuid()) @map("provider_retry_key") @db.Uuid
-  dispatchAttemptCount   Int                   @default(0) @map("dispatch_attempt_count")
-  deliveryAttemptCount   Int                   @default(0) @map("delivery_attempt_count")
-  dispatchLeaseUntil     DateTime?             @map("dispatch_lease_until") @db.Timestamptz(6)
-  deliveryLeaseUntil     DateTime?             @map("delivery_lease_until") @db.Timestamptz(6)
-  enqueuedAt             DateTime?             @map("enqueued_at") @db.Timestamptz(6)
-  acceptedAt             DateTime?             @map("accepted_at") @db.Timestamptz(6)
-  terminalCode           String?               @map("terminal_code") @db.VarChar(80)
-  budgetMonth            String?               @map("budget_month") @db.Char(7)
-  createdAt              DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant                 Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  consumer               User                  @relation("NotificationConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
-  appointment            Appointment           @relation(fields: [tenantId, consumerUserId, appointmentId], references: [tenantId, consumerUserId, id], onDelete: Restrict)
-  sourceOutboxEvent      OutboxEvent            @relation(fields: [tenantId, sourceOutboxEventId], references: [tenantId, id], onDelete: Restrict)
-  deliveries             NotificationDelivery[]
+  id                   String                 @id @default(uuid()) @db.Uuid
+  tenantId             String                 @map("tenant_id") @db.Uuid
+  consumerUserId       String                 @map("consumer_user_id") @db.Uuid
+  appointmentId        String                 @map("appointment_id") @db.Uuid
+  sourceOutboxEventId  String                 @map("source_outbox_event_id") @db.Uuid
+  channel              NotificationChannel
+  templateKey          String                 @map("template_key") @db.VarChar(80)
+  dueAt                DateTime               @map("due_at") @db.Timestamptz(6)
+  status               NotificationJobStatus  @default(PENDING)
+  dedupeKey            String                 @unique @map("dedupe_key") @db.VarChar(255)
+  providerRetryKey     String                 @unique @default(uuid()) @map("provider_retry_key") @db.Uuid
+  dispatchAttemptCount Int                    @default(0) @map("dispatch_attempt_count")
+  deliveryAttemptCount Int                    @default(0) @map("delivery_attempt_count")
+  dispatchLeaseUntil   DateTime?              @map("dispatch_lease_until") @db.Timestamptz(6)
+  deliveryLeaseUntil   DateTime?              @map("delivery_lease_until") @db.Timestamptz(6)
+  enqueuedAt           DateTime?              @map("enqueued_at") @db.Timestamptz(6)
+  acceptedAt           DateTime?              @map("accepted_at") @db.Timestamptz(6)
+  terminalCode         String?                @map("terminal_code") @db.VarChar(80)
+  budgetMonth          String?                @map("budget_month") @db.Char(7)
+  createdAt            DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant               Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer             User                   @relation("NotificationConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  appointment          Appointment            @relation(fields: [tenantId, consumerUserId, appointmentId], references: [tenantId, consumerUserId, id], onDelete: Restrict)
+  sourceOutboxEvent    OutboxEvent            @relation(fields: [tenantId, sourceOutboxEventId], references: [tenantId, id], onDelete: Restrict)
+  deliveries           NotificationDelivery[]
 
   @@index([status, dueAt, id], map: "notification_jobs_dispatch_idx")
   @@index([status, dispatchLeaseUntil, id], map: "notification_jobs_dispatch_lease_idx")
@@ -774,16 +863,16 @@ model NotificationJob {
 }
 
 model NotificationDelivery {
-  id                   String                      @id @default(uuid()) @db.Uuid
-  notificationJobId    String                      @map("notification_job_id") @db.Uuid
-  attemptNumber        Int                         @map("attempt_number")
-  outcome              NotificationDeliveryOutcome @default(STARTED)
-  providerHttpStatus   Int?                        @map("provider_http_status")
-  providerRequestId    String?                     @map("provider_request_id") @db.VarChar(128)
-  code                 String?                     @db.VarChar(80)
-  startedAt            DateTime                    @map("started_at") @db.Timestamptz(6)
-  finishedAt           DateTime?                   @map("finished_at") @db.Timestamptz(6)
-  notificationJob      NotificationJob             @relation(fields: [notificationJobId], references: [id], onDelete: Restrict)
+  id                 String                      @id @default(uuid()) @db.Uuid
+  notificationJobId  String                      @map("notification_job_id") @db.Uuid
+  attemptNumber      Int                         @map("attempt_number")
+  outcome            NotificationDeliveryOutcome @default(STARTED)
+  providerHttpStatus Int?                        @map("provider_http_status")
+  providerRequestId  String?                     @map("provider_request_id") @db.VarChar(128)
+  code               String?                     @db.VarChar(80)
+  startedAt          DateTime                    @map("started_at") @db.Timestamptz(6)
+  finishedAt         DateTime?                   @map("finished_at") @db.Timestamptz(6)
+  notificationJob    NotificationJob             @relation(fields: [notificationJobId], references: [id], onDelete: Restrict)
 
   @@unique([notificationJobId, attemptNumber], map: "notification_deliveries_job_attempt_key")
   @@index([outcome, startedAt, id], map: "notification_deliveries_outcome_started_idx")
@@ -791,14 +880,14 @@ model NotificationDelivery {
 }
 
 model LineMessagingRecipient {
-  providerSubject       String                       @id @map("provider_subject") @db.VarChar(33)
-  userId                String?                      @unique @map("user_id") @db.Uuid
-  status                LineMessagingRecipientStatus
-  observedAt            DateTime                     @map("observed_at") @db.Timestamptz(6)
+  providerSubject        String                       @id @map("provider_subject") @db.VarChar(33)
+  userId                 String?                      @unique @map("user_id") @db.Uuid
+  status                 LineMessagingRecipientStatus
+  observedAt             DateTime                     @map("observed_at") @db.Timestamptz(6)
   observedWebhookEventId String                       @map("observed_webhook_event_id") @db.VarChar(128)
-  createdAt             DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user                  User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt              DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                   User?                        @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([status, observedAt], map: "line_messaging_recipients_status_observed_idx")
   @@map("line_messaging_recipients")
@@ -821,12 +910,284 @@ model LineWebhookEvent {
 
 model NotificationProviderMonthlyUsage {
   provider      NotificationProvider
-  usageMonth   String               @map("usage_month") @db.Char(7)
-  reservedCount Int                 @default(0) @map("reserved_count")
-  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  usageMonth    String               @map("usage_month") @db.Char(7)
+  reservedCount Int                  @default(0) @map("reserved_count")
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@id([provider, usageMonth])
   @@map("notification_provider_monthly_usage")
+}
+
+model Customer {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  tenantId                String                  @map("tenant_id") @db.Uuid
+  consumerUserId          String                  @map("consumer_user_id") @db.Uuid
+  relationshipStartedAt   DateTime                @map("relationship_started_at") @db.Timestamptz(6)
+  firstVisitAt            DateTime?               @map("first_visit_at") @db.Timestamptz(6)
+  lastVisitAt             DateTime?               @map("last_visit_at") @db.Timestamptz(6)
+  completedVisitCount     Int                     @default(0) @map("completed_visit_count")
+  noShowCount             Int                     @default(0) @map("no_show_count")
+  projectionVersion       Int                     @default(1) @map("projection_version")
+  projectedThroughEventId String?                 @map("projected_through_event_id") @db.Uuid
+  projectedAt             DateTime?               @map("projected_at") @db.Timestamptz(6)
+  createdAt               DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer                User                    @relation("CustomerConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  projectionDeliveries    CrmProjectionDelivery[]
+  notes                   CustomerNote[]
+  tagLinks                CustomerTagLink[]
+
+  @@unique([tenantId, consumerUserId], map: "customers_tenant_consumer_key")
+  @@unique([tenantId, id], map: "customers_tenant_id_id_key")
+  @@index([tenantId, createdAt, relationshipStartedAt, id], map: "customers_tenant_cursor_idx")
+  @@map("customers")
+}
+
+model CrmProjectionDelivery {
+  id             String                      @id @default(uuid()) @db.Uuid
+  projector      String                      @db.VarChar(80)
+  outboxEventId  String                      @map("outbox_event_id") @db.Uuid
+  tenantId       String                      @map("tenant_id") @db.Uuid
+  consumerUserId String                      @map("consumer_user_id") @db.Uuid
+  appointmentId  String                      @map("appointment_id") @db.Uuid
+  customerId     String?                     @map("customer_id") @db.Uuid
+  status         CrmProjectionDeliveryStatus @default(PENDING)
+  claimToken     String?                     @map("claim_token") @db.Uuid
+  leaseExpiresAt DateTime?                   @map("lease_expires_at") @db.Timestamptz(6)
+  attemptCount   Int                         @default(0) @map("attempt_count")
+  nextAttemptAt  DateTime                    @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  outcome        CrmProjectionOutcome?
+  projectedAt    DateTime?                   @map("projected_at") @db.Timestamptz(6)
+  safeCode       String?                     @map("safe_code") @db.VarChar(80)
+  createdAt      DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant         Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer       User                        @relation("CrmProjectionConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  appointment    Appointment                 @relation(fields: [tenantId, consumerUserId, appointmentId], references: [tenantId, consumerUserId, id], onDelete: Restrict)
+  customer       Customer?                   @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  outboxEvent    OutboxEvent                 @relation(fields: [tenantId, outboxEventId], references: [tenantId, id], onDelete: Restrict)
+  blockedStream  CrmProjectionStream?        @relation("CrmBlockedDelivery")
+
+  @@unique([projector, outboxEventId], map: "crm_projection_deliveries_projector_event_key")
+  @@index([projector, status, nextAttemptAt, id], map: "crm_projection_deliveries_claim_idx")
+  @@index([tenantId, consumerUserId, status], map: "crm_projection_deliveries_stream_idx")
+  @@map("crm_projection_deliveries")
+}
+
+model CrmProjectionStream {
+  projector         String                    @db.VarChar(80)
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  consumerUserId    String                    @map("consumer_user_id") @db.Uuid
+  status            CrmProjectionStreamStatus @default(ACTIVE)
+  blockedDeliveryId String?                   @unique @map("blocked_delivery_id") @db.Uuid
+  safeCode          String?                   @map("safe_code") @db.VarChar(80)
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer          User                      @relation("CrmProjectionStreamConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  blockedDelivery   CrmProjectionDelivery?    @relation("CrmBlockedDelivery", fields: [blockedDeliveryId], references: [id], onDelete: Restrict)
+
+  @@id([projector, tenantId, consumerUserId])
+  @@index([projector, status, updatedAt], map: "crm_projection_streams_status_idx")
+  @@map("crm_projection_streams")
+}
+
+model CrmBackfillCheckpoint {
+  projector       String            @id @db.VarChar(80)
+  cursorCreatedAt DateTime?         @map("cursor_created_at") @db.Timestamptz(6)
+  cursorId        String?           @map("cursor_id") @db.Uuid
+  status          CrmBackfillStatus @default(PENDING)
+  safeCode        String?           @map("safe_code") @db.VarChar(80)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("crm_backfill_checkpoints")
+}
+
+model ConsentDocument {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  purpose            ConsentPurpose
+  version            String                 @db.VarChar(64)
+  locale             String                 @db.VarChar(16)
+  contentSha256      String                 @map("content_sha256") @db.Char(64)
+  contentText        String                 @map("content_text") @db.Text
+  status             ConsentDocumentStatus  @default(DRAFT)
+  documentGeneration BigInt                 @map("document_generation")
+  activeFrom         DateTime?              @map("active_from") @db.Timestamptz(6)
+  retiredAt          DateTime?              @map("retired_at") @db.Timestamptz(6)
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  events             ConsumerConsentEvent[]
+
+  @@unique([purpose, version], map: "consent_documents_purpose_version_key")
+  @@unique([documentGeneration], map: "consent_documents_generation_key")
+  @@map("consent_documents")
+}
+
+model ConsumerConsentStream {
+  tenantId        String                 @map("tenant_id") @db.Uuid
+  consumerUserId  String                 @map("consumer_user_id") @db.Uuid
+  purpose         ConsentPurpose
+  currentRevision Int                    @default(0) @map("current_revision")
+  currentEventId  String?                @unique @map("current_event_id") @db.Uuid
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer        User                   @relation("ConsentStreamConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  currentEvent    ConsumerConsentEvent?  @relation("ConsentCurrentEvent", fields: [currentEventId], references: [id], onDelete: Restrict)
+  events          ConsumerConsentEvent[] @relation("ConsentStreamEvents")
+
+  @@id([tenantId, consumerUserId, purpose])
+  @@map("consumer_consent_streams")
+}
+
+model ConsumerConsentCommand {
+  id                 String                @id @default(uuid()) @db.Uuid
+  tenantId           String                @map("tenant_id") @db.Uuid
+  consumerUserId     String                @map("consumer_user_id") @db.Uuid
+  purpose            ConsentPurpose
+  idempotencyKeyHash String                @map("idempotency_key_hash") @db.Char(64)
+  commandType        ConsentCommandType    @map("command_type")
+  requestFingerprint String                @map("request_fingerprint") @db.Char(64)
+  resultRevision     Int                   @map("result_revision")
+  outcome            ConsentCommandOutcome
+  requestId          String                @map("request_id") @db.VarChar(128)
+  createdAt          DateTime              @map("created_at") @db.Timestamptz(6)
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer           User                  @relation("ConsentCommandConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  event              ConsumerConsentEvent? @relation("ConsentCommandEvent")
+
+  @@unique([tenantId, consumerUserId, purpose, idempotencyKeyHash], map: "consumer_consent_commands_stream_key")
+  @@map("consumer_consent_commands")
+}
+
+model ConsumerConsentEvent {
+  id                        String                 @id @default(uuid()) @db.Uuid
+  tenantId                  String                 @map("tenant_id") @db.Uuid
+  consumerUserId            String                 @map("consumer_user_id") @db.Uuid
+  purpose                   ConsentPurpose
+  revision                  Int
+  eventType                 ConsentEventType       @map("event_type")
+  consentDocumentId         String                 @map("consent_document_id") @db.Uuid
+  source                    ConsentSource
+  actorUserId               String                 @map("actor_user_id") @db.Uuid
+  commandId                 String                 @unique @map("command_id") @db.Uuid
+  tenantDisplayNameSnapshot String?                @map("tenant_display_name_snapshot") @db.VarChar(120)
+  renderedEvidenceSchema    String?                @map("rendered_evidence_schema") @db.VarChar(64)
+  renderedEvidenceSha256    String?                @map("rendered_evidence_sha256") @db.Char(64)
+  occurredAt                DateTime               @map("occurred_at") @db.Timestamptz(6)
+  requestId                 String                 @map("request_id") @db.VarChar(128)
+  createdAt                 DateTime               @map("created_at") @db.Timestamptz(6)
+  tenant                    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  consumer                  User                   @relation("ConsentEventConsumer", fields: [consumerUserId], references: [id], onDelete: Restrict)
+  actor                     User                   @relation("ConsentEventActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  document                  ConsentDocument        @relation(fields: [consentDocumentId], references: [id], onDelete: Restrict)
+  command                   ConsumerConsentCommand @relation("ConsentCommandEvent", fields: [commandId], references: [id], onDelete: Restrict)
+  stream                    ConsumerConsentStream  @relation("ConsentStreamEvents", fields: [tenantId, consumerUserId, purpose], references: [tenantId, consumerUserId, purpose], onDelete: Restrict)
+  currentForStream          ConsumerConsentStream? @relation("ConsentCurrentEvent")
+
+  @@unique([tenantId, consumerUserId, purpose, revision], map: "consumer_consent_events_stream_revision_key")
+  @@index([tenantId, consumerUserId, purpose, occurredAt], map: "consumer_consent_events_current_idx")
+  @@map("consumer_consent_events")
+}
+
+model TenantCrmPrivacyVersion {
+  tenantId         String   @id @map("tenant_id") @db.Uuid
+  consentWatermark BigInt   @default(0) @map("consent_watermark")
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@map("tenant_crm_privacy_versions")
+}
+
+model CustomerNote {
+  id                      String     @id @default(uuid()) @db.Uuid
+  tenantId                String     @map("tenant_id") @db.Uuid
+  customerId              String     @map("customer_id") @db.Uuid
+  ciphertext              Bytes
+  nonce                   Bytes
+  authTag                 Bytes      @map("auth_tag")
+  wrappedDek              Bytes      @map("wrapped_dek")
+  kekResourceVersion      String     @map("kek_resource_version") @db.VarChar(512)
+  encryptionSchemaVersion Int        @default(1) @map("encryption_schema_version")
+  createdByMembershipId   String     @map("created_by_membership_id") @db.Uuid
+  createdAt               DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant                  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer                Customer   @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  createdBy               Membership @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id], map: "customer_notes_tenant_id_id_key")
+  @@index([tenantId, customerId, createdAt, id], map: "customer_notes_customer_idx")
+  @@map("customer_notes")
+}
+
+model CustomerTagDefinition {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @map("tenant_id") @db.Uuid
+  normalizedName String            @map("normalized_name") @db.VarChar(32)
+  displayName    String            @map("display_name") @db.VarChar(32)
+  status         CustomerTagStatus @default(ACTIVE)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  links          CustomerTagLink[]
+
+  @@unique([tenantId, id], map: "customer_tag_definitions_tenant_id_id_key")
+  @@unique([tenantId, normalizedName], map: "customer_tag_definitions_tenant_name_key")
+  @@map("customer_tag_definitions")
+}
+
+model CustomerTagLink {
+  tenantId              String                @map("tenant_id") @db.Uuid
+  customerId            String                @map("customer_id") @db.Uuid
+  tagId                 String                @map("tag_id") @db.Uuid
+  createdByMembershipId String                @map("created_by_membership_id") @db.Uuid
+  createdAt             DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  tenant                Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer              Customer              @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  tag                   CustomerTagDefinition @relation(fields: [tenantId, tagId], references: [tenantId, id], onDelete: Restrict)
+  createdBy             Membership            @relation(fields: [tenantId, createdByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, customerId, tagId])
+  @@index([tenantId, tagId], map: "customer_tag_links_tag_idx")
+  @@map("customer_tag_links")
+}
+
+model CustomerExportJob {
+  id                      String               @id @default(uuid()) @db.Uuid
+  tenantId                String               @map("tenant_id") @db.Uuid
+  requestedByMembershipId String               @map("requested_by_membership_id") @db.Uuid
+  status                  CustomerExportStatus @default(PENDING)
+  idempotencyKeyHash      String               @map("idempotency_key_hash") @db.Char(64)
+  requestFingerprint      String               @map("request_fingerprint") @db.Char(64)
+  formatVersion           String               @default("crm-export-v1") @map("format_version") @db.VarChar(32)
+  asOf                    DateTime?            @map("as_of") @db.Timestamptz(6)
+  consentWatermark        BigInt?              @map("consent_watermark")
+  documentGeneration      BigInt?              @map("document_generation")
+  attemptCount            Int                  @default(0) @map("attempt_count")
+  claimToken              String?              @map("claim_token") @db.Uuid
+  leaseExpiresAt          DateTime?            @map("lease_expires_at") @db.Timestamptz(6)
+  customerCount           Int?                 @map("customer_count")
+  noteCount               Int?                 @map("note_count")
+  tagLinkCount            Int?                 @map("tag_link_count")
+  uncompressedBytes       BigInt?              @map("uncompressed_bytes")
+  compressedBytes         BigInt?              @map("compressed_bytes")
+  objectKey               String?              @map("object_key") @db.VarChar(1024)
+  objectGeneration        BigInt?              @map("object_generation")
+  artifactSha256          String?              @map("artifact_sha256") @db.Char(64)
+  expiresAt               DateTime?            @map("expires_at") @db.Timestamptz(6)
+  readyAt                 DateTime?            @map("ready_at") @db.Timestamptz(6)
+  revokedAt               DateTime?            @map("revoked_at") @db.Timestamptz(6)
+  failedAt                DateTime?            @map("failed_at") @db.Timestamptz(6)
+  safeCode                String?              @map("safe_code") @db.VarChar(80)
+  createdAt               DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant                  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  requestedBy             Membership           @relation(fields: [tenantId, requestedByMembershipId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([tenantId, id], map: "customer_export_jobs_tenant_id_id_key")
+  @@unique([tenantId, requestedByMembershipId, idempotencyKeyHash], map: "customer_export_jobs_idempotency_key")
+  @@index([status, leaseExpiresAt, createdAt, id], map: "customer_export_jobs_claim_idx")
+  @@index([status, expiresAt, id], map: "customer_export_jobs_expiry_idx")
+  @@map("customer_export_jobs")
 }
 
 model BookingHoldRateAttempt {
@@ -952,17 +1313,21 @@ model PlanEntitlement {
 }
 
 model Membership {
-  id        String           @id @default(uuid()) @db.Uuid
-  tenantId  String           @map("tenant_id") @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  role      MembershipRole
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
-  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String              @id @default(uuid()) @db.Uuid
+  tenantId      String              @map("tenant_id") @db.Uuid
+  userId        String              @map("user_id") @db.Uuid
+  role          MembershipRole
+  status        MembershipStatus    @default(ACTIVE)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerNotes CustomerNote[]
+  customerTags  CustomerTagLink[]
+  exportJobs    CustomerExportJob[]
 
   @@unique([tenantId, userId], map: "memberships_tenant_user_key")
+  @@unique([tenantId, id], map: "memberships_tenant_id_id_key")
   @@index([tenantId, status], map: "memberships_tenant_status_idx")
   @@index([userId, status], map: "memberships_user_status_idx")
   @@map("memberships")
