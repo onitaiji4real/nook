@@ -8,6 +8,7 @@ import { useStudioSession } from './studio-session-provider';
 const links = [
   { href: '/studio', label: '總覽' },
   { href: '/studio/appointments', label: '預約' },
+  { href: '/studio/customers', label: '顧客' },
   { href: '/studio/policies', label: '預約規則' },
   { href: '/studio/onboarding', label: '商家資料' },
   { href: '/studio/services', label: '服務' },

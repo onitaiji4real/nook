@@ -13,11 +13,12 @@ const workspaces = [
     title: '預約行事曆',
     note: '今日節奏、顧客與服務人員',
   },
-  { href: '/studio/onboarding', step: '01', title: '商家資料', note: '名稱、據點與第一項服務' },
-  { href: '/studio/services', step: '02', title: '服務目錄', note: '價格、時間與上下架' },
-  { href: '/studio/staff', step: '03', title: '人員班表', note: '工作時間、休假與例外' },
-  { href: '/studio/portfolio', step: '04', title: '作品管理', note: '受控上傳、排序與發布狀態' },
-  { href: '/studio/publication', step: '05', title: '發布中心', note: '門檻檢查、公開與撤下' },
+  { href: '/studio/customers', step: '01', title: '顧客名冊', note: '履約關係、到訪與同意狀態' },
+  { href: '/studio/onboarding', step: '02', title: '商家資料', note: '名稱、據點與第一項服務' },
+  { href: '/studio/services', step: '03', title: '服務目錄', note: '價格、時間與上下架' },
+  { href: '/studio/staff', step: '04', title: '人員班表', note: '工作時間、休假與例外' },
+  { href: '/studio/portfolio', step: '05', title: '作品管理', note: '受控上傳、排序與發布狀態' },
+  { href: '/studio/publication', step: '06', title: '發布中心', note: '門檻檢查、公開與撤下' },
 ] as const;
 
 export function StudioHomePage() {
