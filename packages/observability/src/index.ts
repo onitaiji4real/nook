@@ -111,6 +111,8 @@ export interface SecurityEventLogInput {
     | 'portfolio.deleted'
     | 'portfolio.publication_status_changed'
     | 'merchant.publication_status_changed'
+    | 'crm.customer_list_read'
+    | 'crm.customer_detail_viewed'
     | 'media.verification_succeeded'
     | 'media.verification_rejected';
   readonly requestId: string;
