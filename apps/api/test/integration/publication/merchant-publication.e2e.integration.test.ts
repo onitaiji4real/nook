@@ -66,6 +66,10 @@ const config: RuntimeConfig = {
   notification: { mode: 'disabled' },
 };
 
+const fixedAvailabilityNow = new Date('2026-07-22T00:00:00.000Z');
+const dayMilliseconds = 24 * 60 * 60 * 1_000;
+let availabilityNow = fixedAvailabilityNow;
+
 describe('merchant publication API', () => {
   const prisma = getPrismaClient();
   const verifier = new TestIdentityVerifier();
@@ -84,7 +88,7 @@ describe('merchant publication API', () => {
       .overrideProvider(MARKETPLACE_MEDIA_SIGNER)
       .useValue(new TestMediaSigner())
       .overrideProvider(AVAILABILITY_CLOCK)
-      .useValue(() => new Date('2026-07-22T00:00:00.000Z'))
+      .useValue(() => new Date(availabilityNow))
       .compile();
     app = module.createNestApplication();
     app.use(requestContextMiddleware);
@@ -93,6 +97,7 @@ describe('merchant publication API', () => {
   });
 
   beforeEach(async () => {
+    availabilityNow = fixedAvailabilityNow;
     await prisma.appointmentTransitionKey.deleteMany();
     await prisma.appointmentConfirmationKey.deleteMany();
     await prisma.outboxEvent.deleteMany();
@@ -411,6 +416,7 @@ describe('merchant publication API', () => {
   });
 
   it('confirms an owned hold, reveals its snapshotted address, and replays without duplicate effects', async () => {
+    const lifecycleStartAt = prepareLifecycleWindow();
     await request(server)
       .put(`/v1/tenants/${tenantId}/publication`)
       .set('authorization', 'Bearer owner-token')
@@ -421,7 +427,7 @@ describe('merchant publication API', () => {
       .post('/v1/marketplace/merchants/public-api-studio/booking-holds')
       .set('authorization', 'Bearer owner-token')
       .set('idempotency-key', '31000000-0000-4000-8000-000000000001')
-      .send({ serviceId: service.id, startAt: '2026-07-29T08:00:00.000Z' })
+      .send({ serviceId: service.id, startAt: lifecycleStartAt.toISOString() })
       .expect(201);
     const hold = holdResponse.body as unknown as BookingHoldResponse;
     expect(hold.policies).toMatchObject({
@@ -513,7 +519,13 @@ describe('merchant publication API', () => {
       .set('authorization', 'Bearer viewer-token')
       .expect(404);
 
-    const calendarQuery = 'from=2026-07-29T00%3A00%3A00.000Z&to=2026-07-30T00%3A00%3A00.000Z';
+    const calendarFrom = new Date(lifecycleStartAt);
+    calendarFrom.setUTCHours(0, 0, 0, 0);
+    const calendarTo = new Date(calendarFrom.getTime() + dayMilliseconds);
+    const calendarQuery = new URLSearchParams({
+      from: calendarFrom.toISOString(),
+      to: calendarTo.toISOString(),
+    }).toString();
     const merchantListResponse = await request(server)
       .get(`/v1/tenants/${tenantId}/appointments?${calendarQuery}`)
       .set('authorization', 'Bearer viewer-token')
@@ -587,6 +599,7 @@ describe('merchant publication API', () => {
   });
 
   it('enforces merchant lifecycle authorization and replays a scoped cancellation', async () => {
+    const lifecycleStartAt = prepareLifecycleWindow();
     await request(server)
       .put(`/v1/tenants/${tenantId}/publication`)
       .set('authorization', 'Bearer owner-token')
@@ -597,7 +610,7 @@ describe('merchant publication API', () => {
       .post('/v1/marketplace/merchants/public-api-studio/booking-holds')
       .set('authorization', 'Bearer owner-token')
       .set('idempotency-key', '34000000-0000-4000-8000-000000000001')
-      .send({ serviceId: service.id, startAt: '2026-07-29T08:00:00.000Z' })
+      .send({ serviceId: service.id, startAt: lifecycleStartAt.toISOString() })
       .expect(201);
     const hold = holdResponse.body as unknown as BookingHoldResponse;
     const appointmentResponse = await request(server)
@@ -771,4 +784,15 @@ async function clearAppointmentAggregates(): Promise<void> {
   await prisma.bookingOccupancy.deleteMany({ where: { appointmentId: { not: null } } });
   await prisma.appointmentItem.deleteMany();
   await prisma.appointment.deleteMany();
+}
+
+function prepareLifecycleWindow(now = new Date()): Date {
+  const startAt = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 8, 8),
+  );
+  while (startAt.getUTCDay() !== 3) {
+    startAt.setUTCDate(startAt.getUTCDate() + 1);
+  }
+  availabilityNow = new Date(startAt.getTime() - 7 * dayMilliseconds);
+  return startAt;
 }
