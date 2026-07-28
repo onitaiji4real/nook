@@ -17,6 +17,7 @@ const baseConfig: Omit<RuntimeConfig, 'notification'> = {
   appointmentConfirmationEnabled: true,
   bookingPolicyV2WritesEnabled: true,
   appointmentLifecycleEnabled: true,
+  crmProjectionMode: 'disabled',
   lineAuthRateLimit: {
     globalLimit: 120,
     tokenLimit: 5,

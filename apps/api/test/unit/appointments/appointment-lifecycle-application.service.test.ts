@@ -146,6 +146,7 @@ function config(appointmentLifecycleEnabled: boolean): RuntimeConfig {
     appointmentConfirmationEnabled: true,
     bookingPolicyV2WritesEnabled: true,
     appointmentLifecycleEnabled,
+    crmProjectionMode: 'disabled',
     lineAuthRateLimit: {
       globalLimit: 120,
       tokenLimit: 5,

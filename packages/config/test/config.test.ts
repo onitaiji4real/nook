@@ -12,6 +12,7 @@ describe('parseRuntimeConfig', () => {
       appointmentConfirmationEnabled: true,
       bookingPolicyV2WritesEnabled: true,
       appointmentLifecycleEnabled: true,
+      crmProjectionMode: 'disabled',
       lineAuthRateLimit: {
         globalLimit: 120,
         tokenLimit: 5,
@@ -105,6 +106,25 @@ describe('parseRuntimeConfig', () => {
       bookingPolicyV2WritesEnabled: true,
       appointmentLifecycleEnabled: true,
     });
+  });
+
+  it('keeps CRM projection disabled by default and accepts explicit shadow or active mode', () => {
+    expect(
+      parseRuntimeConfig({ NODE_ENV: 'production' }, { defaultPort: 8081, service: 'worker' })
+        .crmProjectionMode,
+    ).toBe('disabled');
+    expect(
+      parseRuntimeConfig(
+        { NODE_ENV: 'staging', CRM_PROJECTION_MODE: 'shadow' },
+        { defaultPort: 8081, service: 'worker' },
+      ).crmProjectionMode,
+    ).toBe('shadow');
+    expect(
+      parseRuntimeConfig(
+        { NODE_ENV: 'production', CRM_PROJECTION_MODE: 'active' },
+        { defaultPort: 8081, service: 'worker' },
+      ).crmProjectionMode,
+    ).toBe('active');
   });
 
   it('requires a complete GCP media configuration and only accepts HTTPS worker URLs', () => {

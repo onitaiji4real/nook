@@ -15,6 +15,7 @@ describe('api HealthService', () => {
         appointmentConfirmationEnabled: true,
         bookingPolicyV2WritesEnabled: true,
         appointmentLifecycleEnabled: true,
+        crmProjectionMode: 'disabled',
         lineAuthRateLimit: {
           globalLimit: 120,
           tokenLimit: 5,
@@ -46,6 +47,7 @@ describe('api HealthService', () => {
         appointmentConfirmationEnabled: true,
         bookingPolicyV2WritesEnabled: true,
         appointmentLifecycleEnabled: true,
+        crmProjectionMode: 'disabled',
         lineAuthRateLimit: {
           globalLimit: 120,
           tokenLimit: 5,
