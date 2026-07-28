@@ -1,17 +1,20 @@
 # P4-001：Consumer CRM consent boundary
 
-狀態：`blocked`
+狀態：`in_progress`
 依賴：P3-005 repository/local acceptance
 
-## Specification blockers
+## Specification decisions
 
-開始migration或程式實作前，必須先在ADR、data dictionary與API contract中完成：
+規格阻塞已於2026-07-28完成fresh-reader三輪回歸並解除；implementation以以下文件為唯一contract：
 
-- 定義consent grant／withdraw／supersede狀態機、版本與同時事件的唯一順序，以及停止利用後各read/write/export路徑的明確行為。
-- 定義customer relationship何時建立、由哪個appointment event投影、取消／改期chain及projection replay/backfill的唯一演算法與checkpoint。
-- 定義contact來源、是否允許由LINE／預約資料建立、current truth與snapshot責任，以及欄位級加密、key version、rotation與provider disabled時的fail-closed行為。
-- 在選定同步或非同步export後，固定bounded size、artifact格式、TTL、撤銷、download authorization與retry/idempotency contract。
-- 在notes encryption完成前，不建立notes明文或暫存欄位；retention與cleanup在legal核准前維持feature-disabled。
+- [ADR 0015](../adr/0015-consumer-crm-consent-encryption-and-export.md)：operational relationship、purpose-specific consent、LINE-derived display label、KMS envelope、async export與production gates。
+- [Consumer CRM data dictionary](../data-dictionary/consumer-crm.md)：per-projector delivery/blocked stream、projection replay/backfill、consent command/event evidence、note/tag caps、export lease/CAS/bounds與exact CSV。
+- [Security contract](../security/consumer-crm.md)：OWNER/MANAGER matrix、current eligibility、secondary authentication、no-store、signed URL residual window與negative tests。
+- [Design](../design/consumer-crm-consent-export.md)：RWD list/detail、immutable cursor、withdraw-wins state machine、notes flow與REPEATABLE READ export lifecycle。
+- [Runbook](../runbooks/consumer-crm-data-lifecycle.md)：default-disabled modes、activation order、monitoring、incident與retention external gate。
+- [OpenAPI](../api/openapi.yaml)：customer、notes、tags、consumer consent及export HTTP contract。
+
+Notes、tags、grant與export在各自external gate核准前仍feature-disabled；consent read/withdraw不可被grant gate關閉。規格完成只允許開始expand migration/application implementation，不代表下列acceptance criteria或production activation已完成。
 
 ## Outcome
 

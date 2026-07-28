@@ -1606,3 +1606,19 @@
 - 完整integration在當日另外發現publication lifecycle fixture固定預約於2026-07-29，已進入24小時取消限制而正確得到409。測試改為執行日起至少八天後的下一個星期三，並只在兩個lifecycle案例對齊availability clock；沒有放寬產品取消規則。Focused publication 10/10、tenant 17/17及完整database 63/63、API 57/57均在各自fresh ephemeral database通過並自動刪除。
 - Workspace Prettier、architecture/workflow contracts、12-package lint、strict typecheck、unit tests與production build通過。三個production Docker image均build成功且runtime user為`65532:65532`；Trivy 0.70.0同CI條件掃描Web、API、worker的HIGH/CRITICAL皆為0。
 - 本checkpoint沒有push、deploy、Terraform apply、PR mutation、外部provider呼叫或更新`main`。修復維持在`phase1`；Phase 4 P4-001規格工作在CI恢復後再續。
+
+### Remote CI recovery evidence
+
+- 將六筆尚未上傳的小型architecture/test/CI commits推到`phase1`，沒有更新`main`。同一HEAD `56d71c01e23e91a409e493a045e94678fdc7b917`的GitHub Actions push run `30359481717`與PR run `30359483469`均完成且conclusion為success；verify、Terraform與Web/API/worker container gates全綠。
+- 遠端狀態只透過GitHub API讀取；本次不需下載credential-protected log。沒有輸出或寫入token，也沒有merge、deploy、Terraform apply或修改PR狀態。
+
+## 2026-07-28 — P4-001 Consumer CRM specification unblocked
+
+- P4-001先完成ADR 0015、Consumer CRM data dictionary、security/design、data lifecycle runbook與OpenAPI，固定CONFIRMED建立營運customer、COMPLETED/NO_SHOW current-truth統計、取消／改期不重複、unknown spend不推算，以及tenant OWNER/MANAGER專用CRM。
+- CRM不再與notification爭用shared outbox status；新增per-projector delivery、tenant+consumer blocked stream、六種exact appointment events、retry/terminal recovery及backfill cursor contract。Customer list依immutable relationship key分頁，另以`customers.createdAt<=asOf`排除首頁後才完成的projection。
+- Marketing使用tenant+consumer+purpose linear stream與獨立command idempotency ledger。Grant只限consumer、ACTIVE tenant/document及server-verified appointment relationship；withdraw在既有stream上永遠可用，concurrent時優先。HTTP replay不重做command，但每次重算current eligibility，避免撤回後重播過期`GRANTED`。
+- Grant evidence固定tenant display snapshot、`nook-consent-evidence-v1` canonical JSON bytes及SHA-256 test vector；新文案使舊grant SUPERSEDED。P4的停止利用只指marketing purpose withdrawal；廣義DSAR/operational restriction仍由P5-002且legal未核准。
+- Contact第一版不推測phone/email；營運display label明確沿用LINE-authenticated current name且不延伸subject/avatar。Notes採AES-256-GCM per-note DEK與Cloud KMS wrap、100筆上限及update CAS；KMS unavailable絕不降級明文。Tag定義/links各有100/50 caps且taxonomy核准前disabled。
+- Export固定非同步、近5分鐘reauth、REPEATABLE READ `asOf`、claim token/lease/CAS與三次attempt。Hard bounds為10,000 customers、50,000 notes、100,000 tag links、200 MiB uncompressed、50 MiB compressed、512 MiB temp disk及120秒；四個CSV headers/order/null/timestamp規則已固定。Consent watermark/document generation使withdraw/supersede後舊artifact不能再簽新URL；已簽URL明示最多60秒residual window。
+- Fresh-reader第一輪找出shared outbox競爭、consent缺路徑、export lease/容量/snapshot、權限與API/data model不一致；第二輪再找出no-op command ledger、blocked stream、projection-lag cursor與evidence canonicalization；最後一輪確認current-state replay修正後PASS。P4-001由`blocked`改`in_progress`，Phase 4改`in_progress`；implementation acceptance與三組external activation gates仍全部未完成。
+- 驗證：新文件與OpenAPI通過Prettier、YAML parse、所有local `$ref`存在、`git diff --check`；repository architecture/workflow/local development 26 tests及static gates通過。這是規格checkpoint，尚未建立migration/runtime code，也沒有GCP/KMS/storage apply或production activation。

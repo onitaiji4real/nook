@@ -1,7 +1,7 @@
 # Phase 4：留存、評論與探索
 
-狀態：`planning`
-最後更新：2026-07-27
+狀態：`in_progress`
+最後更新：2026-07-28
 來源：`docs/product/business-technical-plan.md` §6.6、§6.8、§11、Phase 4；`docs/product/product-delivery-roadmap.md`
 
 ## 目標
@@ -16,7 +16,7 @@
 4. `P4-004` Favorites and discovery return path：consumer私有收藏與cursor pagination。
 5. `P4-005` Platform moderation console：最小admin RBAC、理由與不可變audit。
 
-一次只把一個task設為`in_progress`。P4-001需先完成規格阻塞項，其餘依賴前一條資料與權限contract，維持blocked。
+一次只把一個task設為`in_progress`。P4-001規格阻塞已完成fresh-reader回歸，進入expand migration/application implementation；其餘依賴前一條資料與權限contract，維持blocked。
 
 ## 不可跨越的邊界
 

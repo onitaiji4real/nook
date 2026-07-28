@@ -1343,6 +1343,384 @@ paths:
                   expiredCount: { type: integer, minimum: 0, maximum: 100 }
         '403': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customers:
+    get:
+      operationId: listTenantCustomers
+      summary: List appointment-backed customers for an authorized tenant
+      description: OWNER or MANAGER only. Results are ordered by relationshipStartedAt DESC then id DESC. The cursor fixes database asOf and the last immutable sort key; the bounded response excludes contact details and note plaintext.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: cursor
+          in: query
+          schema: { type: string, minLength: 1, maxLength: 512 }
+      responses:
+        '200':
+          description: Tenant-scoped customer page
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerListResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customers/{customerId}:
+    get:
+      operationId: getTenantCustomer
+      summary: Read an authorized customer detail and encrypted notes
+      description: OWNER or MANAGER only. Unknown and cross-tenant identifiers return the same 404 contract.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Tenant-scoped detail
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerDetail' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customers/{customerId}/notes:
+    post:
+      operationId: createCustomerNote
+      summary: Encrypt and create one tenant-private customer note
+      description: OWNER or MANAGER only. Fails closed when the approved KMS provider is disabled or unavailable.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCustomerNoteRequest' }
+      responses:
+        '201':
+          description: Note encrypted and stored
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerNote' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customers/{customerId}/notes/{noteId}:
+    patch:
+      operationId: updateCustomerNote
+      summary: Replace one customer note with a newly encrypted envelope
+      description: OWNER or MANAGER only. expectedUpdatedAt is a compare-and-swap precondition; encryption never reuses the prior DEK or nonce.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/NoteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCustomerNoteRequest' }
+      responses:
+        '200':
+          description: Note replaced
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerNote' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: deleteCustomerNote
+      summary: Delete one encrypted customer note
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/NoteId'
+      responses:
+        '204': { description: Note deleted }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customer-tags:
+    get:
+      operationId: listCustomerTagDefinitions
+      summary: List the tenant's bounded non-sensitive tag definitions
+      description: OWNER or MANAGER only. Returns feature_disabled until the tag taxonomy is approved.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: At most one hundred definitions ordered by normalized name then id
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 100
+                items: { $ref: '#/components/schemas/CustomerTagDefinition' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: createCustomerTagDefinition
+      summary: Create one tenant-owned non-sensitive tag definition
+      description: OWNER only. Names are immutable after normalized creation.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCustomerTagDefinitionRequest' }
+      responses:
+        '201':
+          description: Tag definition created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerTagDefinition' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customer-tags/{tagId}/status:
+    put:
+      operationId: changeCustomerTagDefinitionStatus
+      summary: Activate or deactivate one immutable tag definition
+      description: OWNER only. Inactive definitions remain visible for historical links but cannot be newly attached.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/TagId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, INACTIVE] }
+      responses:
+        '200':
+          description: Current definition
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerTagDefinition' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customers/{customerId}/tags/{tagId}:
+    put:
+      operationId: attachCustomerTag
+      summary: Attach one owner-approved non-sensitive tag
+      description: OWNER or MANAGER only. Returns feature_disabled until the tenant taxonomy is approved.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '204': { description: Tag attached or already attached }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: detachCustomerTag
+      summary: Detach one customer tag
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/TagId'
+      responses:
+        '204': { description: Tag detached or already absent }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/marketing-consents/{tenantId}:
+    get:
+      operationId: getMyMarketingConsent
+      summary: Read the authenticated consumer's current tenant marketing consent
+      description: Exists only when a server-verified confirmed appointment relationship or an existing consent stream belongs to this consumer. It does not depend on customer projection completion.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Current purpose-specific consent and active document
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingConsentState' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    post:
+      operationId: grantMyMarketingConsent
+      summary: Explicitly grant the active marketing document as the authenticated consumer
+      description: Requires an ACTIVE tenant, an ACTIVE document, and a server-verified confirmed appointment relationship; customer projection lag is not an authorization failure.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/WriteIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantMarketingConsentRequest' }
+      responses:
+        '200':
+          description: Consent granted or exact idempotent result replayed
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingConsentState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: withdrawMyMarketingConsent
+      summary: Withdraw marketing consent without changing operational appointment data
+      description: Requires an existing consent stream, but remains available without an ACTIVE tenant/document/customer projection. A latest WITHDRAWN stream returns its current state without a new revision.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/WriteIdempotencyKey'
+        - name: expectedRevision
+          in: query
+          required: true
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Consent withdrawn or exact idempotent result replayed
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketingConsentState' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customer-exports:
+    post:
+      operationId: createCustomerExport
+      summary: Request a bounded asynchronous tenant CRM export
+      description: OWNER or MANAGER only, with verified auth_time no older than five minutes. The v1 request is always a full tenant snapshot and has no PII filters.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/WriteIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              maxProperties: 0
+      responses:
+        '202':
+          description: Export job accepted or exact idempotent job replayed
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerExportJob' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customer-exports/{exportJobId}:
+    get:
+      operationId: getCustomerExport
+      summary: Read a customer export job status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ExportJobId'
+      responses:
+        '200':
+          description: Authorized job status without object key or download URL
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerExportJob' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+    delete:
+      operationId: revokeCustomerExport
+      summary: Revoke an export before deleting its private artifact
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ExportJobId'
+      responses:
+        '204': { description: Export revoked or already terminal }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/tenants/{tenantId}/customer-exports/{exportJobId}/download:
+    post:
+      operationId: authorizeCustomerExportDownload
+      summary: Reauthorize and mint a short-lived single-purpose export download
+      description: Requires verified auth_time no older than five minutes plus current ACTIVE OWNER or MANAGER authorization. Revocation blocks new authorization immediately, but an already minted bearer URL has a documented residual lifetime of at most sixty seconds.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ExportJobId'
+      responses:
+        '200':
+          description: At most sixty-second private object download URL
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
+            Referrer-Policy: { schema: { type: string, const: no-referrer } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerExportDownload' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     bearerAuth:
@@ -1399,6 +1777,32 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    CustomerId:
+      name: customerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    NoteId:
+      name: noteId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExportJobId:
+      name: exportJobId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    WriteIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Visible ASCII, 16 to 128 characters. Stored only as SHA-256.
+      schema: { type: string, minLength: 16, maxLength: 128, pattern: '^[!-~]+$' }
   responses:
     Problem:
       description: RFC 9457 Problem Details with a stable Nook code
@@ -2783,6 +3187,218 @@ components:
           type: array
           items: { $ref: '#/components/schemas/MerchantAppointmentSummary' }
         nextCursor: { type: [string, 'null'], maxLength: 512 }
+    CustomerSummary:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          displayName,
+          relationshipStartedAt,
+          firstVisitAt,
+          lastVisitAt,
+          completedVisitCount,
+          noShowCount,
+          totalSpent,
+          spendStatus,
+          marketingState,
+          activeMarketingDocumentVersion,
+          tags,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        relationshipStartedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        firstVisitAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+        lastVisitAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+        completedVisitCount: { type: integer, minimum: 0 }
+        noShowCount: { type: integer, minimum: 0 }
+        totalSpent: { type: 'null' }
+        spendStatus: { type: string, const: UNKNOWN }
+        marketingState:
+          type: string
+          enum: [NOT_GRANTED, GRANTED, WITHDRAWN, SUPERSEDED]
+        activeMarketingDocumentVersion: { type: [string, 'null'], minLength: 1, maxLength: 64 }
+        tags:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/CustomerTag' }
+    CustomerListResponse:
+      type: object
+      additionalProperties: false
+      required: [asOf, items, nextCursor]
+      properties:
+        asOf: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        items:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/CustomerSummary' }
+        nextCursor: { type: [string, 'null'], maxLength: 512 }
+    CustomerTag:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 32 }
+    CustomerTagDefinition:
+      type: object
+      additionalProperties: false
+      required: [id, name, status]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 32 }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    CreateCustomerTagDefinitionRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 32 }
+    CustomerNote:
+      type: object
+      additionalProperties: false
+      required: [id, content, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        createdAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+        updatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+    CreateCustomerNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000, writeOnly: true }
+    UpdateCustomerNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [content, expectedUpdatedAt]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000, writeOnly: true }
+        expectedUpdatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+    CustomerDetail:
+      type: object
+      additionalProperties: false
+      required: [customer, contact, notes]
+      properties:
+        customer: { $ref: '#/components/schemas/CustomerSummary' }
+        contact:
+          type: object
+          additionalProperties: false
+          required: [phone, email, source]
+          properties:
+            phone: { type: [string, 'null'] }
+            email: { type: [string, 'null'], format: email }
+            source: { type: [string, 'null'], enum: [CONSUMER_VERIFIED, null] }
+        notes:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/CustomerNote' }
+    GrantMarketingConsentRequest:
+      type: object
+      additionalProperties: false
+      required: [purpose, consentDocumentId, expectedRevision]
+      properties:
+        purpose: { type: string, const: MARKETING_MESSAGES }
+        consentDocumentId: { type: string, format: uuid }
+        expectedRevision: { type: integer, minimum: 0 }
+    MarketingConsentState:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          tenantId,
+          tenantDisplayName,
+          purpose,
+          state,
+          eligible,
+          revision,
+          activeDocument,
+          grantedAt,
+          withdrawnAt,
+        ]
+      properties:
+        tenantId: { type: string, format: uuid }
+        tenantDisplayName: { type: string, minLength: 1, maxLength: 120 }
+        purpose: { type: string, const: MARKETING_MESSAGES }
+        state:
+          type: string
+          enum: [NOT_GRANTED, GRANTED, WITHDRAWN, SUPERSEDED]
+        eligible: { type: boolean }
+        revision: { type: integer, minimum: 0 }
+        activeDocument:
+          oneOf:
+            - $ref: '#/components/schemas/MarketingConsentDocument'
+            - { type: 'null' }
+        grantedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+        withdrawnAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+    MarketingConsentDocument:
+      type: object
+      additionalProperties: false
+      required: [id, purpose, version, locale, content]
+      properties:
+        id: { type: string, format: uuid }
+        purpose: { type: string, const: MARKETING_MESSAGES }
+        version: { type: string, minLength: 1, maxLength: 64 }
+        locale: { type: string, const: zh-TW }
+        content: { type: string, minLength: 1, maxLength: 10000 }
+    CustomerExportJob:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          id,
+          status,
+          formatVersion,
+          asOf,
+          customerCount,
+          noteCount,
+          tagLinkCount,
+          uncompressedBytes,
+          compressedBytes,
+          expiresAt,
+          safeCode,
+        ]
+      properties:
+        id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, READY, FAILED, EXPIRED, REVOKED]
+        formatVersion: { type: string, const: crm-export-v1 }
+        asOf:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+        customerCount: { type: [integer, 'null'], minimum: 0, maximum: 10000 }
+        noteCount: { type: [integer, 'null'], minimum: 0, maximum: 50000 }
+        tagLinkCount: { type: [integer, 'null'], minimum: 0, maximum: 100000 }
+        uncompressedBytes: { type: [integer, 'null'], minimum: 0, maximum: 209715200 }
+        compressedBytes: { type: [integer, 'null'], minimum: 0, maximum: 52428800 }
+        expiresAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
+            - { type: 'null' }
+        safeCode: { type: [string, 'null'], maxLength: 64 }
+    CustomerExportDownload:
+      type: object
+      additionalProperties: false
+      required: [url, expiresAt]
+      properties:
+        url: { type: string, format: uri }
+        expiresAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
     ProblemDetails:
       type: object
       required: [type, title, status, detail, instance, requestId, code]
