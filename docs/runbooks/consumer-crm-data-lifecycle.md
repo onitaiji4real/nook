@@ -2,7 +2,7 @@
 
 ## Safe defaults
 
-- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_MODE=disabled`為production預設。Consent state read與withdraw不受grant mode控制；migration一旦部署就必須保持可用。
+- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API的grant flag固定為`false`，核准前不得用console漂移覆寫。
 - Expand migration及fake KMS/storage tests可先部署；disabled不代表可以保存明文、建立ACTIVE consent document或產生artifact。
 - Repository、Terraform state/output、`.env.example`、log及worklog不得含KMS key URI、plaintext、wrapped key、object key或signed URL。
 

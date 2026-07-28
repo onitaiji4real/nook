@@ -198,6 +198,14 @@ run "runtime_uses_private_worker_and_immutable_images" {
   }
 
   assert {
+    condition = anytrue([
+      for item in google_cloud_run_v2_service.application["api"].template[0].containers[0].env :
+      item.name == "MARKETING_CONSENT_GRANT_ENABLED" && try(item.value, null) == "false"
+    ])
+    error_message = "Marketing consent grant must remain disabled until the legal activation gate is approved."
+  }
+
+  assert {
     condition     = alltrue([for image in values(var.container_images) : can(regex("@sha256:[0-9a-f]{64}$", image))])
     error_message = "All runtime images must be pinned by digest."
   }

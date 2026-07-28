@@ -1651,3 +1651,11 @@
 - Worker新增獨立feature module與`POST /internal/customer-projection/run`，每輪最多100 delivery及100 backfill cursor。`CRM_PROJECTION_MODE`固定`disabled | shadow | active`，config、`.env.example`及Terraform runtime預設皆為disabled；本slice不新增Scheduler或GCP service。這避免尚未抽樣驗證就產生production CRM read，也以batch而非per-customer task控制Cloud Run/DB成本。
 - 初次API/worker typecheck揭露新增required config需要同步既有synthetic RuntimeConfig fixtures，補齊後通過；Terraform init第一次因sandbox DNS無法連registry，取得network權限後使用lockfile provider完成validate及12/12 module tests。Focused projection integration在本機PostgreSQL通過；fresh ephemeral PostgreSQL從零套用20/20 migrations後完整database integration 13 files／73 tests全綠並刪除測試database。
 - External activation仍未核准：Terraform刻意無法在目前版本啟用deployed projection，需先完成shadow SQL truth抽樣、alert owner及後續reviewed IaC change。Consent、CRM read API與RWD尚未包含在本checkpoint。
+
+### P4-001 marketing consent repository/application checkpoint
+
+- Domain新增MARKETING_MESSAGES current-state推導、tenant display snapshot NFC/length boundary及八欄canonical evidence encoder，並以文件固定vector驗SHA-256。Appointment relationship只授權operational read；沒有stream的read/grant直接查server-owned appointment，不依賴customer projection完成。
+- Database新增consent stream transaction repository：row lock配置revision、same-key ledger current-safe replay、same-key不同fingerprint拒絕、ACTIVE document join即時產生SUPERSEDED、明確re-grant、withdraw no-op command、tenant watermark及safe audit。Grant與withdraw採bounded serializable retry；withdraw不受tenant inactive、ACTIVE document或grant flag阻擋。
+- API application service新增strict purpose/document/revision contract、consumer actor binding、idempotency/fingerprint hash與repository error mapping。`MARKETING_CONSENT_GRANT_ENABLED`預設false，Terraform把API固定false；read/withdraw不讀此flag。本checkpoint刻意不註冊HTTP controller，下一個slice完成authentication/no-store HTTP matrix後才暴露route。
+- 第一次focused integration因新domain尚未build而讀到舊dist，加上fixture的`confirmedAt`與`policiesAcceptedAt`各自取時造成既有policy constraint拒絕；先build dependency並共用同一database timestamp後，fresh PostgreSQL套用20/20 migrations且consent integration 6/6通過，沒有放寬production constraint。
+- 完整format、12-package lint/typecheck、19-task unit（domain 22、contracts 57、database 48、API 73、worker 23、web 57）、12-package build、architecture 26/static gates及Terraform validate/12 module runs通過。Fresh database完整integration為database 14 files／79 tests與API 7 files／57 tests，全數通過並刪除暫時database。

@@ -58,13 +58,14 @@ Notes、tags、grant與export在各自external gate核准前仍feature-disabled�
 - [x] Expand schema/migration、tenant composite constraints與fresh migration replay。
 - [x] `consumer_crm_v1` outbox delivery seeding、lease claim、stream lock、current-truth customer recompute及concurrent replay evidence。
 - [x] Projection backfill checkpoint、retry exhaustion、blocked-stream repair runbook command與worker wiring；deployed mode仍由IaC固定disabled。
-- [ ] Consent repository/application、tenant CRM RBAC、safe audit、notes/tags/export及RWD/API。
+- [x] Consent domain/repository/application、canonical evidence、revision/idempotency ledger、withdrawal safe audit及legal grant gate；HTTP route尚未接線。
+- [ ] Tenant CRM RBAC、notes/tags/export及RWD/API。
 
 ## Acceptance criteria
 
-- [ ] Schema與migration採expand-and-contract；`tenantId + consumerUserId`唯一，projection replay／concurrency不重複。
-- [ ] Operational relationship與marketing consent分離；grant／withdraw state machine、version/source與current truth明確。
-- [ ] COMPLETED／NO_SHOW統計、取消與改期chain有domain及database evidence，unknown spend不被推算。
+- [x] Schema與migration採expand-and-contract；`tenantId + consumerUserId`唯一，projection replay／concurrency不重複。
+- [x] Operational relationship與marketing consent分離；grant／withdraw state machine、version/source與current truth明確。
+- [x] COMPLETED／NO_SHOW統計、取消與改期chain有domain及database evidence，unknown spend不被推算。
 - [ ] OWNER／MANAGER、VIEWER／STAFF、consumer self-service與cross-tenant matrix有HTTP integration evidence。
 - [ ] Notes at-rest encryption與key/version envelope有ADR及fail-closed test；明文不得落DB/log。
 - [ ] Tag boundary拒絕敏感用途、控制字元、超長值與跨tenant links。
