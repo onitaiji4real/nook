@@ -41,6 +41,7 @@ const config: RuntimeConfig = {
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'active',
   crmTagsMode: 'active',
+  crmNotesMode: 'disabled',
   marketingConsentGrantEnabled: false,
   lineAuthRateLimit: { globalLimit: 120, tokenLimit: 5, windowSeconds: 60, bucketTtlSeconds: 600 },
   identity: { mode: 'disabled' },

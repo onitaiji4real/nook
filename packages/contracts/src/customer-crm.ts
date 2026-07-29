@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import type { CustomerNote } from './customer-notes';
+
 export const customerIdSchema = z
   .string()
   .uuid()
@@ -53,5 +55,5 @@ export interface CustomerDetail {
     readonly email: null;
     readonly source: null;
   };
-  readonly notes: readonly [];
+  readonly notes: readonly CustomerNote[];
 }

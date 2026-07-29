@@ -14,6 +14,7 @@ describe('parseRuntimeConfig', () => {
       appointmentLifecycleEnabled: true,
       crmProjectionMode: 'disabled',
       crmTagsMode: 'disabled',
+      crmNotesMode: 'disabled',
       marketingConsentGrantEnabled: false,
       lineAuthRateLimit: {
         globalLimit: 120,
@@ -150,6 +151,50 @@ describe('parseRuntimeConfig', () => {
       parseRuntimeConfig({ NODE_ENV: 'staging', CRM_TAGS_MODE: 'active' }, { defaultPort: 8080 })
         .crmTagsMode,
     ).toBe('active');
+  });
+
+  it('keeps encrypted customer notes disabled until the KMS activation gate is approved', () => {
+    expect(parseRuntimeConfig({ NODE_ENV: 'production' }, { defaultPort: 8080 }).crmNotesMode).toBe(
+      'disabled',
+    );
+    expect(() =>
+      parseRuntimeConfig({ NODE_ENV: 'test', CRM_NOTES_MODE: 'active' }, { defaultPort: 8080 }),
+    ).toThrow('CRM_NOTES_KMS_KEY_RESOURCE');
+    expect(
+      parseRuntimeConfig(
+        {
+          NODE_ENV: 'test',
+          CRM_NOTES_MODE: 'active',
+          CRM_NOTES_KMS_KEY_RESOURCE:
+            'projects/nook-dev/locations/asia-east1/keyRings/customer-notes/cryptoKeys/note-kek',
+        },
+        { defaultPort: 8080 },
+      ),
+    ).toMatchObject({
+      crmNotesMode: 'active',
+      crmNotesKmsKeyResource:
+        'projects/nook-dev/locations/asia-east1/keyRings/customer-notes/cryptoKeys/note-kek',
+    });
+    expect(() =>
+      parseRuntimeConfig(
+        {
+          CRM_NOTES_MODE: 'active',
+          CRM_NOTES_KMS_KEY_RESOURCE:
+            'projects/nook-dev/locations/global/keyRings/customer-notes/cryptoKeys/note-kek',
+        },
+        { defaultPort: 8080 },
+      ),
+    ).toThrow();
+    expect(() =>
+      parseRuntimeConfig(
+        {
+          CRM_NOTES_MODE: 'active',
+          CRM_NOTES_KMS_KEY_RESOURCE:
+            'projects/nook-dev/locations/asia-east1/keyRings/customer-notes/cryptoKeys/note-kek/cryptoKeyVersions/1',
+        },
+        { defaultPort: 8080 },
+      ),
+    ).toThrow();
   });
 
   it('requires a complete GCP media configuration and only accepts HTTPS worker URLs', () => {
@@ -380,7 +425,11 @@ describe('parseWebRuntimeConfig', () => {
     expect(parseWebRuntimeConfig({})).toEqual({
       nodeEnv: 'development',
       apiBaseUrl: 'http://localhost:8080',
-      capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+      capabilities: {
+        bookingPolicyV2Writes: true,
+        appointmentLifecycle: true,
+        customerNotes: false,
+      },
       auth: { mode: 'disabled' },
     });
   });
@@ -391,6 +440,7 @@ describe('parseWebRuntimeConfig', () => {
         NODE_ENV: 'production',
         WEB_AUTH_MODE: 'firebase-line',
         WEB_API_PUBLIC_BASE_URL: 'https://api.nook.example',
+        WEB_CRM_NOTES_WRITES_ENABLED: 'true',
         LINE_LIFF_ID: '1234567890-AbCdEfGh',
         LINE_MERCHANT_LIFF_ID: '1234567890-Merchant',
         FIREBASE_WEB_API_KEY: 'public-key',
@@ -402,7 +452,11 @@ describe('parseWebRuntimeConfig', () => {
     ).toEqual({
       nodeEnv: 'production',
       apiBaseUrl: 'https://api.nook.example',
-      capabilities: { bookingPolicyV2Writes: false, appointmentLifecycle: false },
+      capabilities: {
+        bookingPolicyV2Writes: false,
+        appointmentLifecycle: false,
+        customerNotes: true,
+      },
       auth: {
         mode: 'firebase-line',
         liffId: '1234567890-AbCdEfGh',

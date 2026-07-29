@@ -9,7 +9,11 @@ describe('buildBrowserRuntimeConfig', () => {
     expect(config).toEqual({
       mode: 'disabled',
       apiBaseUrl: 'http://localhost:8080',
-      capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+      capabilities: {
+        bookingPolicyV2Writes: true,
+        appointmentLifecycle: true,
+        customerNotes: false,
+      },
     });
     expect(JSON.stringify(config)).not.toContain('secret');
     expect(JSON.stringify(config)).not.toContain('serviceAccount');

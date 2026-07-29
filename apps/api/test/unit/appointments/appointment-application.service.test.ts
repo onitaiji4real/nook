@@ -124,6 +124,7 @@ function runtimeConfig(appointmentConfirmationEnabled = true): RuntimeConfig {
     appointmentLifecycleEnabled: true,
     crmProjectionMode: 'disabled',
     crmTagsMode: 'disabled',
+    crmNotesMode: 'disabled',
     marketingConsentGrantEnabled: false,
     lineAuthRateLimit: {
       globalLimit: 120,

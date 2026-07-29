@@ -23,6 +23,7 @@ const baseConfig: RuntimeConfig = {
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'disabled',
   crmTagsMode: 'active',
+  crmNotesMode: 'disabled',
   marketingConsentGrantEnabled: false,
   lineAuthRateLimit: {
     globalLimit: 120,
@@ -107,6 +108,7 @@ describe('CustomerTagsApplicationService', () => {
     const service = createService(repository, createTenants('OWNER'), {
       ...baseConfig,
       crmTagsMode: 'disabled',
+      crmNotesMode: 'disabled',
     });
 
     await expect(service.list(context())).rejects.toMatchObject({

@@ -9,6 +9,15 @@ const optionalEmail = z.preprocess(
   (value) => (typeof value === 'string' && value.trim().length === 0 ? undefined : value),
   z.string().trim().email().optional(),
 );
+const optionalCustomerNoteKmsKeyResource = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim().length === 0 ? undefined : value),
+  z
+    .string()
+    .regex(
+      /^projects\/[a-z][a-z0-9-]{4,28}[a-z0-9]\/locations\/asia-east1\/keyRings\/[A-Za-z0-9_-]{1,63}\/cryptoKeys\/[A-Za-z0-9_-]{1,63}$/,
+    )
+    .optional(),
+);
 
 export interface RuntimeConfigOptions {
   readonly defaultPort: number;
@@ -27,6 +36,8 @@ export interface RuntimeConfig {
   readonly appointmentLifecycleEnabled: boolean;
   readonly crmProjectionMode: 'disabled' | 'shadow' | 'active';
   readonly crmTagsMode: 'disabled' | 'active';
+  readonly crmNotesMode: 'disabled' | 'active';
+  readonly crmNotesKmsKeyResource?: string;
   readonly marketingConsentGrantEnabled: boolean;
   readonly lineAuthRateLimit: {
     readonly globalLimit: number;
@@ -80,6 +91,7 @@ export interface WebRuntimeConfig {
   readonly capabilities: {
     readonly bookingPolicyV2Writes: boolean;
     readonly appointmentLifecycle: boolean;
+    readonly customerNotes: boolean;
   };
   readonly auth:
     | { readonly mode: 'disabled' }
@@ -104,6 +116,7 @@ export function parseWebRuntimeConfig(environment: NodeJS.ProcessEnv): WebRuntim
     WEB_API_PUBLIC_BASE_URL: optionalNonEmptyString,
     WEB_BOOKING_POLICY_V2_WRITES_ENABLED: z.enum(['true', 'false']).optional(),
     WEB_APPOINTMENT_LIFECYCLE_ENABLED: z.enum(['true', 'false']).optional(),
+    WEB_CRM_NOTES_WRITES_ENABLED: z.enum(['true', 'false']).default('false'),
     LINE_LIFF_ID: optionalNonEmptyString,
     LINE_MERCHANT_LIFF_ID: optionalNonEmptyString,
     FIREBASE_WEB_API_KEY: optionalNonEmptyString,
@@ -160,6 +173,7 @@ export function parseWebRuntimeConfig(environment: NodeJS.ProcessEnv): WebRuntim
       parsed.WEB_APPOINTMENT_LIFECYCLE_ENABLED === undefined
         ? localCapabilities
         : parsed.WEB_APPOINTMENT_LIFECYCLE_ENABLED === 'true',
+    customerNotes: parsed.WEB_CRM_NOTES_WRITES_ENABLED === 'true',
   };
 
   return { nodeEnv: parsed.NODE_ENV, apiBaseUrl, capabilities, auth };
@@ -186,6 +200,8 @@ export function parseRuntimeConfig(
     APPOINTMENT_LIFECYCLE_ENABLED: z.enum(['true', 'false']).optional(),
     CRM_PROJECTION_MODE: z.enum(['disabled', 'shadow', 'active']).default('disabled'),
     CRM_TAGS_MODE: z.enum(['disabled', 'active']).default('disabled'),
+    CRM_NOTES_MODE: z.enum(['disabled', 'active']).default('disabled'),
+    CRM_NOTES_KMS_KEY_RESOURCE: optionalCustomerNoteKmsKeyResource,
     MARKETING_CONSENT_GRANT_ENABLED: z.enum(['true', 'false']).default('false'),
     AUTH_LINE_EXCHANGE_GLOBAL_LIMIT: z.coerce.number().int().positive().max(10_000).default(120),
     AUTH_LINE_EXCHANGE_TOKEN_LIMIT: z.coerce.number().int().positive().max(100).default(5),
@@ -266,6 +282,10 @@ export function parseRuntimeConfig(
         } as const);
 
   const notification = notificationConfig(parsed, options.service);
+  const crmNotesKmsKeyResource =
+    parsed.CRM_NOTES_MODE === 'active'
+      ? requireCrmNotesValue(parsed.CRM_NOTES_KMS_KEY_RESOURCE, 'CRM_NOTES_KMS_KEY_RESOURCE')
+      : undefined;
 
   return {
     nodeEnv: parsed.NODE_ENV,
@@ -278,6 +298,8 @@ export function parseRuntimeConfig(
     appointmentLifecycleEnabled,
     crmProjectionMode: parsed.CRM_PROJECTION_MODE,
     crmTagsMode: parsed.CRM_TAGS_MODE,
+    crmNotesMode: parsed.CRM_NOTES_MODE,
+    ...(crmNotesKmsKeyResource === undefined ? {} : { crmNotesKmsKeyResource }),
     marketingConsentGrantEnabled: parsed.MARKETING_CONSENT_GRANT_ENABLED === 'true',
     lineAuthRateLimit: {
       globalLimit: parsed.AUTH_LINE_EXCHANGE_GLOBAL_LIMIT,
@@ -289,6 +311,13 @@ export function parseRuntimeConfig(
     media,
     notification,
   };
+}
+
+function requireCrmNotesValue(value: string | undefined, name: string): string {
+  if (value === undefined) {
+    throw new Error(`${name} is required when CRM_NOTES_MODE=active.`);
+  }
+  return value;
 }
 
 function notificationConfig(

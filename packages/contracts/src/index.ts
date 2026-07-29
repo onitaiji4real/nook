@@ -211,6 +211,14 @@ export {
   type CreateCustomerTagDefinitionRequest,
   type CustomerTagDefinition,
 } from './customer-tags';
+export {
+  createCustomerNoteRequestSchema,
+  customerNoteIdSchema,
+  updateCustomerNoteRequestSchema,
+  type CreateCustomerNoteRequest,
+  type CustomerNote,
+  type UpdateCustomerNoteRequest,
+} from './customer-notes';
 
 export interface HealthResponseInput {
   readonly status: HealthStatus;

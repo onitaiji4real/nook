@@ -19,6 +19,7 @@ const baseConfig: Omit<RuntimeConfig, 'notification'> = {
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'disabled',
   crmTagsMode: 'disabled',
+  crmNotesMode: 'disabled',
   marketingConsentGrantEnabled: false,
   lineAuthRateLimit: {
     globalLimit: 120,

@@ -8,12 +8,20 @@ describe('browserRuntimeConfigResponseSchema', () => {
       browserRuntimeConfigResponseSchema.parse({
         mode: 'disabled',
         apiBaseUrl: 'http://localhost:8080',
-        capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+        capabilities: {
+          bookingPolicyV2Writes: true,
+          appointmentLifecycle: true,
+          customerNotes: false,
+        },
       }),
     ).toEqual({
       mode: 'disabled',
       apiBaseUrl: 'http://localhost:8080',
-      capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+      capabilities: {
+        bookingPolicyV2Writes: true,
+        appointmentLifecycle: true,
+        customerNotes: false,
+      },
     });
   });
 
@@ -22,7 +30,11 @@ describe('browserRuntimeConfigResponseSchema', () => {
       browserRuntimeConfigResponseSchema.parse({
         mode: 'disabled',
         apiBaseUrl: 'http://localhost:8080',
-        capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+        capabilities: {
+          bookingPolicyV2Writes: true,
+          appointmentLifecycle: true,
+          customerNotes: false,
+        },
         channelSecret: 'must-not-be-public',
       }),
     ).toThrow();
@@ -33,7 +45,11 @@ describe('browserRuntimeConfigResponseSchema', () => {
       browserRuntimeConfigResponseSchema.parse({
         mode: 'firebase-line',
         apiBaseUrl: 'https://api.example.com',
-        capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+        capabilities: {
+          bookingPolicyV2Writes: true,
+          appointmentLifecycle: true,
+          customerNotes: false,
+        },
         liffId: 'consumer-liff-id',
         merchantLiffId: 'merchant-liff-id',
         firebase: {
@@ -55,7 +71,11 @@ describe('browserRuntimeConfigResponseSchema', () => {
       browserRuntimeConfigResponseSchema.parse({
         mode: 'firebase-line',
         apiBaseUrl: 'https://api.example.com',
-        capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+        capabilities: {
+          bookingPolicyV2Writes: true,
+          appointmentLifecycle: true,
+          customerNotes: false,
+        },
         liffId: 'consumer-liff-id',
         firebase: {
           apiKey: 'public-api-key',

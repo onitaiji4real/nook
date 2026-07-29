@@ -79,7 +79,11 @@ const StudioSessionContext = createContext<StudioSessionContextValue | undefined
 
 const previewSessionValue: StudioSessionContextValue = {
   status: 'local-preview',
-  capabilities: { bookingPolicyV2Writes: true, appointmentLifecycle: true },
+  capabilities: {
+    bookingPolicyV2Writes: true,
+    appointmentLifecycle: true,
+    customerNotes: false,
+  },
   memberships: [],
   selectedMembership: null,
   lineEntryConfig: { status: 'disabled' },
@@ -356,6 +360,7 @@ export function StudioSessionProvider({ children }: { readonly children: ReactNo
       capabilities: runtimeConfig?.capabilities ?? {
         bookingPolicyV2Writes: false,
         appointmentLifecycle: false,
+        customerNotes: false,
       },
       memberships,
       selectedMembership,

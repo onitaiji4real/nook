@@ -148,6 +148,7 @@ function config(appointmentLifecycleEnabled: boolean): RuntimeConfig {
     appointmentLifecycleEnabled,
     crmProjectionMode: 'disabled',
     crmTagsMode: 'disabled',
+    crmNotesMode: 'disabled',
     marketingConsentGrantEnabled: false,
     lineAuthRateLimit: {
       globalLimit: 120,

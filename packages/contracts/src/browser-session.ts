@@ -14,6 +14,7 @@ const browserCapabilitiesSchema = z
   .object({
     bookingPolicyV2Writes: z.boolean(),
     appointmentLifecycle: z.boolean(),
+    customerNotes: z.boolean(),
   })
   .strict();
 
