@@ -135,7 +135,7 @@ Transition exact behavior：
 - `encryption_schema_version`：P4-001固定1。
 - `created_by_membership_id`、`created_at`、`updated_at`。
 
-AAD不另存自由文字，依固定欄位重建。Note plaintext 1..2000 Unicode code points，僅在authorized request記憶體存在；不得進audit、exception、task或metrics。每customer最多100 notes；create使用customer row lock計數，超限回409。Detail固定`created_at DESC,id DESC`回全部notes，不截斷。
+AAD不另存自由文字，UTF-8 bytes依固定JSON array `["nook-customer-note-aad-v1",environment,tenantId,customerId,noteId,1]`依序重建；array順序、schema literal與number `1`是cryptographic contract。Note plaintext 1..2000 Unicode code points，僅在authorized request記憶體存在；不得進audit、exception、task或metrics。每customer最多100 notes；create使用customer row lock計數，超限回409。Detail固定`created_at DESC,id DESC`回全部notes，不截斷。
 
 ## `customer_tag_definitions`與`customer_tag_links`
 

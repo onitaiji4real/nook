@@ -2,7 +2,7 @@
 
 ## Safe defaults
 
-- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API的grant flag與tag mode固定為disabled，核准前不得用console漂移覆寫。
+- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`WEB_CRM_NOTES_WRITES_ENABLED=false`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API notes/tag/grant及Web note-write capability固定為disabled，核准前不得用console漂移覆寫。
 - Consumer self-service固定為`GET|POST|DELETE /v1/me/marketing-consents/{tenantId}`；三種方法及authentication/problem response都必須回`Cache-Control: private, no-store`。POST是唯一受grant flag控制的方法，GET與DELETE不得因tenant/document停用或flag為false而被關閉。
 - Tenant CRM讀取固定為`GET /v1/tenants/{tenantId}/customers`與`GET /v1/tenants/{tenantId}/customers/{customerId}`；只允許ACTIVE OWNER／MANAGER，VIEWER／STAFF固定403，cross-tenant ID固定404，所有成功與錯誤response皆為`Cache-Control: private, no-store`。只有`CRM_PROJECTION_MODE=active`可讀；disabled／shadow固定503，不能把未驗證投影冒充current truth。
 - List使用database產生的immutable `asOf`與relationship key cursor；第一頁後新建立的customer不會插入同一個pagination snapshot。API不回phone/email/note內容，不推算spend。Tags只有`CRM_TAGS_MODE=active`且tenant plan的generic boolean `CUSTOMER_TAGS=true`才會出現在customer read；任一gate未開即固定空集合。Detail若發現既有encrypted note row但KMS read尚未啟用，固定503 fail closed並留下不含PII的safe audit，不能回空notes冒充成功解密。
@@ -24,11 +24,11 @@
 
 1. 套用expand migration；部署相容API/worker，所有mode仍disabled。
 2. 啟用projection shadow/backfill，對appointment SQL truth抽樣比對counts與first/last；確認無chain failure才切read。
-3. Security/platform owner建立regional Cloud KMS key與rotation schedule，以exact service account授權；測試disable/rotation/rewrap及alert。
+3. Security/platform owner在`asia-east1`建立regional Cloud KMS CryptoKey與rotation schedule，以API exact service account、exact CryptoKey scope授予`cloudkms.cryptoKeyVersions.useToEncrypt`／`cloudkms.cryptoKeyVersions.useToDecrypt`；Web、Cloud Tasks、Scheduler與CI不得取得權限。設定`CRM_NOTES_KMS_KEY_RESOURCE=projects/<project>/locations/asia-east1/keyRings/<ring>/cryptoKeys/<key>`，不得包含CryptoKeyVersion。先以synthetic note驗CRC32C、5秒timeout、disable、rotation、舊version decrypt、tamper與alert。
 4. 建立private export prefix、CMEK、15分鐘lifecycle defense、CORS/referrer限制與bounded cleanup；驗證signed URL沒有進log。
 5. Legal/product owner核准operational purpose、tenant identity render schema、`zh-TW` marketing document/version、retention與stop-use政策後，才建立ACTIVE consent document並啟用consumer grant。Withdrawal endpoint必須先部署且不可由grant feature flag關閉。
 6. Tag owner核准non-sensitive taxonomy及拒絕清單後才啟用tags；不能用「使用者自行負責」取代分類控制。
-7. 分別開notes/export staging；用合成PII完成authorization、expiry、revoke與incident drill後，才申請production activation。
+7. Notes staging先只把API設為`CRM_NOTES_MODE=active`並保持`WEB_CRM_NOTES_WRITES_ENABLED=false`，以API synthetic fixture確認DB無明文、exact key version、cross-tenant 404及KMS outage 503；證據通過後才打開Web capability。Export另行啟用並以合成PII完成authorization、expiry、revoke與incident drill後，才申請production activation。
 
 ## Monitoring
 

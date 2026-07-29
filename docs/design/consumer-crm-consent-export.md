@@ -37,7 +37,7 @@ SUPERSEDED -- consumer withdraw -------------> WITHDRAWN
 
 ## Notes flow
 
-Create/update application service先驗tenant role，產生note ID、DEK與nonce，以固定AAD加密並呼叫KMS wrap DEK；最後在短transaction內重新驗權限、鎖customer、檢查100 notes上限並寫cipher envelope及safe audit，避免在database lock期間呼叫外部KMS。任一步失敗都不寫row。Update要求`expectedUpdatedAt` CAS並使用全新DEK/nonce；衝突回409。Read先驗權限，固定`createdAt DESC,id DESC`最多且恰可回100筆，再unwrap/decrypt；invalid metadata或tag回安全503，不回部分內容。
+Create/update application service先驗tenant role，產生note ID、DEK與nonce，以固定AAD加密並呼叫KMS wrap DEK；最後在短transaction內重新驗權限、鎖customer、檢查100 notes上限並寫cipher envelope及safe audit，避免在database lock期間呼叫外部KMS。任一步失敗都不寫row。Update要求`expectedUpdatedAt` CAS並使用全新DEK/nonce；衝突回409。Read先驗權限，固定`createdAt DESC,id DESC`最多且恰可回100筆，再unwrap/decrypt；stored CryptoKeyVersion先驗證屬於configured CryptoKey，symmetric `DecryptRequest.name`仍傳CryptoKey並由KMS依ciphertext選擇version。Invalid metadata、CRC32C或GCM tag回安全503，不回部分內容。
 
 Update使用新的DEK/nonce/ciphertext並保留同note ID；不重用nonce。Delete移除envelope並寫safe audit。Task、outbox與audit永遠不承載plaintext。
 

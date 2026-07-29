@@ -62,7 +62,8 @@ Notes、tags、grant與export在各自external gate核准前仍feature-disabled�
 - [x] Consumer self-service consent GET／grant／withdraw HTTP route、authentication、cross-tenant non-disclosure、private no-store及current-safe replay integration evidence。
 - [x] Tenant CRM bounded list/detail read API、OWNER／MANAGER RBAC、VIEWER／STAFF denial、cross-tenant non-disclosure、safe detail audit及RWD local-preview UI。
 - [x] Tenant-owned non-sensitive tag definitions/links、OWNER／MANAGER mutation matrix、`CUSTOMER_TAGS` entitlement、`CRM_TAGS_MODE` production gate、safe audit及customer read雙gate曝光。
-- [ ] Notes/export write與artifact lifecycle；兩者維持disabled並各自等待external gate。Tags runtime已可供local/staging synthetic verification，但production仍由Terraform固定disabled。
+- [x] Notes envelope encryption、KMS adapter、tenant write/read API、safe audit、RWD與production feature gates；production仍等待security/platform external gate。
+- [ ] Export job write與artifact lifecycle；維持disabled並等待external gate。Tags runtime已可供local/staging synthetic verification，但production仍由Terraform固定disabled。
 
 ## Acceptance criteria
 
@@ -70,11 +71,13 @@ Notes、tags、grant與export在各自external gate核准前仍feature-disabled�
 - [x] Operational relationship與marketing consent分離；grant／withdraw state machine、version/source與current truth明確。
 - [x] COMPLETED／NO_SHOW統計、取消與改期chain有domain及database evidence，unknown spend不被推算。
 - [x] OWNER／MANAGER、VIEWER／STAFF及cross-tenant merchant CRM matrix有HTTP integration evidence；consumer self-service與cross-tenant consent matrix已完成。
-- [ ] Notes at-rest encryption與key/version envelope有ADR及fail-closed test；明文不得落DB/log。
+- [x] Notes at-rest encryption與key/version envelope有ADR及fail-closed test；明文不得落DB/log。
 - [x] Tag boundary拒絕敏感用途、控制／格式字元、超長值與跨tenant links；100 definitions／50 links上限、inactive及idempotency有database/HTTP evidence。
-- [ ] PII detail/export採獨立authorization、no-store、bounded／expiring contract與safe audit。
-- [ ] OpenAPI、data dictionary、security/design、runbook、worklog與task狀態完成。
-- [ ] Lint、strict typecheck、unit/integration/browser tests、fresh migration replay、build與architecture gates通過。
+- [x] PII detail與notes採獨立authorization、no-store、100筆上限與safe audit。
+- [ ] Export採獨立authorization、no-store、bounded／expiring artifact contract與safe audit。
+- [x] Notes相關OpenAPI、data dictionary、security/design、runbook、worklog與task checkpoint完成。
+- [ ] Export相關文件與P4-001最終task狀態完成。
+- [x] Notes checkpoint的lint、strict typecheck、unit/integration/browser tests、fresh migration replay、build與architecture gates通過。
 
 ## External activation gates
 

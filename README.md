@@ -4,7 +4,7 @@ LINE-first 的美業店務 SaaS 與新客媒合平台。產品與技術決策以
 
 ## 目前狀態
 
-Phase 1平台骨架仍等待外部GCP／LINE／deployment evidence；repository-local Phase 2供給功能已完成主要切片，並開始規劃Phase 3預約核心。範圍見[Phase 1實作計畫](docs/phase-1/implementation-plan.md)、[Phase 2實作計畫](docs/phase-2/implementation-plan.md)與[Phase 3實作計畫](docs/phase-3/implementation-plan.md)，可接手工作見[Codex垂直任務](docs/tasks/README.md)，進度見[工作報告](docs/worklog.md)。
+Phase 1平台骨架仍等待外部GCP／LINE／deployment evidence；repository-local Phase 2供給與Phase 3預約核心已完成主要切片，Phase 4 Consumer CRM正依external activation gates逐步實作。範圍見各Phase實作計畫，可接手工作見[Codex垂直任務](docs/tasks/README.md)，進度見[工作報告](docs/worklog.md)。
 
 ## Repository layout
 
@@ -63,6 +63,7 @@ pnpm dev
 - 作品集本機工作台：`http://localhost:3000/studio/portfolio`
 - 發布管理本機工作台：`http://localhost:3000/studio/publication`
 - 店家預約行事曆：`http://localhost:3000/studio/appointments`
+- 店家顧客名冊與加密備註預覽：`http://localhost:3000/studio/customers`
 - 預約政策工作台：`http://localhost:3000/studio/policies`
 - 顧客預約紀錄：`http://localhost:3000/appointments`
 - 公開商家頁合成預覽：`http://localhost:3000/preview/merchant`（LOCAL PREVIEW、noindex）

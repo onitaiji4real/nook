@@ -34,7 +34,7 @@ Tenant routes每次都重驗ACTIVE membership及role；consumer route只從verif
 
 - Note plaintext只在已授權application service記憶體中存在。每筆獨立DEK，AES-256-GCM，secure random 96-bit nonce；AAD exact canonical bytes綁定environment、tenant、customer、note及schema version。
 - Cloud KMS CryptoKey只授權API runtime所需最小encrypt/decrypt；worker若只做export，需獨立exact key permission並在activation plan證明。Web、Cloud Tasks、Scheduler及CI沒有decrypt權限。
-- Runtime只接受approved project/location/key allowlist的resource version。KMS timeout、disabled key、authentication failure、invalid tag或AAD mismatch回503/安全錯誤；不回cipher detail、不重試成明文。
+- Runtime config只接受`asia-east1` exact CryptoKey resource且不得指定version；encrypt response保存provider回傳的exact CryptoKeyVersion，unwrap先驗該version是configured CryptoKey的子資源，再以CryptoKey作`DecryptRequest.name`，由KMS依ciphertext選擇正確version。KMS request／response需通過CRC32C完整性驗證；timeout、disabled key、authentication failure、CRC mismatch、invalid tag或AAD mismatch回503/安全錯誤，不回cipher detail、不重試成明文。
 - Rotation先切current version，再bounded rewrap。舊version在引用歸零及owner核准前不得destroy。疑似洩漏立即disable notes/export、保全metadata、依runbook rotate與重包。
 
 ## Export controls

@@ -1394,7 +1394,7 @@ paths:
     post:
       operationId: createCustomerNote
       summary: Encrypt and create one tenant-private customer note
-      description: OWNER or MANAGER only. Fails closed when the approved KMS provider is disabled or unavailable.
+      description: OWNER or MANAGER only. Requires CRM_NOTES_MODE=active and an approved regional KMS CryptoKey; fails closed when the provider is disabled or unavailable.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1421,7 +1421,7 @@ paths:
     patch:
       operationId: updateCustomerNote
       summary: Replace one customer note with a newly encrypted envelope
-      description: OWNER or MANAGER only. expectedUpdatedAt is a compare-and-swap precondition; encryption never reuses the prior DEK or nonce.
+      description: OWNER or MANAGER only. Requires CRM_NOTES_MODE=active. expectedUpdatedAt is a compare-and-swap precondition; encryption never reuses the prior DEK or nonce.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1449,13 +1449,17 @@ paths:
     delete:
       operationId: deleteCustomerNote
       summary: Delete one encrypted customer note
+      description: OWNER or MANAGER only. Requires CRM_NOTES_MODE=active.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CustomerId'
         - $ref: '#/components/parameters/NoteId'
       responses:
-        '204': { description: Note deleted }
+        '204':
+          description: Note deleted
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
@@ -3290,13 +3294,23 @@ components:
       additionalProperties: false
       required: [content]
       properties:
-        content: { type: string, minLength: 1, maxLength: 2000, writeOnly: true }
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          writeOnly: true
+          description: 1 to 2000 Unicode code points; whitespace-only content is rejected.
     UpdateCustomerNoteRequest:
       type: object
       additionalProperties: false
       required: [content, expectedUpdatedAt]
       properties:
-        content: { type: string, minLength: 1, maxLength: 2000, writeOnly: true }
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          writeOnly: true
+          description: 1 to 2000 Unicode code points; whitespace-only content is rejected.
         expectedUpdatedAt: { $ref: '#/components/schemas/CanonicalUtcTimestamp' }
     CustomerDetail:
       type: object
