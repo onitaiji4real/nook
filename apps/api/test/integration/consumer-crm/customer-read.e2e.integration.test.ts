@@ -41,6 +41,7 @@ const config: RuntimeConfig = {
   bookingPolicyV2WritesEnabled: true,
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'active',
+  crmTagsMode: 'disabled',
   marketingConsentGrantEnabled: false,
   lineAuthRateLimit: { globalLimit: 120, tokenLimit: 5, windowSeconds: 60, bucketTtlSeconds: 600 },
   identity: { mode: 'disabled' },

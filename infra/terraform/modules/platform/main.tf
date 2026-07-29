@@ -520,6 +520,14 @@ resource "google_cloud_run_v2_service" "application" {
       dynamic "env" {
         for_each = each.key == "api" ? [1] : []
         content {
+          name  = "CRM_TAGS_MODE"
+          value = "disabled"
+        }
+      }
+
+      dynamic "env" {
+        for_each = each.key == "api" ? [1] : []
+        content {
           name  = "MARKETING_CONSENT_GRANT_ENABLED"
           value = "false"
         }

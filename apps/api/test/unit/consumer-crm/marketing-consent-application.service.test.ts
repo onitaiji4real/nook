@@ -24,6 +24,7 @@ const baseConfig: RuntimeConfig = {
   bookingPolicyV2WritesEnabled: true,
   appointmentLifecycleEnabled: true,
   crmProjectionMode: 'disabled',
+  crmTagsMode: 'disabled',
   marketingConsentGrantEnabled: false,
   lineAuthRateLimit: {
     globalLimit: 120,

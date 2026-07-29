@@ -13,6 +13,7 @@ describe('parseRuntimeConfig', () => {
       bookingPolicyV2WritesEnabled: true,
       appointmentLifecycleEnabled: true,
       crmProjectionMode: 'disabled',
+      crmTagsMode: 'disabled',
       marketingConsentGrantEnabled: false,
       lineAuthRateLimit: {
         globalLimit: 120,
@@ -139,6 +140,16 @@ describe('parseRuntimeConfig', () => {
         { defaultPort: 8080 },
       ).marketingConsentGrantEnabled,
     ).toBe(true);
+  });
+
+  it('keeps customer tags disabled until taxonomy approval and accepts explicit activation', () => {
+    expect(parseRuntimeConfig({ NODE_ENV: 'production' }, { defaultPort: 8080 }).crmTagsMode).toBe(
+      'disabled',
+    );
+    expect(
+      parseRuntimeConfig({ NODE_ENV: 'staging', CRM_TAGS_MODE: 'active' }, { defaultPort: 8080 })
+        .crmTagsMode,
+    ).toBe('active');
   });
 
   it('requires a complete GCP media configuration and only accepts HTTPS worker URLs', () => {
