@@ -131,6 +131,7 @@ describe('merchant customer CRM read API', () => {
             tenantId: tenant.id,
             consumerUserId: consumer.id,
             relationshipStartedAt,
+            createdAt: relationshipStartedAt,
             firstVisitAt: index === 0 ? relationshipStartedAt : null,
             lastVisitAt: index === 0 ? relationshipStartedAt : null,
             completedVisitCount: index === 0 ? 1 : 0,

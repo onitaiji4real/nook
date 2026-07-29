@@ -270,7 +270,10 @@ describe('merchant publication API', () => {
     const service = await prisma.service.findFirstOrThrow({ where: { tenantId } });
     const url = '/v1/marketplace/merchants/public-api-studio/booking-holds';
     const key = '30000000-0000-4000-8000-000000000001';
-    const body = { serviceId: service.id, startAt: '2026-07-29T08:00:00.000Z' };
+    const holdStartAt = prepareLifecycleWindow();
+    availabilityNow = new Date();
+    const holdDate = holdStartAt.toISOString().slice(0, 10);
+    const body = { serviceId: service.id, startAt: holdStartAt.toISOString() };
 
     await request(server).post(url).set('idempotency-key', key).send(body).expect(401);
     await request(server)
@@ -318,7 +321,7 @@ describe('merchant publication API', () => {
     const availabilityUrl = '/v1/marketplace/merchants/public-api-studio/availability';
     const heldAvailability = await request(server)
       .get(availabilityUrl)
-      .query({ serviceId: service.id, date: '2026-07-29' })
+      .query({ serviceId: service.id, date: holdDate })
       .expect(200);
     expect(
       (heldAvailability.body as unknown as PublicAvailabilityResponse).slots.some(
@@ -344,7 +347,10 @@ describe('merchant publication API', () => {
       .post(url)
       .set('authorization', 'Bearer owner-token')
       .set('idempotency-key', key)
-      .send({ ...body, startAt: '2026-07-22T09:00:00.000Z' })
+      .send({
+        ...body,
+        startAt: new Date(holdStartAt.getTime() + 60 * 60 * 1_000).toISOString(),
+      })
       .expect(409);
 
     const hidden = await request(server)
@@ -373,7 +379,7 @@ describe('merchant publication API', () => {
     });
     const releasedAvailability = await request(server)
       .get(availabilityUrl)
-      .query({ serviceId: service.id, date: '2026-07-29' })
+      .query({ serviceId: service.id, date: holdDate })
       .expect(200);
     expect(
       (releasedAvailability.body as unknown as PublicAvailabilityResponse).slots.some(
