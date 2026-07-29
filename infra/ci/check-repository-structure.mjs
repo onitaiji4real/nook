@@ -8,6 +8,7 @@ const expectedPackages = [
   'auth',
   'config',
   'contracts',
+  'crypto',
   'database',
   'domain',
   'line',

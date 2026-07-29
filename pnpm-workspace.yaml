@@ -16,6 +16,8 @@ allowBuilds:
   prisma: true
   protobufjs: true
   sharp: true
+  # fast-crc32c has a pure-JS fallback; do not compile its optional legacy native addon.
+  sse4_crc32: false
 
 overrides:
   '@types/superagent': 8.1.10
