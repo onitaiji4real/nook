@@ -1689,4 +1689,5 @@
 - External taxonomy owner尚未核准，既有plan也未映射成可售權益，所以production維持disabled且catalog仍為`coming_soon`。Notes/export、完整P4-001 browser acceptance與remote CI仍待後續checkpoint。
 - 完整workspace驗證已通過：Prettier、12-package lint、strict typecheck、19個unit test tasks、12-package production build、architecture/static 26 tests及`git diff --check`。Terraform recursive fmt、validate與12/12 module tests亦通過；沒有apply或修改遠端環境。
 - Fresh ephemeral PostgreSQL完整重放21/21 migrations並自動刪除；database integration 15 files／83 tests、API integration 10 files／69 tests全綠。期間修正三個只影響測試的時序假設：publication hold改用動態未來日期、notification dedupe明確設為已到期、customer cursor fixture把既有customer的`createdAt`固定為relationship time，避免macOS Node與Docker database毫秒級時鐘差把fixture誤判為快照後資料；production規則未放寬。
-- 本checkpoint沒有新增tag UI，既有customer RWD與production disabled狀態不變；完整P4-001 browser acceptance仍隨notes/export slice保留。Remote CI仍待本批小型commits推送後驗證。
+- 本checkpoint沒有新增tag UI，既有customer RWD與production disabled狀態不變；完整P4-001 browser acceptance仍隨notes/export slice保留。
+- 七筆小型commits已推送`phase1`，沒有更新`main`。同一code/docs HEAD `2db5ea6976a2ba9c0a24b8cfb9620efccddc8cee`的push run `30466470826`與draft PR run `30466473817`皆為success；verify、Terraform及Web/API/worker container image jobs全綠。公開API只讀檢查未使用credential；沒有merge、deploy、Terraform apply或production activation。
