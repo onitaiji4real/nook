@@ -1,9 +1,15 @@
 'use client';
 
-import type { CustomerDetail, CustomerListResponse, CustomerSummary } from '@nook/contracts';
+import type {
+  CustomerDetail,
+  CustomerListResponse,
+  CustomerNote,
+  CustomerSummary,
+} from '@nook/contracts';
 import Link from 'next/link';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 
+import { StudioApiError } from '../studio-session/studio-api-error';
 import { useStudioSession } from '../studio-session/studio-session-provider';
 import { previewCustomerDetail, previewCustomers } from './preview-customers';
 
@@ -15,7 +21,13 @@ const marketingLabels: Record<CustomerSummary['marketingState'], string> = {
 };
 
 export function CustomerCrmPage() {
-  const { request, retryAccount, selectedMembership: membership, status } = useStudioSession();
+  const {
+    capabilities,
+    request,
+    retryAccount,
+    selectedMembership: membership,
+    status,
+  } = useStudioSession();
   const preview = status === 'local-preview';
   const [items, setItems] = useState<readonly CustomerSummary[]>(previewCustomers);
   const [asOf, setAsOf] = useState<string | null>(null);
@@ -25,8 +37,16 @@ export function CustomerCrmPage() {
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const [noteDeleteCandidate, setNoteDeleteCandidate] = useState<string | null>(null);
+  const [noteError, setNoteError] = useState<string | null>(null);
+  const [noteNotice, setNoteNotice] = useState<string | null>(null);
 
   const canRead = preview || membership?.role === 'OWNER' || membership?.role === 'MANAGER';
+  const canWriteNotes = !preview && capabilities.customerNotes && canRead;
+  const noteLength = Array.from(noteDraft).length;
 
   const loadCustomers = useCallback(
     async (append = false, cursor?: string) => {
@@ -62,6 +82,7 @@ export function CustomerCrmPage() {
 
   useEffect(() => {
     setDetail(null);
+    resetNoteEditor();
     setError(null);
     setNextCursor(null);
     setAsOf(null);
@@ -80,6 +101,7 @@ export function CustomerCrmPage() {
 
   async function openDetail(customer: CustomerSummary): Promise<void> {
     if (!canRead || (!preview && membership === null)) return;
+    resetNoteEditor();
     setDetailLoading(true);
     setError(null);
     try {
@@ -97,6 +119,121 @@ export function CustomerCrmPage() {
       setError('顧客明細目前無法讀取；若加密筆記服務尚未啟用，系統會安全地拒絕顯示。');
     } finally {
       setDetailLoading(false);
+    }
+  }
+
+  function resetNoteEditor(): void {
+    setNoteDraft('');
+    setEditingNoteId(null);
+    setNoteBusy(false);
+    setNoteDeleteCandidate(null);
+    setNoteError(null);
+    setNoteNotice(null);
+  }
+
+  function closeDetail(): void {
+    setDetail(null);
+    resetNoteEditor();
+  }
+
+  function startEditing(note: CustomerNote): void {
+    setEditingNoteId(note.id);
+    setNoteDraft(note.content);
+    setNoteDeleteCandidate(null);
+    setNoteError(null);
+    setNoteNotice(null);
+  }
+
+  async function saveNote(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!canWriteNotes || membership === null || detail === null || noteBusy) return;
+    if (noteDraft.trim().length === 0 || noteLength > 2_000) {
+      setNoteError('備註需為 1–2,000 個字元，不能只包含空白。');
+      return;
+    }
+    const current = detail.notes.find(({ id }) => id === editingNoteId);
+    if (editingNoteId !== null && current === undefined) {
+      setNoteError('這筆備註已不在目前畫面，請重新開啟顧客明細。');
+      return;
+    }
+
+    setNoteBusy(true);
+    setNoteError(null);
+    setNoteNotice(null);
+    try {
+      const basePath = `/v1/tenants/${membership.tenantId}/customers/${detail.customer.id}/notes`;
+      const saved =
+        current === undefined
+          ? await request<CustomerNote>(basePath, {
+              method: 'POST',
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: noteDraft }),
+            })
+          : await request<CustomerNote>(`${basePath}/${current.id}`, {
+              method: 'PATCH',
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: noteDraft,
+                expectedUpdatedAt: current.updatedAt,
+              }),
+            });
+      setDetail((latest) =>
+        latest === null
+          ? latest
+          : {
+              ...latest,
+              notes:
+                current === undefined
+                  ? [saved, ...latest.notes]
+                  : latest.notes.map((note) => (note.id === saved.id ? saved : note)),
+            },
+      );
+      setNoteDraft('');
+      setEditingNoteId(null);
+      setNoteNotice(current === undefined ? '加密備註已建立。' : '加密備註已更新。');
+    } catch (caught) {
+      setNoteError(
+        caught instanceof StudioApiError && caught.code === 'customer_note_conflict'
+          ? '其他工作人員已更新這筆備註。請關閉明細後重新讀取，再決定是否覆寫。'
+          : '備註目前無法安全儲存；系統沒有降級成明文，請稍後重試。',
+      );
+    } finally {
+      setNoteBusy(false);
+    }
+  }
+
+  async function deleteNote(note: CustomerNote): Promise<void> {
+    if (!canWriteNotes || membership === null || detail === null || noteBusy) return;
+    if (noteDeleteCandidate !== note.id) {
+      setNoteDeleteCandidate(note.id);
+      setEditingNoteId(null);
+      setNoteDraft('');
+      setNoteError(null);
+      setNoteNotice('再按一次「確認刪除」才會移除這筆備註。');
+      return;
+    }
+
+    setNoteBusy(true);
+    setNoteError(null);
+    setNoteNotice(null);
+    try {
+      await request<void>(
+        `/v1/tenants/${membership.tenantId}/customers/${detail.customer.id}/notes/${note.id}`,
+        { method: 'DELETE', cache: 'no-store' },
+      );
+      setDetail((latest) =>
+        latest === null
+          ? latest
+          : { ...latest, notes: latest.notes.filter(({ id }) => id !== note.id) },
+      );
+      setNoteDeleteCandidate(null);
+      setNoteNotice('加密備註已刪除。');
+    } catch {
+      setNoteError('備註目前無法刪除；請重新讀取顧客明細後再試一次。');
+    } finally {
+      setNoteBusy(false);
     }
   }
 
@@ -290,7 +427,7 @@ export function CustomerCrmPage() {
                     <h2>{detail.customer.displayName}</h2>
                     <span>營運資料 · 非行銷名單</span>
                   </div>
-                  <button aria-label="關閉顧客明細" onClick={() => setDetail(null)} type="button">
+                  <button aria-label="關閉顧客明細" onClick={closeDetail} type="button">
                     ×
                   </button>
                 </header>
@@ -328,10 +465,136 @@ export function CustomerCrmPage() {
                   <h3>尚未收錄已驗證聯絡方式</h3>
                   <p>第一版不從 LINE subject、頭像或預約文字猜測電話與 Email。</p>
                 </section>
-                <section>
-                  <p className="studio-eyebrow">ENCRYPTED NOTES</p>
-                  <h3>加密筆記尚未啟用</h3>
-                  <p>取得 KMS 與安全核准前不接受明文筆記，也不會把空白畫面冒充已讀取。</p>
+                <section className="customer-note-panel">
+                  <div className="customer-note-heading">
+                    <div>
+                      <p className="studio-eyebrow">ENCRYPTED NOTES · PRIVATE</p>
+                      <h3>只留服務所需的內部脈絡</h3>
+                    </div>
+                    <span>{detail.notes.length}/100</span>
+                  </div>
+                  <p className="customer-note-safety">
+                    內容只在授權請求中解密；系統不會把備註寫進 log、公開頁或行銷名單。
+                  </p>
+
+                  {detail.notes.length === 0 ? (
+                    <div className="customer-note-empty">
+                      <strong>尚無加密備註</strong>
+                      <span>不以空白紀錄推測顧客偏好。</span>
+                    </div>
+                  ) : (
+                    <div className="customer-note-list">
+                      {detail.notes.map((note, index) => (
+                        <article className="customer-note-card" key={note.id}>
+                          <header>
+                            <span>NOTE {String(detail.notes.length - index).padStart(2, '0')}</span>
+                            <time dateTime={note.updatedAt}>{formatDateTime(note.updatedAt)}</time>
+                          </header>
+                          <p>{note.content}</p>
+                          {canWriteNotes ? (
+                            <footer>
+                              <button
+                                disabled={noteBusy}
+                                onClick={() => startEditing(note)}
+                                type="button"
+                              >
+                                編輯
+                              </button>
+                              <button
+                                className={
+                                  noteDeleteCandidate === note.id
+                                    ? 'customer-note-delete-confirm'
+                                    : undefined
+                                }
+                                disabled={noteBusy}
+                                onClick={() => void deleteNote(note)}
+                                type="button"
+                              >
+                                {noteDeleteCandidate === note.id ? '確認刪除' : '刪除'}
+                              </button>
+                            </footer>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  )}
+
+                  {preview ? (
+                    <div className="customer-note-gate">
+                      LOCAL PREVIEW 不接受備註輸入，也不會製造合成的敏感內容。
+                    </div>
+                  ) : !capabilities.customerNotes ? (
+                    <div className="customer-note-gate">
+                      此環境仍等待 KMS、IAM、輪替與事件負責人核准；讀寫入口保持關閉。
+                    </div>
+                  ) : (
+                    <form className="customer-note-form" onSubmit={(event) => void saveNote(event)}>
+                      <label htmlFor="customer-note-content">
+                        {editingNoteId === null ? '新增服務備註' : '編輯服務備註'}
+                      </label>
+                      <textarea
+                        aria-describedby="customer-note-counter customer-note-help"
+                        disabled={noteBusy}
+                        id="customer-note-content"
+                        onChange={(event) => setNoteDraft(event.target.value)}
+                        placeholder="只記錄下次服務真正需要知道的內容…"
+                        rows={5}
+                        value={noteDraft}
+                      />
+                      <div className="customer-note-form-meta">
+                        <small id="customer-note-help">
+                          請勿填寫醫療診斷、證件號碼或行銷推論。
+                        </small>
+                        <span
+                          className={noteLength > 2_000 ? 'customer-note-counter-over' : undefined}
+                          id="customer-note-counter"
+                        >
+                          {noteLength}/2,000
+                        </span>
+                      </div>
+                      <div className="customer-note-actions">
+                        {editingNoteId === null ? null : (
+                          <button
+                            disabled={noteBusy}
+                            onClick={() => {
+                              setEditingNoteId(null);
+                              setNoteDraft('');
+                              setNoteError(null);
+                            }}
+                            type="button"
+                          >
+                            取消編輯
+                          </button>
+                        )}
+                        <button
+                          disabled={
+                            noteBusy ||
+                            noteDraft.trim().length === 0 ||
+                            noteLength > 2_000 ||
+                            (editingNoteId === null && detail.notes.length >= 100)
+                          }
+                          type="submit"
+                        >
+                          {noteBusy
+                            ? '正在安全處理…'
+                            : editingNoteId === null
+                              ? '建立加密備註'
+                              : '儲存新版本'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {noteError === null ? null : (
+                    <p className="customer-note-message customer-note-message-error" role="alert">
+                      {noteError}
+                    </p>
+                  )}
+                  {noteNotice === null ? null : (
+                    <p className="customer-note-message" role="status">
+                      {noteNotice}
+                    </p>
+                  )}
                 </section>
               </>
             )}

@@ -5403,6 +5403,218 @@ summary {
   line-height: 1.65;
 }
 
+.customer-crm-detail > section.customer-note-panel:last-child {
+  padding: 0;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.customer-note-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(242, 238, 229, 0.28);
+}
+
+.customer-note-heading .studio-eyebrow {
+  color: var(--acid);
+}
+
+.customer-note-heading > span {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgba(242, 238, 229, 0.45);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 0.8rem;
+}
+
+.customer-note-safety {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(242, 238, 229, 0.18);
+  color: rgba(242, 238, 229, 0.7);
+  font-size: 0.68rem;
+  line-height: 1.7;
+}
+
+.customer-note-empty,
+.customer-note-gate {
+  display: grid;
+  gap: 0.3rem;
+  margin: 1.25rem;
+  padding: 1rem;
+  border: 1px dashed rgba(242, 238, 229, 0.42);
+  color: rgba(242, 238, 229, 0.68);
+  font-size: 0.68rem;
+  line-height: 1.65;
+}
+
+.customer-note-empty strong {
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 500;
+}
+
+.customer-note-list {
+  display: grid;
+  border-bottom: 1px solid rgba(242, 238, 229, 0.28);
+}
+
+.customer-note-card {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.customer-note-card + .customer-note-card {
+  border-top: 1px solid var(--ink);
+}
+
+.customer-note-card > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.customer-note-card > p {
+  margin: 0;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.customer-note-card > footer {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+}
+
+.customer-note-card > footer button,
+.customer-note-actions button {
+  min-height: 2.6rem;
+  padding: 0.55rem 0.9rem;
+  border: 0;
+  border-left: 1px solid var(--ink);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.customer-note-card > footer .customer-note-delete-confirm {
+  background: var(--signal);
+  color: var(--paper);
+}
+
+.customer-note-form {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.25rem;
+  padding: 1rem;
+  background: var(--acid);
+  color: var(--ink);
+}
+
+.customer-note-form > label {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.customer-note-form textarea {
+  width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+  padding: 0.85rem;
+  border: 1px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+  line-height: 1.65;
+}
+
+.customer-note-form textarea:focus-visible {
+  outline: 3px solid var(--signal);
+  outline-offset: -4px;
+}
+
+.customer-note-form-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.58rem;
+  line-height: 1.5;
+}
+
+.customer-note-form-meta small {
+  max-width: 25rem;
+}
+
+.customer-note-form-meta span {
+  flex: 0 0 auto;
+  font-weight: 900;
+}
+
+.customer-note-counter-over {
+  color: #a32117;
+}
+
+.customer-note-actions {
+  display: flex;
+  justify-content: flex-end;
+  border: 1px solid var(--ink);
+}
+
+.customer-note-actions button {
+  border-left: 0;
+}
+
+.customer-note-actions button + button {
+  border-left: 1px solid var(--ink);
+}
+
+.customer-note-actions button:last-child {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.customer-note-card button:disabled,
+.customer-note-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.customer-note-message {
+  margin: 0 1.25rem 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(242, 238, 229, 0.45);
+  color: var(--paper);
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+
+.customer-note-message-error {
+  border-color: var(--signal);
+  color: #ffc7b8;
+}
+
 .customer-crm-gate {
   display: flex;
   flex-direction: column;
@@ -5531,6 +5743,25 @@ summary {
 
   .customer-crm-detail dl > div {
     grid-template-columns: 6rem minmax(0, 1fr);
+  }
+
+  .customer-note-heading,
+  .customer-note-safety {
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .customer-note-empty,
+  .customer-note-gate,
+  .customer-note-form,
+  .customer-note-message {
+    margin-right: 1rem;
+    margin-left: 1rem;
+  }
+
+  .customer-note-form-meta {
+    display: grid;
+    gap: 0.35rem;
   }
 }
 
