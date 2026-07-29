@@ -68,9 +68,10 @@ export class CustomerReadApplicationService {
       }),
     );
     this.log('crm.customer_list_read', input, 'success');
+    const includeTags = this.config.crmTagsMode === 'active' && page.tagsEntitled;
     return {
       asOf: page.asOf.toISOString(),
-      items: page.items.map(toSummary),
+      items: page.items.map((record) => toSummary(record, includeTags)),
       nextCursor:
         page.next === null
           ? null
@@ -110,7 +111,10 @@ export class CustomerReadApplicationService {
     }
     this.log('crm.customer_detail_viewed', input, 'success');
     return {
-      customer: toSummary(result.customer),
+      customer: toSummary(
+        result.customer,
+        this.config.crmTagsMode === 'active' && result.tagsEntitled,
+      ),
       contact: { phone: null, email: null, source: null },
       notes: [],
     };
@@ -198,7 +202,7 @@ export class CustomerReadApplicationService {
   }
 }
 
-function toSummary(record: CustomerReadRecord): CustomerSummary {
+function toSummary(record: CustomerReadRecord, includeTags: boolean): CustomerSummary {
   return {
     id: record.id,
     displayName: record.displayName,
@@ -211,7 +215,7 @@ function toSummary(record: CustomerReadRecord): CustomerSummary {
     spendStatus: 'UNKNOWN',
     marketingState: record.marketingState,
     activeMarketingDocumentVersion: record.activeMarketingDocumentVersion,
-    tags: [],
+    tags: includeTags ? record.tags : [],
   };
 }
 

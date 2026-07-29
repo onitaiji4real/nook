@@ -113,6 +113,11 @@ export interface SecurityEventLogInput {
     | 'merchant.publication_status_changed'
     | 'crm.customer_list_read'
     | 'crm.customer_detail_viewed'
+    | 'crm.customer_tags_listed'
+    | 'crm.customer_tag_definition_created'
+    | 'crm.customer_tag_definition_status_changed'
+    | 'crm.customer_tag_attached'
+    | 'crm.customer_tag_detached'
     | 'media.verification_succeeded'
     | 'media.verification_rejected';
   readonly requestId: string;

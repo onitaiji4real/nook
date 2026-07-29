@@ -94,6 +94,7 @@ describe('API modular architecture', () => {
       'modules/appointments/appointment-view.controller.ts',
       'modules/appointments/appointment-lifecycle.controller.ts',
       'modules/consumer-crm/read/customer-read.controller.ts',
+      'modules/consumer-crm/tags/customer-tags.controller.ts',
     ]) {
       const controller = readFileSync(resolve(process.cwd(), `src/${filename}`), 'utf8');
       expect(controller).not.toContain('@prisma/client');
