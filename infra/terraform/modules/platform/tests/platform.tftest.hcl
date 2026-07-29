@@ -208,6 +208,22 @@ run "runtime_uses_private_worker_and_immutable_images" {
   assert {
     condition = anytrue([
       for item in google_cloud_run_v2_service.application["api"].template[0].containers[0].env :
+      item.name == "CRM_NOTES_MODE" && try(item.value, null) == "disabled"
+    ])
+    error_message = "Customer notes must remain disabled until the KMS activation gate is approved."
+  }
+
+  assert {
+    condition = anytrue([
+      for item in google_cloud_run_v2_service.application["web"].template[0].containers[0].env :
+      item.name == "WEB_CRM_NOTES_WRITES_ENABLED" && try(item.value, null) == "false"
+    ])
+    error_message = "Customer note browser writes must remain disabled until the KMS activation gate is approved."
+  }
+
+  assert {
+    condition = anytrue([
+      for item in google_cloud_run_v2_service.application["api"].template[0].containers[0].env :
       item.name == "MARKETING_CONSENT_GRANT_ENABLED" && try(item.value, null) == "false"
     ])
     error_message = "Marketing consent grant must remain disabled until the legal activation gate is approved."
