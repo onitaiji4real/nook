@@ -139,15 +139,24 @@ describe('notification repositories', () => {
 
   it('revalidates an existing dedupe row before publishing a duplicate event', async () => {
     const fixture = await createFixture('dedupe-shape', 0);
-    const first = await createOutboxEvent(fixture, 'appointment.confirmed.v1', {
-      appointmentId: fixture.appointmentId,
-      tenantId: fixture.tenantId,
-    });
+    const firstAvailableAt = new Date(Date.now() - 60_000);
+    const first = await createOutboxEvent(
+      fixture,
+      'appointment.confirmed.v1',
+      {
+        appointmentId: fixture.appointmentId,
+        tenantId: fixture.tenantId,
+      },
+      { availableAt: firstAvailableAt },
+    );
     const second = await createOutboxEvent(
       fixture,
       'appointment.confirmed.v1',
       { appointmentId: fixture.appointmentId, tenantId: fixture.tenantId },
-      { createdAt: new Date(first.createdAt.getTime() + 1_000) },
+      {
+        createdAt: new Date(first.createdAt.getTime() + 1_000),
+        availableAt: new Date(firstAvailableAt.getTime() + 1),
+      },
     );
     await expect(projection.projectNext()).resolves.toMatchObject({
       kind: 'projected',
