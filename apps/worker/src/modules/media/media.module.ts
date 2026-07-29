@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { getPrismaClient, PrismaPortfolioMediaRepository } from '@nook/database';
 import type { RuntimeConfig } from '@nook/config';
 
-import { runtimeConfig } from '../../runtime-config';
 import { RUNTIME_CONFIG } from '../../runtime-config.token';
 import { GcsMediaObjectStore, UnavailableMediaObjectStore } from './media-object-store';
 import { MediaVerificationController } from './media-verification.controller';
@@ -13,7 +12,6 @@ import { MEDIA_OBJECT_STORE, PORTFOLIO_MEDIA_REPOSITORY } from './media.tokens';
   controllers: [MediaVerificationController],
   providers: [
     MediaVerificationService,
-    { provide: RUNTIME_CONFIG, useValue: runtimeConfig },
     {
       provide: PORTFOLIO_MEDIA_REPOSITORY,
       useFactory: () => new PrismaPortfolioMediaRepository(getPrismaClient()),
