@@ -22,6 +22,7 @@ import { createSecurityEventLog, redactValue } from '@nook/observability';
 import { RUNTIME_CONFIG } from '../../../platform/config/runtime-config.token';
 import { ApplicationError } from '../../../platform/http/application-error';
 import { TENANT_REPOSITORY } from '../../../platform/identity/tenant-repository.token';
+import { CustomerNotesApplicationService } from '../notes/customer-notes-application.service';
 import { CUSTOMER_READ_REPOSITORY } from './customer-read.tokens';
 
 interface RequestContext {
@@ -44,6 +45,8 @@ export class CustomerReadApplicationService {
     private readonly customers: CustomerReadRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository,
     @Inject(RUNTIME_CONFIG) private readonly config: RuntimeConfig,
+    @Inject(CustomerNotesApplicationService)
+    private readonly notes: CustomerNotesApplicationService,
   ) {}
 
   async list(
@@ -90,25 +93,28 @@ export class CustomerReadApplicationService {
     await this.requireReader(input, input.customerId);
     this.requireActiveProjection();
     const result = await this.execute(() =>
-      this.customers.readDetailAndAudit({
+      this.customers.readDetail({
         tenantId: input.tenantId,
         customerId: input.customerId,
-        actorUserId: input.userId,
-        requestId: input.requestId,
       }),
     );
     if (result === null) {
       await this.recordDetailDenied(input, input.customerId);
       throw customerNotFound();
     }
-    if (result.kind === 'notes_unavailable') {
-      throw new ApplicationError(
-        503,
-        'customer_notes_unavailable',
-        'Service Unavailable',
-        'Customer notes are temporarily unavailable.',
-      );
+    let notes;
+    try {
+      notes = await this.notes.readForDetail({
+        tenantId: input.tenantId,
+        customerId: input.customerId,
+        userId: input.userId,
+        requestId: input.requestId,
+      });
+    } catch (error) {
+      await this.recordDetailAudit(input, input.customerId, 'crm.customer_detail_unavailable');
+      throw error;
     }
+    await this.recordDetailAudit(input, input.customerId, 'crm.customer_detail_viewed');
     this.log('crm.customer_detail_viewed', input, 'success');
     return {
       customer: toSummary(
@@ -116,7 +122,7 @@ export class CustomerReadApplicationService {
         this.config.crmTagsMode === 'active' && result.tagsEntitled,
       ),
       contact: { phone: null, email: null, source: null },
-      notes: [],
+      notes,
     };
   }
 
@@ -166,6 +172,22 @@ export class CustomerReadApplicationService {
         customerId,
         actorUserId: input.userId,
         requestId: input.requestId,
+      }),
+    );
+  }
+
+  private async recordDetailAudit(
+    input: RequestContext,
+    customerId: string,
+    action: 'crm.customer_detail_viewed' | 'crm.customer_detail_unavailable',
+  ): Promise<void> {
+    await this.execute(() =>
+      this.customers.recordDetailAudit({
+        tenantId: input.tenantId,
+        customerId,
+        actorUserId: input.userId,
+        requestId: input.requestId,
+        action,
       }),
     );
   }

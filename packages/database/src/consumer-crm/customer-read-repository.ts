@@ -27,14 +27,11 @@ export interface CustomerReadPage {
   readonly tagsEntitled: boolean;
 }
 
-export type CustomerDetailReadResult =
-  | {
-      readonly kind: 'found';
-      readonly customer: CustomerReadRecord;
-      readonly tagsEntitled: boolean;
-    }
-  | { readonly kind: 'notes_unavailable' }
-  | null;
+export type CustomerDetailReadResult = {
+  readonly kind: 'found';
+  readonly customer: CustomerReadRecord;
+  readonly tagsEntitled: boolean;
+} | null;
 
 export type CustomerReadRepositoryErrorCode = 'customer_read_unavailable';
 
@@ -52,12 +49,17 @@ export interface CustomerReadRepository {
     readonly asOf?: Date | undefined;
     readonly after?: CustomerReadCursor | undefined;
   }): Promise<CustomerReadPage>;
-  readDetailAndAudit(input: {
+  readDetail(input: {
+    readonly tenantId: string;
+    readonly customerId: string;
+  }): Promise<CustomerDetailReadResult>;
+  recordDetailAudit(input: {
     readonly tenantId: string;
     readonly customerId: string;
     readonly actorUserId: string;
     readonly requestId: string;
-  }): Promise<CustomerDetailReadResult>;
+    readonly action: 'crm.customer_detail_viewed' | 'crm.customer_detail_unavailable';
+  }): Promise<void>;
   recordDetailDeniedIfTenantExists(input: {
     readonly tenantId: string;
     readonly customerId: string;
@@ -129,11 +131,9 @@ export class PrismaCustomerReadRepository implements CustomerReadRepository {
     }
   }
 
-  async readDetailAndAudit(input: {
+  async readDetail(input: {
     readonly tenantId: string;
     readonly customerId: string;
-    readonly actorUserId: string;
-    readonly requestId: string;
   }): Promise<CustomerDetailReadResult> {
     try {
       return await this.prisma.$transaction(async (transaction) => {
@@ -142,24 +142,32 @@ export class PrismaCustomerReadRepository implements CustomerReadRepository {
           select: customerSelect,
         });
         if (row === null) return null;
-        const noteCount = await transaction.customerNote.count({
-          where: { tenantId: input.tenantId, customerId: input.customerId },
-        });
-        if (noteCount > 0) {
-          await writeDetailAudit(transaction, input, 'crm.customer_detail_unavailable');
-          return { kind: 'notes_unavailable' };
-        }
         const [consent, tagsAccess] = await Promise.all([
           readConsentState(transaction, input.tenantId, [row]),
           readCustomerTagsEntitlement(transaction, input.tenantId),
         ]);
-        await writeDetailAudit(transaction, input, 'crm.customer_detail_viewed');
         return {
           kind: 'found',
           customer: toRecord(row, consent),
           tagsEntitled: tagsAccess === 'enabled',
         };
       });
+    } catch {
+      throw new CustomerReadRepositoryError('customer_read_unavailable');
+    }
+  }
+
+  async recordDetailAudit(input: {
+    readonly tenantId: string;
+    readonly customerId: string;
+    readonly actorUserId: string;
+    readonly requestId: string;
+    readonly action: 'crm.customer_detail_viewed' | 'crm.customer_detail_unavailable';
+  }): Promise<void> {
+    try {
+      await this.prisma.$transaction((transaction) =>
+        writeDetailAudit(transaction, input, input.action),
+      );
     } catch {
       throw new CustomerReadRepositoryError('customer_read_unavailable');
     }

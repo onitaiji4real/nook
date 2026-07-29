@@ -118,6 +118,9 @@ export interface SecurityEventLogInput {
     | 'crm.customer_tag_definition_status_changed'
     | 'crm.customer_tag_attached'
     | 'crm.customer_tag_detached'
+    | 'crm.customer_note_created'
+    | 'crm.customer_note_updated'
+    | 'crm.customer_note_deleted'
     | 'media.verification_succeeded'
     | 'media.verification_rejected';
   readonly requestId: string;
