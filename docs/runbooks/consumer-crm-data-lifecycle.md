@@ -2,10 +2,11 @@
 
 ## Safe defaults
 
-- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API的grant flag固定為`false`，核准前不得用console漂移覆寫。
+- `CRM_PROJECTION_MODE=disabled`、`CRM_NOTES_MODE=disabled`、`CRM_TAGS_MODE=disabled`、`CRM_EXPORT_MODE=disabled`、`MARKETING_CONSENT_GRANT_ENABLED=false`為production預設。Consent state read與withdraw不受grant flag控制；migration一旦部署就必須保持可用。現有Terraform明確把API的grant flag與tag mode固定為disabled，核准前不得用console漂移覆寫。
 - Consumer self-service固定為`GET|POST|DELETE /v1/me/marketing-consents/{tenantId}`；三種方法及authentication/problem response都必須回`Cache-Control: private, no-store`。POST是唯一受grant flag控制的方法，GET與DELETE不得因tenant/document停用或flag為false而被關閉。
 - Tenant CRM讀取固定為`GET /v1/tenants/{tenantId}/customers`與`GET /v1/tenants/{tenantId}/customers/{customerId}`；只允許ACTIVE OWNER／MANAGER，VIEWER／STAFF固定403，cross-tenant ID固定404，所有成功與錯誤response皆為`Cache-Control: private, no-store`。只有`CRM_PROJECTION_MODE=active`可讀；disabled／shadow固定503，不能把未驗證投影冒充current truth。
-- List使用database產生的immutable `asOf`與relationship key cursor；第一頁後新建立的customer不會插入同一個pagination snapshot。API不回phone/email/note內容，不推算spend，tags在taxonomy gate前固定空集合。Detail若發現既有encrypted note row但KMS read尚未啟用，固定503 fail closed並留下不含PII的safe audit，不能回空notes冒充成功解密。
+- List使用database產生的immutable `asOf`與relationship key cursor；第一頁後新建立的customer不會插入同一個pagination snapshot。API不回phone/email/note內容，不推算spend。Tags只有`CRM_TAGS_MODE=active`且tenant plan的generic boolean `CUSTOMER_TAGS=true`才會出現在customer read；任一gate未開即固定空集合。Detail若發現既有encrypted note row但KMS read尚未啟用，固定503 fail closed並留下不含PII的safe audit，不能回空notes冒充成功解密。
+- Tag definition list/create/status與customer attach/detach全部回`Cache-Control: private, no-store`。Create/status只允許OWNER；list/attach/detach允許OWNER／MANAGER；VIEWER／STAFF固定403，非會員及cross-tenant resource固定404。名稱先NFKC／trim並以32 code points、control/format與敏感分類拒絕清單fail closed；definition/link上限分別100／50。
 - Expand migration及fake KMS/storage tests可先部署；disabled不代表可以保存明文、建立ACTIVE consent document或產生artifact。
 - Repository、Terraform state/output、`.env.example`、log及worklog不得含KMS key URI、plaintext、wrapped key、object key或signed URL。
 

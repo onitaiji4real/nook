@@ -1678,3 +1678,15 @@
 - 第一輪完整API integration因執行時讀到尚未重建的`@nook/database` dist而在bootstrap失敗，沒有進入行為測試；重建contracts/database/observability後，fresh PostgreSQL套用20/20 migrations，API integration 9 files／65 tests全綠，包含4項真實HTTP/database CRM read案例。
 - 最終完整驗證通過：Prettier、12-package lint與strict typecheck、19個unit test tasks（contracts 60、database 48、API 73、Web 59等）、12-package production build、architecture/static 26 tests及`git diff --check`。Fresh ephemeral PostgreSQL再次從零套用20/20 migrations後，database integration 14 files／79 tests與API integration 9 files／65 tests全綠。
 - 截圖中的CI失敗屬較早run。本checkpoint已分為contracts `1bac1d8`、database `55b9f83`、API `c1949f3`、Web `34241f5`與docs `02d6546`五筆小型commit並推送`phase1`，沒有更新`main`。同一HEAD `02d6546`的push run `30372481097`與draft PR run `30372481884`皆為success；verify、Terraform及API/Web/worker container image jobs全綠。Notes、tags、export與其external activation gates維持未完成。
+
+### P4-001 customer tag entitlement and tenant mutation checkpoint
+
+- 截圖中的GitHub通知經公開Actions API核對為舊run；目前遠端HEAD `59939e2`的push run `30372875534`與draft PR run `30372882728`皆為success，verify、Terraform與三個container image全綠，因此沒有回滾或修改CI。
+- 新增generic boolean entitlement `CUSTOMER_TAGS`。Migration只為既有plans寫入`false`並加BOOLEAN JSON constraint，不依plan code/name開功能；production `CRM_TAGS_MODE`由`.env.example`與Terraform固定`disabled`，必須同時有runtime active及tenant entitlement true才可mutation或在customer read曝光。
+- Tag名稱採NFKC、trim、32 code points上限，拒絕Cc/Cf及健康／醫療／族群／宗教／性生活／證件等敏感分類片段。定義每tenant最多100、customer links最多50；inactive不能新增link，attach/detach重送為idempotent。
+- HTTP權限固定：create/status只限ACTIVE OWNER；list/attach/detach限ACTIVE OWNER／MANAGER；VIEWER／STAFF為403，非會員及cross-tenant customer/tag不揭露而回404。所有tag route在authentication guard前寫入`Cache-Control: private, no-store`；audit只保存safe tag ID，不記名稱。
+- Focused unit共14項通過：domain policy 3、contracts 3、migration contract 2、API application 6。Database/API strict typecheck與ESLint通過。兩個獨立fresh ephemeral PostgreSQL皆從零套用21/21 migrations並自動刪除：repository integration 4/4驗entitlement、safe audit、duplicate、cross-tenant、idempotency、inactive及100/50 caps；真實Nest HTTP/database integration 4/4驗authentication/RBAC/no-store、敏感taxonomy、雙gate read、inactive及cross-tenant。
+- External taxonomy owner尚未核准，既有plan也未映射成可售權益，所以production維持disabled且catalog仍為`coming_soon`。Notes/export、完整P4-001 browser acceptance與remote CI仍待後續checkpoint。
+- 完整workspace驗證已通過：Prettier、12-package lint、strict typecheck、19個unit test tasks、12-package production build、architecture/static 26 tests及`git diff --check`。Terraform recursive fmt、validate與12/12 module tests亦通過；沒有apply或修改遠端環境。
+- Fresh ephemeral PostgreSQL完整重放21/21 migrations並自動刪除；database integration 15 files／83 tests、API integration 10 files／69 tests全綠。期間修正三個只影響測試的時序假設：publication hold改用動態未來日期、notification dedupe明確設為已到期、customer cursor fixture把既有customer的`createdAt`固定為relationship time，避免macOS Node與Docker database毫秒級時鐘差把fixture誤判為快照後資料；production規則未放寬。
+- 本checkpoint沒有新增tag UI，既有customer RWD與production disabled狀態不變；完整P4-001 browser acceptance仍隨notes/export slice保留。Remote CI仍待本批小型commits推送後驗證。

@@ -118,6 +118,8 @@ P3-006使用平台Messaging API channel發送預約成立、取消、改期與24
 
 沒有acceptance evidence的項目一律`coming_soon`；若它是某方案的主要價值，該方案不得production sale。這項規則優先於商業計畫中的建議方案表，避免先收費後補功能。
 
+顧客標籤已建立generic boolean entitlement `CUSTOMER_TAGS`與P4-001 local acceptance evidence，但既有plans在migration一律預設`false`，production `CRM_TAGS_MODE`亦由Terraform固定`disabled`。Taxonomy owner核准及catalog mapping完成前仍是`coming_soon`；不得因repository/API已存在就視為任何付費方案已交付。
+
 ## 帳務與收入basis
 
 - Subscription invoice paid按服務期間形成cash與deferred/recognized subscription revenue；退款、credit與chargeback是獨立contra entry，不刪原ledger。

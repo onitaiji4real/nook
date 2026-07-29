@@ -1464,7 +1464,7 @@ paths:
     get:
       operationId: listCustomerTagDefinitions
       summary: List the tenant's bounded non-sensitive tag definitions
-      description: OWNER or MANAGER only. Returns feature_disabled until the tag taxonomy is approved.
+      description: OWNER or MANAGER only. Requires both CRM_TAGS_MODE=active and the generic CUSTOMER_TAGS boolean entitlement; production remains disabled until the non-sensitive taxonomy is approved.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1481,11 +1481,12 @@ paths:
                 items: { $ref: '#/components/schemas/CustomerTagDefinition' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
     post:
       operationId: createCustomerTagDefinition
       summary: Create one tenant-owned non-sensitive tag definition
-      description: OWNER only. Names are immutable after normalized creation.
+      description: OWNER only. Requires both CRM_TAGS_MODE=active and CUSTOMER_TAGS. Names are NFKC-normalized, immutable after creation, bounded to 32 code points, and rejected when they contain control/format characters or a sensitive classification.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1497,19 +1498,22 @@ paths:
       responses:
         '201':
           description: Tag definition created
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CustomerTagDefinition' }
         '400': { $ref: '#/components/responses/Problem' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
   /v1/tenants/{tenantId}/customer-tags/{tagId}/status:
     put:
       operationId: changeCustomerTagDefinitionStatus
       summary: Activate or deactivate one immutable tag definition
-      description: OWNER only. Inactive definitions remain visible for historical links but cannot be newly attached.
+      description: OWNER only. Requires both CRM_TAGS_MODE=active and CUSTOMER_TAGS. Inactive definitions remain visible for historical links but cannot be newly attached.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1527,6 +1531,8 @@ paths:
       responses:
         '200':
           description: Current definition
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CustomerTagDefinition' }
@@ -1534,33 +1540,42 @@ paths:
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
   /v1/tenants/{tenantId}/customers/{customerId}/tags/{tagId}:
     put:
       operationId: attachCustomerTag
       summary: Attach one owner-approved non-sensitive tag
-      description: OWNER or MANAGER only. Returns feature_disabled until the tenant taxonomy is approved.
+      description: OWNER or MANAGER only. Requires both CRM_TAGS_MODE=active and CUSTOMER_TAGS; repeated attachment is idempotent.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CustomerId'
         - $ref: '#/components/parameters/TagId'
       responses:
-        '204': { description: Tag attached or already attached }
+        '204':
+          description: Tag attached or already attached
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
     delete:
       operationId: detachCustomerTag
       summary: Detach one customer tag
+      description: OWNER or MANAGER only. Requires both CRM_TAGS_MODE=active and CUSTOMER_TAGS; repeated detachment is idempotent.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/CustomerId'
         - $ref: '#/components/parameters/TagId'
       responses:
-        '204': { description: Tag detached or already absent }
+        '204':
+          description: Tag detached or already absent
+          headers:
+            Cache-Control: { schema: { type: string, const: 'private, no-store' } }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
