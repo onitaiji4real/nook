@@ -226,3 +226,13 @@ export {
   type CustomerTagRepository,
   type CustomerTagRepositoryErrorCode,
 } from './consumer-crm/customer-tag-repository';
+export {
+  CUSTOMER_NOTE_LIMIT,
+  CustomerNoteRepositoryError,
+  PrismaCustomerNoteRepository,
+  type CustomerNoteEnvelopeInput,
+  type CustomerNoteEnvelopeRecord,
+  type CustomerNoteMutationContext,
+  type CustomerNoteRepository,
+  type CustomerNoteRepositoryErrorCode,
+} from './consumer-crm/customer-note-repository';
