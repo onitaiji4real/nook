@@ -214,3 +214,15 @@ export {
   type CustomerReadRepository,
   type CustomerReadRepositoryErrorCode,
 } from './consumer-crm/customer-read-repository';
+export {
+  CUSTOMER_TAG_DEFINITION_LIMIT,
+  CUSTOMER_TAG_LINK_LIMIT,
+  CUSTOMER_TAGS_ENTITLEMENT,
+  CustomerTagRepositoryError,
+  PrismaCustomerTagRepository,
+  readCustomerTagsEntitlement,
+  type CustomerTagDefinitionRecord,
+  type CustomerTagMutationContext,
+  type CustomerTagRepository,
+  type CustomerTagRepositoryErrorCode,
+} from './consumer-crm/customer-tag-repository';

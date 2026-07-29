@@ -1,5 +1,7 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 
+import { readCustomerTagsEntitlement } from './customer-tag-repository';
+
 export interface CustomerReadCursor {
   readonly relationshipStartedAt: Date;
   readonly id: string;
@@ -22,10 +24,15 @@ export interface CustomerReadPage {
   readonly asOf: Date;
   readonly items: readonly CustomerReadRecord[];
   readonly next: CustomerReadCursor | null;
+  readonly tagsEntitled: boolean;
 }
 
 export type CustomerDetailReadResult =
-  | { readonly kind: 'found'; readonly customer: CustomerReadRecord }
+  | {
+      readonly kind: 'found';
+      readonly customer: CustomerReadRecord;
+      readonly tagsEntitled: boolean;
+    }
   | { readonly kind: 'notes_unavailable' }
   | null;
 
@@ -101,12 +108,16 @@ export class PrismaCustomerReadRepository implements CustomerReadRepository {
           select: customerSelect,
         });
         const visible = rows.slice(0, input.limit);
-        const consent = await readConsentState(transaction, input.tenantId, visible);
+        const [consent, tagsAccess] = await Promise.all([
+          readConsentState(transaction, input.tenantId, visible),
+          readCustomerTagsEntitlement(transaction, input.tenantId),
+        ]);
         const items = visible.map((row) => toRecord(row, consent));
         const last = visible.at(-1);
         return {
           asOf,
           items,
+          tagsEntitled: tagsAccess === 'enabled',
           next:
             rows.length > input.limit && last !== undefined
               ? { relationshipStartedAt: last.relationshipStartedAt, id: last.id }
@@ -138,9 +149,16 @@ export class PrismaCustomerReadRepository implements CustomerReadRepository {
           await writeDetailAudit(transaction, input, 'crm.customer_detail_unavailable');
           return { kind: 'notes_unavailable' };
         }
-        const consent = await readConsentState(transaction, input.tenantId, [row]);
+        const [consent, tagsAccess] = await Promise.all([
+          readConsentState(transaction, input.tenantId, [row]),
+          readCustomerTagsEntitlement(transaction, input.tenantId),
+        ]);
         await writeDetailAudit(transaction, input, 'crm.customer_detail_viewed');
-        return { kind: 'found', customer: toRecord(row, consent) };
+        return {
+          kind: 'found',
+          customer: toRecord(row, consent),
+          tagsEntitled: tagsAccess === 'enabled',
+        };
       });
     } catch {
       throw new CustomerReadRepositoryError('customer_read_unavailable');
