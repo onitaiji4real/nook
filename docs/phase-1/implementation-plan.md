@@ -1,8 +1,10 @@
 # Phase 1：平台骨架實作計畫
 
-狀態：`ready`  
-最後更新：2026-07-14  
+狀態：`in_progress`
+最後更新：2026-07-21
 來源：`docs/product/business-technical-plan.md` §18 Phase 1
+
+任務索引的 `done` 只表示單一 task 在 repository／local evidence 範圍內符合 acceptance criteria。Phase 1 仍以 `docs/phase-1/acceptance-evidence.md` 的 required gates為準；只要任一 gate為`BLOCKED`、`FAIL`或`NOT_RUN`，本文件狀態不得改為完成。
 
 ## 目標
 
@@ -10,16 +12,16 @@
 
 ## 交付串流
 
-| 串流 | 交付 | 驗收證據 |
-|---|---|---|
-| Repository | pnpm/Turborepo、web/api/worker、共用 packages | lint/typecheck/test/build 可執行 |
-| Local data | PostgreSQL + PostGIS、Prisma migration | integration test 可連線且 migration 可重跑 |
-| Cloud foundation | dev/stg/prod projects、APIs、state、Artifact Registry | Terraform plan 與 project checklist |
-| Runtime | Cloud Run web/api/worker、service accounts、secrets | 三服務 health check |
-| Identity | Identity Platform、LINE token exchange | contract + auth integration tests |
-| Tenancy | user/identity/tenant/membership、RBAC、audit log | cross-tenant denial tests |
-| Delivery | PR CI、staging deployment、production approval gate | workflow run 與 smoke test |
-| Observability | structured logging、request correlation | log query 與無 PII 測試 |
+| 串流             | 交付                                                  | 驗收證據                                   |
+| ---------------- | ----------------------------------------------------- | ------------------------------------------ |
+| Repository       | pnpm/Turborepo、web/api/worker、共用 packages         | lint/typecheck/test/build 可執行           |
+| Local data       | PostgreSQL + PostGIS、Prisma migration                | integration test 可連線且 migration 可重跑 |
+| Cloud foundation | dev/stg/prod projects、APIs、state、Artifact Registry | Terraform plan 與 project checklist        |
+| Runtime          | Cloud Run web/api/worker、service accounts、secrets   | 三服務 health check                        |
+| Identity         | Identity Platform、LINE token exchange                | contract + auth integration tests          |
+| Tenancy          | user/identity/tenant/membership、RBAC、audit log      | cross-tenant denial tests                  |
+| Delivery         | PR CI、staging deployment、production approval gate   | workflow run 與 smoke test                 |
+| Observability    | structured logging、request correlation               | log query 與無 PII 測試                    |
 
 ## 建議順序與依賴
 
@@ -28,6 +30,8 @@
 3. `P1-003` identity/tenant/RBAC，依賴 Prisma 與 API 骨架。
 4. `P1-004` LINE login exchange，依賴 identity repository 與 Secret Manager interface。
 5. `P1-005` CI/CD and observability，先接 lint/test/build，再接 staging deploy。
+
+P1-006～P1-017 是依 gap audit建立的 repository remediation tasks；它們完成 local implementation contract，不取代下列外部前置條件或 required gate。
 
 ## Phase 1 完成定義
 
@@ -50,3 +54,5 @@
 - staging/production 網域；未決時可先用 Cloud Run URL。
 
 這些值不得提交。範例只能放在 `.tfvars.example` 或 `.env.example`。
+
+完整 gate、證據強度與外部阻塞定義見 [Phase 1 驗收標準](acceptance-standard.md)。

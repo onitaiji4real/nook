@@ -1,0 +1,1 @@
+export const TENANT_REPOSITORY = Symbol('TENANT_REPOSITORY');

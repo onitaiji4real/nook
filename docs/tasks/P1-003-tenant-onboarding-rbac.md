@@ -1,6 +1,6 @@
 # P1-003：Tenant onboarding and RBAC
 
-狀態：`blocked`（等待 P1-001）  
+狀態：`done`
 目標：登入使用者可建立 tenant，成為 OWNER，並安全查詢自己的 membership。
 
 ## Vertical slice
@@ -24,3 +24,9 @@
 - 三個 endpoint contract、authorization、integration tests 全數通過。
 - controller 無 Prisma import；repository method 顯式要求 tenantId。
 - migration backward compatible，工作報告記錄驗證與剩餘 RBAC 決策。
+
+## Handoff
+
+- 完成日期：2026-07-14。
+- P1-003 使用可替換 `IdentityTokenVerifier`；production default 為 fail closed，P1-004 必須接上 Identity Platform verifier。
+- 角色 permission matrix 延後到 Phase 2 各 tenant-owned resource 出現時定義；不得以 plan name 代替 RBAC。

@@ -1,0 +1,127 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - phase1
+      - dev
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.5
+        env:
+          POSTGRES_DB: nook
+          POSTGRES_PASSWORD: nook
+          POSTGRES_USER: nook
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nook -d nook"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      APP_VERSION: ${{ github.sha }}
+      DATABASE_URL: postgresql://nook:nook@localhost:5432/nook?schema=public
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.7.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Architecture contracts
+        run: pnpm check:architecture
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Apply database migrations
+        run: pnpm db:migrate
+
+      - name: Integration tests
+        run: pnpm test:integration
+
+      - name: Build
+        run: pnpm build
+
+      - name: Production dependency audit
+        run: pnpm audit --prod --audit-level high
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.15.8
+      - name: Validate Terraform contracts
+        run: infra/terraform/scripts/validate.sh
+      - name: Scan Terraform configuration
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infra/terraform
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
+  container-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [web, api, worker]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Build non-root image
+        run: docker build --file apps/${{ matrix.service }}/Dockerfile --tag nook-${{ matrix.service }}:${{ github.sha }} .
+      - name: Assert runtime user is non-root
+        run: test "$(docker image inspect nook-${{ matrix.service }}:${{ github.sha }} --format '{{.Config.User}}')" = "65532:65532"
+      - name: Scan image
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        with:
+          image-ref: nook-${{ matrix.service }}:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'

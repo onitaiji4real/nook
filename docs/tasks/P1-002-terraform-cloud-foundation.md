@@ -1,6 +1,6 @@
 # P1-002：Terraform cloud foundation
 
-狀態：`ready`  
+狀態：`done`
 目標：將現有 Terraform 骨架提升為可審查、可重複部署的 Phase 1 cloud foundation。
 
 ## Scope
@@ -28,3 +28,9 @@
 - `deploy_runtime=false` 可先建立 foundation；true 時強制三個 immutable image references。
 - runbook 包含 bootstrap、plan/apply approval、secret、rollback 與 drift 處理。
 - 未經明確批准不得 apply；工作報告需區分 validated 與 actually deployed。
+
+## Handoff
+
+- 完成日期：2026-07-14。
+- local/static acceptance 已完成；沒有執行 provider-level dev plan 或任何 apply。
+- actual GCP foundation 仍是 Phase 1 gate P1-B05，外部輸入與 owner 見 `docs/phase-1/acceptance-evidence.md`。

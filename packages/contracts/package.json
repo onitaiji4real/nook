@@ -1,0 +1,19 @@
+{
+  "name": "@nook/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src test --no-error-on-unmatched-pattern",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "4.1.12"
+  }
+}

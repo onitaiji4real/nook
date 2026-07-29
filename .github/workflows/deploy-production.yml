@@ -1,0 +1,16 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: prod
+    permissions:
+      contents: read
+      id-token: write

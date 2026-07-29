@@ -1,0 +1,17 @@
+name: Deploy staging
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      environment: stg
+    permissions:
+      contents: read
+      id-token: write

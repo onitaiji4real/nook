@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["APP_VERSION", "DATABASE_URL", "NODE_ENV", "PORT"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -13,8 +14,7 @@
       "dependsOn": ["^lint"]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": ["^build"]
     },
     "test:integration": {
       "dependsOn": ["^build"],

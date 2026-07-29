@@ -1,0 +1,43 @@
+{
+  "name": "@nook/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "db:migrate": "prisma migrate deploy --schema node_modules/@nook/database/prisma/schema.prisma",
+    "dev": "tsx watch src/main.ts",
+    "lint": "eslint src test --no-error-on-unmatched-pattern",
+    "start": "node dist/main.js",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@google-cloud/kms": "5.7.0",
+    "@google-cloud/storage": "7.21.0",
+    "@google-cloud/tasks": "6.2.3",
+    "@nestjs/common": "11.1.28",
+    "@nestjs/core": "11.1.28",
+    "@nestjs/platform-express": "11.1.28",
+    "@nook/auth": "workspace:*",
+    "@nook/config": "workspace:*",
+    "@nook/contracts": "workspace:*",
+    "@nook/crypto": "workspace:*",
+    "@nook/database": "workspace:*",
+    "@nook/domain": "workspace:*",
+    "@nook/line": "workspace:*",
+    "@nook/observability": "workspace:*",
+    "@prisma/client": "6.19.0",
+    "fast-crc32c": "2.0.0",
+    "firebase-admin": "13.9.0",
+    "prisma": "6.19.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "11.1.28",
+    "@types/express": "^5.0.0",
+    "@types/supertest": "6.0.3",
+    "supertest": "7.1.4"
+  }
+}

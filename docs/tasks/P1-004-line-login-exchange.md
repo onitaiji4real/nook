@@ -1,6 +1,6 @@
 # P1-004：LINE login exchange
 
-狀態：`blocked`（等待 P1-003）  
+狀態：`done`
 目標：後端驗證 LINE token，建立/連結 local identity，再換發 Identity Platform custom token。
 
 ## Vertical slice
@@ -24,3 +24,12 @@
 - 成功回應只包含前端登入所需 custom token/expiry，不建立 cookie side effect。
 - provider error 映射為穩定 Problem Details；外部 timeout 有上限。
 - secret 只透過 typed config/Secret Manager 注入，文件與工作報告同步。
+
+## Handoff evidence
+
+- `@nook/line` 5 個 synthetic contract tests：valid、expired、wrong audience、invalid nonce、provider timeout。
+- API integration 4 個 LINE exchange tests：無 cookie/敏感 log、concurrent idempotency、401/503 Problem Details；既有 tenant/RBAC 7 個 regression tests 同時通過。
+- Firebase adapter 2 個 unit tests；typed config 在 firebase mode 缺值時 fail closed。
+- Terraform 五個 configuration validate、3 個 mocked tests、isolation check 與 Trivy HIGH/CRITICAL 0。
+- OpenAPI、ADR 0002、login sequence、data dictionary、runtime env/IAM 與 worklog 已同步。
+- 真實 LINE/Identity Platform staging exchange 屬 P1-D05 外部 gate，維持 `BLOCKED`，不以 synthetic tests 冒充。

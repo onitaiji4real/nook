@@ -1,0 +1,15 @@
+#!/bin/sh
+
+remote_name="$1"
+remote_url="$2"
+
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo "Direct pushes to main are blocked." >&2
+    echo "Push phase1/dev (or a task branch) and merge through a pull request." >&2
+    echo "Remote: ${remote_name} ${remote_url}" >&2
+    exit 1
+  fi
+done
+
+exit 0

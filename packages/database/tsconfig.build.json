@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "paths": {
+      "@nook/domain": ["packages/domain/dist"]
+    },
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["test", "vitest.integration.config.mts"]
+}

@@ -1,6 +1,6 @@
 # P1-001：Repository foundation
 
-狀態：`ready`  
+狀態：`done`
 目標：建立可本機執行與驗證的 monorepo，不實作 booking。
 
 ## Scope
@@ -30,3 +30,12 @@
 - fresh database 可向前 migration，且 application 不會在 startup 自動 migrate。
 - 三個 app 可在本機啟動並回應 health。
 - ADR 0001 與本機啟動 README 已同步；工作報告包含實際驗證結果。
+
+## Handoff
+
+- 完成日期：2026-07-14。
+- 驗證與已知風險詳見 `docs/worklog.md` 的 P1-001 完成紀錄。
+- 2026-07-14 completion audit 補齊 web health/readiness 的 `x-request-id`、安全 request ID validation 與 production-image runtime evidence；三服務 correlation contract 現已一致。
+- 2026-07-15 repository structure audit 確認三個 deployable apps、九個 shared packages、Terraform environments、docs 與 tests 的頂層分層符合規劃；`pnpm check:architecture` 現會阻擋缺少目錄、workspace 命名錯誤、跨 app/package boundary import、未宣告的 `@nook/*` dependency 與誤提交產物。
+- 2026-07-20 完成驗收：architecture 5 tests、26 unit tests、database 3 integration tests、API 11 integration tests、12 strict typechecks、全部 package/app production builds 與 full format/package-scope lint 通過；implementation commit 為 `2354a66`。
+- 後續可開始 P1-003；不得在 P1-003 偷渡 LINE login 或 booking 功能。

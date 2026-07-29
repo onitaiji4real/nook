@@ -1,0 +1,17 @@
+export {
+  canonicalCustomerNoteAad,
+  CUSTOMER_NOTE_AAD_SCHEMA,
+  CUSTOMER_NOTE_AUTH_TAG_BYTES,
+  CUSTOMER_NOTE_DATA_KEY_BYTES,
+  CUSTOMER_NOTE_ENCRYPTION_SCHEMA_VERSION,
+  CUSTOMER_NOTE_MAX_CODE_POINTS,
+  CUSTOMER_NOTE_NONCE_BYTES,
+  CustomerNoteEncryptionError,
+  decryptCustomerNote,
+  encryptCustomerNote,
+  type CustomerNoteAadInput,
+  type CustomerNoteDataKeyWrapper,
+  type CustomerNoteEncryptionErrorCode,
+  type CustomerNoteEnvelope,
+  type CustomerNoteEnvironment,
+} from './customer-note-envelope';

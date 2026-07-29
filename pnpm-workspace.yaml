@@ -1,3 +1,28 @@
 packages:
   - apps/*
   - packages/*
+
+# CI installs package.json's pin explicitly. Local Homebrew pnpm may use a newer version
+# allowed by engines without downloading the pin before every command.
+pmOnFail: warn
+
+injectWorkspacePackages: true
+
+allowBuilds:
+  '@firebase/util': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  protobufjs: true
+  sharp: true
+  # fast-crc32c has a pure-JS fallback; do not compile its optional legacy native addon.
+  sse4_crc32: false
+
+overrides:
+  '@types/superagent': 8.1.10
+  brace-expansion@2.1.2: 5.0.8
+  effect: 3.20.0
+  fast-xml-parser@5.10.0: 5.10.1
+  postcss@8.4.31: 8.5.18
+  sharp@0.34.5: 0.35.3

@@ -1,0 +1,29 @@
+{
+  "name": "@nook/database",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "crm:projection:repair": "tsx scripts/customer-projection-repair.ts",
+    "lint": "eslint src test scripts --no-error-on-unmatched-pattern",
+    "prisma:format": "prisma format --schema prisma/schema.prisma",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.mts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nook/domain": "workspace:*",
+    "@prisma/client": "6.19.0"
+  },
+  "devDependencies": {
+    "prisma": "6.19.0"
+  }
+}
