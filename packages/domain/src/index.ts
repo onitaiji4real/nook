@@ -50,3 +50,8 @@ export {
   type MarketingConsentCurrentState,
   type MarketingConsentLatestEvent,
 } from './consumer-crm/marketing-consent';
+
+export {
+  normalizeCustomerTagName,
+  type CustomerTagNamePolicyResult,
+} from './consumer-crm/customer-tag-policy';

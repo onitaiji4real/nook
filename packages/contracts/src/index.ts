@@ -203,6 +203,14 @@ export {
   type CustomerSummary,
   type CustomerTag,
 } from './customer-crm';
+export {
+  changeCustomerTagDefinitionStatusRequestSchema,
+  createCustomerTagDefinitionRequestSchema,
+  customerTagIdSchema,
+  type ChangeCustomerTagDefinitionStatusRequest,
+  type CreateCustomerTagDefinitionRequest,
+  type CustomerTagDefinition,
+} from './customer-tags';
 
 export interface HealthResponseInput {
   readonly status: HealthStatus;
